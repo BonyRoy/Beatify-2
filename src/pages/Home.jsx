@@ -190,7 +190,18 @@ const playlistTrackIds = {
   Holi: ["d7ea68c3-fb56-4cc7-a5fe-b20362af0c8f","fd890f01-6ebc-41ae-bbd5-34193d330402","69eedce3-ff05-4273-9128-4b9fded4fd00","917933d6-0467-4294-ae5a-776406656523","41b39f05-e3c4-4bf9-a2c0-9bdb7130f466","804e4bac-62d2-4055-a269-f0255c1c3582"],
 
   'Old Melodies': [],
-  'Romantic': [],
+  'Romantic': [
+    'f4134ccd-adb5-4d62-b0a8-a9fd8d74e23e',
+    '1a707f3c-fb6b-45d3-b5c1-a3ebeb896425',
+    '1358929a-bd9a-46a9-bceb-f3f4c997a231',
+    'd6f16706-596f-467a-a764-04618b68a3a0',
+    '11f5f287-8202-48ca-a7be-4edcee8189cf',
+    '4f908ca9-9037-4ac9-9904-45f8897a9009',
+    '82b368b9-fb3f-441b-829a-b765922d17f2',
+    '22c9c82d-6132-4752-8d51-9f6d7d0ea6d8',
+    'e2c748fd-12f3-489a-b47a-021ff544f4c6',
+    'd729a181-13e4-46f7-aee1-89f5011ca03c'
+  ],
   'Party': [],
   'Chill Vibes': [],
   'Gym': [],
