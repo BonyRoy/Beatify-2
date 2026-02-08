@@ -1,0 +1,431 @@
+.home {
+  width: 100%;
+  height: 100%;
+}
+
+.home__grid {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 1rem;
+  width: 100%;
+  padding: 10px;
+  height: calc(100vh - 210px - 70px);
+  align-content: start;
+}
+
+.home__sidebar {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.home__sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  padding-bottom: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Reduce padding-bottom when footer has player active */
+body:has(.footer--player) .home__sidebar-content {
+  padding-bottom: 40px;
+}
+
+.home__sidebar-content::-webkit-scrollbar {
+  display: none;
+}
+
+.home__sidebar-header {
+  padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+  border-bottom: 2px solid #ec4899;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+
+.home__sidebar-header--tracks {
+  border-bottom: none;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.home__sidebar-header--tracks::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 2px;
+  background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+}
+
+.home__sidebar-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.home__sidebar-title--tracks {
+  color: var(--text-primary);
+}
+
+.home__sidebar-title svg {
+  color: #ec4899;
+  flex-shrink: 0;
+}
+
+.home__music-icon-gradient {
+  flex-shrink: 0;
+}
+
+/* Music track row - horizontal list item */
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--nav-border, #333);
+  background-color: var(--track-bg, rgba(255, 255, 255, 0.03));
+  transition: background-color 0.2s;
+  min-height: 60px;
+}
+
+.track-row {
+  cursor: pointer;
+}
+
+.track-row:hover {
+  background-color: var(--track-bg-hover, rgba(255, 255, 255, 0.06));
+}
+
+.track-row--selected {
+  border-color: var(--text-hover, #a78bfa);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2);
+  background-color: rgba(167, 139, 250, 0.08);
+}
+
+.track-row__art-wrapper {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.track-row__art {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: transparent;
+}
+
+.track-row__art--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
+  color: white;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+}
+
+.track-row__art--placeholder svg {
+  width: 24px;
+  height: 24px;
+}
+
+.track-row__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.track-row__title-wrapper,
+.track-row__artist-wrapper {
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.track-row__title-inner,
+.track-row__artist-inner {
+  display: inline-flex;
+  white-space: nowrap;
+  width: auto;
+}
+
+.track-row__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.track-row__artist {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.track-row__text--duplicate {
+  margin-left: 1.5rem;
+}
+
+/* Auto-scrolling animation for long text */
+@keyframes track-scroll-marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.track-row__title-inner.track-row__text--scroll {
+  animation: track-scroll-marquee 15s linear infinite;
+  will-change: transform;
+}
+
+.track-row__artist-inner.track-row__text--scroll {
+  animation: track-scroll-marquee 12s linear infinite;
+  will-change: transform;
+}
+
+/* Pause animation on hover */
+.track-row__title-wrapper:hover .track-row__title-inner.track-row__text--scroll,
+.track-row__artist-wrapper:hover .track-row__artist-inner.track-row__text--scroll {
+  animation-play-state: paused;
+}
+
+.track-row__right {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.track-row__duration {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.track-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.track-row__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--nav-border, #333);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+.track-row__icon-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.track-row__icon-btn--active {
+  color: var(--text-hover, #a78bfa);
+  border-color: var(--text-hover, #a78bfa);
+  background-color: rgba(167, 139, 250, 0.12);
+}
+
+.track-row__icon-btn--fav.track-row__icon-btn--active {
+  color: #ec4899;
+  border-color: #ec4899;
+  background-color: rgba(236, 72, 153, 0.12);
+}
+
+/* Loading, Error, and Empty States */
+.home__loading,
+.home__error,
+.home__empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.home__loading p,
+.home__error p,
+.home__empty p {
+  margin: 0.5rem 0;
+}
+
+.home__empty-hint {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.home__email-link {
+  color: var(--text-hover, #a78bfa);
+  text-decoration: underline;
+  transition: opacity 0.2s;
+}
+
+.home__email-link:hover {
+  opacity: 0.8;
+}
+
+.home__retry-btn {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--nav-border, #333);
+  border-radius: 6px;
+  background-color: var(--track-bg, rgba(255, 255, 255, 0.03));
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.home__retry-btn:hover {
+  background-color: var(--track-bg-hover, rgba(255, 255, 255, 0.06));
+}
+
+.home__main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.home__main h4 {
+  margin: 0 0 0 0;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.home__playlist-count {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Laptop and full screen - add gap after artists section */
+@media (min-width: 1024px) {
+  .home__grid {
+    height: calc(100vh - 226px - 70px);
+  }
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .home__grid {
+    grid-template-columns: 1fr;
+    height: calc(100vh - 180px - 70px);
+  }
+
+  .home__sidebar {
+    height: 100%;
+  }
+
+  .home--mobile-view-track .home__main {
+    display: none;
+  }
+
+  .home--mobile-view-track .home__sidebar {
+    width: 100%;
+  }
+
+  .home--mobile-view-playlist .home__sidebar,
+  .home--mobile-view-home .home__sidebar {
+    display: none;
+  }
+
+  .home--mobile-view-playlist .home__main,
+  .home--mobile-view-home .home__main {
+    width: 100%;
+  }
+
+  /* Adjust text wrapping for mobile */
+  .track-row__title {
+    font-size: 0.9rem;
+    -webkit-line-clamp: 2;
+    max-height: calc(1.3em * 2);
+  }
+
+  .track-row__artist {
+    font-size: 0.8rem;
+    -webkit-line-clamp: 2;
+    max-height: calc(1.3em * 2);
+  }
+
+  .track-row {
+    min-height: 56px;
+    padding: 1rem;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+  .home__grid {
+    height: calc(100vh - 165px - 70px);
+  }
+
+  .home__sidebar {
+    height: 100%;
+  }
+
+  .track-row__title {
+    font-size: 0.85rem;
+    -webkit-line-clamp: 2;
+  }
+
+  .track-row__artist {
+    font-size: 0.75rem;
+    -webkit-line-clamp: 2;
+  }
+
+  .track-row__art,
+  .track-row__art--placeholder {
+    width: 40px;
+    height: 40px;
+  }
+
+  .track-row__art--placeholder svg {
+    width: 20px;
+    height: 20px;
+  }
+}

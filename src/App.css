@@ -1,0 +1,58 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app__content {
+  height: 100vh;
+  padding-top: 230px;
+  padding-bottom: 90px;
+  width: 100%;
+  overflow-y: hidden;
+  overflow-x: hidden;
+}
+
+/* Reduce padding when artists section is hidden */
+body.artists-hidden .app__content {
+  padding-top: 73px;
+  /* Only navbar height */
+}
+
+/* Laptop and full screen - add gap after artists section */
+@media (min-width: 1024px) {
+  .app__content {
+    padding-top: 246px;
+    /* 230px + 16px gap */
+  }
+
+  body.artists-hidden .app__content {
+    padding-top: 73px;
+    /* Only navbar height */
+  }
+}
+
+/* Mobile adjustments - account for navbar + artists section */
+@media (max-width: 768px) {
+  .app__content {
+    /* Navbar ~70px + Artists section ~132px (80px image + padding + text) = ~202px */
+    padding-top: 200px;
+  }
+
+  body.artists-hidden .app__content {
+    padding-top: 70px;
+    /* Only navbar height on mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .app__content {
+    /* Navbar ~70px + Artists section ~116px (70px image + padding + text) = ~186px */
+    padding-top: 185px;
+  }
+
+  body.artists-hidden .app__content {
+    padding-top: 70px;
+    /* Only navbar height on mobile */
+  }
+}
