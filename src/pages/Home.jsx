@@ -187,14 +187,8 @@ const playlistTrackIds = {
     'e2c748fd-12f3-489a-b47a-021ff544f4c6',
     'd729a181-13e4-46f7-aee1-89f5011ca03c'
   ],
-  'Holi': [
-    '32d36fc7-d69a-4217-b004-baf9412988ec',
-    '1cd9f324-4f86-4814-a04e-ec8f30bf287d',
-    '5855e5dd-b061-45f4-8a73-f53485f41181',
-    '9b8a6e98-ae82-449e-a526-284561ee605e',
-    '318ccac8-c78e-4541-97f4-674fb594d977',
-    '140b03ca-7b00-4521-9ebd-fc45469df14d'
-  ],
+  Holi: ["d7ea68c3-fb56-4cc7-a5fe-b20362af0c8f","fd890f01-6ebc-41ae-bbd5-34193d330402","69eedce3-ff05-4273-9128-4b9fded4fd00","917933d6-0467-4294-ae5a-776406656523","41b39f05-e3c4-4bf9-a2c0-9bdb7130f466","804e4bac-62d2-4055-a269-f0255c1c3582"],
+
   'Old Melodies': [],
   'Romantic': [],
   'Party': [],
