@@ -213,8 +213,15 @@ const playlistTrackIds = {
   ]
 }
 
+const ClearIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+)
+
 const Home = () => {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const view = searchParams.get('view') || 'playlist'
   const mobileView = view === 'home' ? 'playlist' : view
   const showFavorites = searchParams.get('favorites') === 'true'
@@ -363,6 +370,12 @@ const Home = () => {
     setSelectedTrack(null)
   }
 
+  const handleClearPlaylistFilter = () => {
+    const newSearchParams = new URLSearchParams(searchParams)
+    newSearchParams.delete('playlist')
+    setSearchParams(newSearchParams)
+  }
+
   const selectedTrackData = selectedTrack ? {
     name: selectedTrack.name,
     artist: selectedTrack.artist,
@@ -390,6 +403,16 @@ const Home = () => {
               <h3 className="home__sidebar-title home__sidebar-title--tracks">
                 <MusicIconGradient />
                 {selectedPlaylist ? `Tracks for "${selectedPlaylist}" playlist` : 'Tracks'}
+                {selectedPlaylist && (
+                  <button
+                    type="button"
+                    className="home__clear-filter-btn"
+                    onClick={handleClearPlaylistFilter}
+                    aria-label="Clear playlist filter"
+                  >
+                    <ClearIcon />
+                  </button>
+                )}
               </h3>
             </div>
           )}

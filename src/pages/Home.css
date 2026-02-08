@@ -74,6 +74,7 @@ body:has(.footer--player) .home__sidebar-content {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .home__sidebar-title--tracks {
@@ -87,6 +88,34 @@ body:has(.footer--player) .home__sidebar-content {
 
 .home__music-icon-gradient {
   flex-shrink: 0;
+}
+
+.home__clear-filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin-left: auto;
+  border: 1px solid var(--nav-border, #333);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.home__clear-filter-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.home__clear-filter-btn svg {
+  width: 12px;
+  height: 12px;
 }
 
 /* Music track row - horizontal list item */
