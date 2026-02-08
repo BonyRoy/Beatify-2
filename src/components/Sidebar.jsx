@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import './Sidebar.css'
@@ -72,7 +72,21 @@ const Sidebar = ({ isOpen, onClose }) => {
   const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const currentView = searchParams.get('view') || 'playlist'
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
+  
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+  
+  // Default to 'track' on mobile, 'playlist' on desktop if no view param is set
+  const defaultView = isMobile ? 'track' : 'playlist'
+  const currentView = searchParams.get('view') || defaultView
   const showFavorites = searchParams.get('favorites') === 'true'
 
   const handleTrackOrPlaylist = () => {
