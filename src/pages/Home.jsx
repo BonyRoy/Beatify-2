@@ -227,7 +227,21 @@ const ClearIcon = () => (
 
 const Home = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const view = searchParams.get('view') || 'playlist'
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
+  
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+  
+  // Default to 'track' on mobile, 'playlist' on desktop if no view param is set
+  const defaultView = isMobile ? 'track' : 'playlist'
+  const view = searchParams.get('view') || defaultView
   const mobileView = view === 'home' ? 'playlist' : view
   const showFavorites = searchParams.get('favorites') === 'true'
   const selectedArtist = searchParams.get('artist')
