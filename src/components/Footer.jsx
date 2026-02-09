@@ -508,25 +508,25 @@ const Footer = () => {
 
   // Handle progress bar start (mouse down or touch start)
   const handleProgressStart = useCallback((e) => {
-    if (e.touches) {
+    const isTouch = e.touches && e.touches.length > 0
+    if (isTouch) {
       e.preventDefault() // Prevent scrolling on iOS
       e.stopPropagation() // Prevent event bubbling
-      e.stopImmediatePropagation() // Prevent other handlers
     }
     isDraggingProgressRef.current = true
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX
     updateProgress(clientX)
   }, [updateProgress])
 
   // Handle progress bar move (mouse move or touch move)
   const handleProgressMove = useCallback((e) => {
     if (!isDraggingProgressRef.current) return
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.touches) {
-      e.stopImmediatePropagation() // Prevent other handlers on iOS
+    const isTouch = e.touches && e.touches.length > 0
+    if (isTouch) {
+      e.preventDefault()
+      e.stopPropagation()
     }
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX
     updateProgress(clientX)
   }, [updateProgress])
 
@@ -543,7 +543,8 @@ const Footer = () => {
   // Handle progress bar click
   const handleProgressClick = useCallback((e) => {
     if (!isDraggingProgressRef.current) {
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX
+      const isTouch = e.touches && e.touches.length > 0
+      const clientX = isTouch ? e.touches[0].clientX : e.clientX
       updateProgress(clientX)
     }
   }, [updateProgress])
@@ -578,17 +579,16 @@ const Footer = () => {
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-    // Use capture phase for touch events on iOS for better control
-    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
-    document.addEventListener('touchend', handleTouchEnd, { capture: true })
-    document.addEventListener('touchcancel', handleTouchCancel, { capture: true })
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('touchend', handleTouchEnd)
+    document.addEventListener('touchcancel', handleTouchCancel)
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
-      document.removeEventListener('touchmove', handleTouchMove, { capture: true })
-      document.removeEventListener('touchend', handleTouchEnd, { capture: true })
-      document.removeEventListener('touchcancel', handleTouchCancel, { capture: true })
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
+      document.removeEventListener('touchcancel', handleTouchCancel)
     }
   }, [handleProgressMove, handleProgressEnd, handleProgressCancel])
 
@@ -608,24 +608,24 @@ const Footer = () => {
   // Handle volume bar start (mouse down or touch start)
   const handleVolumeStart = useCallback((e) => {
     e.stopPropagation()
-    if (e.touches) {
+    const isTouch = e.touches && e.touches.length > 0
+    if (isTouch) {
       e.preventDefault() // Prevent scrolling on iOS
-      e.stopImmediatePropagation() // Prevent other handlers
     }
     isDraggingVolumeRef.current = true
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX
     updateVolume(clientX)
   }, [updateVolume])
 
   // Handle volume bar move (mouse move or touch move)
   const handleVolumeMove = useCallback((e) => {
     if (!isDraggingVolumeRef.current) return
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.touches) {
-      e.stopImmediatePropagation() // Prevent other handlers on iOS
+    const isTouch = e.touches && e.touches.length > 0
+    if (isTouch) {
+      e.preventDefault()
+      e.stopPropagation()
     }
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX
     updateVolume(clientX)
   }, [updateVolume])
 
@@ -642,12 +642,12 @@ const Footer = () => {
   // Handle volume bar click
   const handleVolumeClick = useCallback((e) => {
     e.stopPropagation()
-    if (e.touches) {
+    const isTouch = e.touches && e.touches.length > 0
+    if (isTouch) {
       e.preventDefault()
-      e.stopImmediatePropagation()
     }
     if (!isDraggingVolumeRef.current) {
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX
+      const clientX = isTouch ? e.touches[0].clientX : e.clientX
       updateVolume(clientX)
     }
   }, [updateVolume])
@@ -682,17 +682,16 @@ const Footer = () => {
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-    // Use capture phase for touch events on iOS for better control
-    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
-    document.addEventListener('touchend', handleTouchEnd, { capture: true })
-    document.addEventListener('touchcancel', handleTouchCancel, { capture: true })
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('touchend', handleTouchEnd)
+    document.addEventListener('touchcancel', handleTouchCancel)
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
-      document.removeEventListener('touchmove', handleTouchMove, { capture: true })
-      document.removeEventListener('touchend', handleTouchEnd, { capture: true })
-      document.removeEventListener('touchcancel', handleTouchCancel, { capture: true })
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
+      document.removeEventListener('touchcancel', handleTouchCancel)
     }
   }, [handleVolumeMove, handleVolumeEnd, handleVolumeCancel])
 
@@ -810,7 +809,7 @@ const Footer = () => {
                   onMouseDown={handleProgressStart}
                   onTouchStart={handleProgressStart}
                   onTouchCancel={handleProgressCancel}
-                  style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+                  style={{ touchAction: 'none' }}
                 >
                   <div className="player__progress-fill" style={{ width: `${progressPercentage}%` }} />
                   <div className="player__progress-handle" style={{ left: `${progressPercentage}%` }} />
@@ -868,7 +867,7 @@ const Footer = () => {
                     onMouseDown={handleVolumeStart}
                     onTouchStart={handleVolumeStart}
                     onTouchCancel={handleVolumeCancel}
-                    style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+                    style={{ touchAction: 'none' }}
                   >
                     <div className="player__volume-fill" style={{ width: `${volume * 100}%` }} />
                   </div>
@@ -1012,7 +1011,7 @@ const Footer = () => {
               onMouseDown={handleProgressStart}
               onTouchStart={handleProgressStart}
               onTouchCancel={handleProgressCancel}
-              style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+              style={{ touchAction: 'none' }}
             >
               <div className="player__progress-fill" style={{ width: `${progressPercentage}%` }} />
             </div>
@@ -1034,7 +1033,7 @@ const Footer = () => {
               onMouseDown={handleVolumeStart}
               onTouchStart={handleVolumeStart}
               onTouchCancel={handleVolumeCancel}
-              style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+              style={{ touchAction: 'none' }}
             >
               <div className="player__volume-fill" style={{ width: `${volume * 100}%` }} />
             </div>
