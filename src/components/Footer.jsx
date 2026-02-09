@@ -169,10 +169,32 @@ const Footer = () => {
         audioRef.current.load()
         updateTime(0)
         
-        // Reset flag after a short delay
+        // If we should be playing, ensure it plays when ready
+        const shouldPlay = isPlaying
+        const handleCanPlayThrough = () => {
+          isSourceChangingRef.current = false
+          if (shouldPlay && audioRef.current) {
+            audioRef.current.play().catch(error => {
+              console.error('Error auto-playing after track change:', error)
+            })
+          }
+        }
+        
+        audioRef.current.addEventListener('canplaythrough', handleCanPlayThrough, { once: true })
+        
+        // Fallback: reset flag after delay even if canplaythrough doesn't fire
         setTimeout(() => {
           isSourceChangingRef.current = false
-        }, 100)
+          if (shouldPlay && audioRef.current && audioRef.current.paused) {
+            audioRef.current.play().catch(error => {
+              console.error('Error auto-playing after track change (fallback):', error)
+            })
+          }
+        }, 500)
+        
+        return () => {
+          audioRef.current?.removeEventListener('canplaythrough', handleCanPlayThrough)
+        }
       }
     } else if (!currentTrack) {
       currentSrcRef.current = null
@@ -182,7 +204,7 @@ const Footer = () => {
         audioRef.current.src = ''
       }
     }
-  }, [currentTrack, updateTime])
+  }, [currentTrack, updateTime, isPlaying])
 
   // Handle play/pause state changes
   useEffect(() => {
@@ -200,24 +222,35 @@ const Footer = () => {
         if (audio.paused && isPlaying && !isSourceChangingRef.current) {
           const playPromise = audio.play()
           if (playPromise !== undefined) {
-            playPromise.catch(error => {
-              console.error('Error playing audio:', error)
-              setPlaying(false)
-            })
+            playPromise
+              .then(() => {
+                // Successfully started playing
+              })
+              .catch(error => {
+                console.error('Error playing audio:', error)
+                // Don't set playing to false on error - might be autoplay restriction
+                // The user can manually play
+              })
           }
         }
       }
 
+      // Try to play immediately if ready, otherwise wait for canplay
       if (audio.readyState >= 2) {
         attemptPlay()
       } else {
         const handleCanPlay = () => {
           attemptPlay()
         }
+        const handleLoadedData = () => {
+          attemptPlay()
+        }
         audio.addEventListener('canplay', handleCanPlay, { once: true })
+        audio.addEventListener('loadeddata', handleLoadedData, { once: true })
         
         return () => {
           audio.removeEventListener('canplay', handleCanPlay)
+          audio.removeEventListener('loadeddata', handleLoadedData)
         }
       }
     } else {
@@ -261,22 +294,10 @@ const Footer = () => {
 
   // Handle ended - auto-play next track (works even in background)
   const handleEnded = useCallback(() => {
-    setPlaying(false)
     updateTime(0)
-    // Auto-play next track - ensure it works in background
-    // Use requestAnimationFrame for better reliability on iOS
-    requestAnimationFrame(() => {
-      playNextTrack()
-      // Ensure audio plays even in background
-      setTimeout(() => {
-        if (audioRef.current && audioRef.current.paused) {
-          audioRef.current.play().catch(error => {
-            console.error('Error auto-playing next track:', error)
-          })
-        }
-      }, 200)
-    })
-  }, [setPlaying, updateTime, playNextTrack])
+    // Auto-play next track immediately - don't wait
+    playNextTrack()
+  }, [updateTime, playNextTrack])
 
   // Handle pause event
   const handlePause = useCallback(() => {
