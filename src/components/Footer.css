@@ -400,6 +400,8 @@ body.footer-fullscreen-active {
 .player__info {
   min-width: 0;
   flex: 1;
+  overflow: hidden;
+  max-width: 100%;
 }
 
 .player__title-wrapper,
@@ -413,10 +415,12 @@ body.footer-fullscreen-active {
 .player__album-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.15rem;
   overflow: hidden;
   margin-top: 0.15rem;
   margin-bottom: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .player__title-wrapper:last-child,
@@ -445,8 +449,11 @@ body.footer-fullscreen-active {
 .player__album-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.15rem;
   margin-top: 0.15rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .player__album-label {
@@ -454,18 +461,22 @@ body.footer-fullscreen-active {
   color: var(--text-muted);
   opacity: 0.8;
   flex-shrink: 0;
-  min-width: 50px;
   width: auto;
   overflow: visible;
   white-space: nowrap;
-  margin-right: 0.5rem;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
 }
 
 .player__album-content {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .player__album-text {
@@ -476,6 +487,8 @@ body.footer-fullscreen-active {
   display: inline-block;
   overflow: visible;
   text-overflow: clip;
+  line-height: 1.2;
+  vertical-align: middle;
 }
 
 /* Center Section: Controls & Progress */
@@ -728,6 +741,7 @@ body.footer-fullscreen-active {
     min-width: 0;
     flex: 1;
     overflow: hidden;
+    max-width: 100%;
   }
 
   .player__title-wrapper,
@@ -799,9 +813,11 @@ body.footer-fullscreen-active {
   .player__album-wrapper {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.15rem;
     overflow: hidden;
     position: relative;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .player__album-wrapper::after {
@@ -817,22 +833,26 @@ body.footer-fullscreen-active {
   }
 
   .player__album-label {
-    min-width: 50px;
     width: auto;
     flex-shrink: 0;
     font-size: 0.7rem;
     overflow: visible;
     white-space: nowrap;
-    margin-right: 0.5rem;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
   }
 
   .player__album-content {
     flex: 1;
     min-width: 0;
+    max-width: 100%;
     overflow: hidden;
     position: relative;
     white-space: nowrap;
     width: 100%;
+    display: flex;
+    align-items: center;
   }
 
   .player__album-inner {
@@ -933,6 +953,8 @@ body.footer-fullscreen-active {
   .player__album-text {
     font-size: 0.65rem;
     animation-duration: 10s;
+    line-height: 1.2;
+    vertical-align: middle;
   }
 
   .player__control-btn {
