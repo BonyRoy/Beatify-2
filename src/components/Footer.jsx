@@ -122,6 +122,13 @@ const Footer = () => {
       return
     }
     
+    // Don't toggle if clicking on volume bar or volume controls
+    if (e.target.closest('.player__volume-bar') || 
+        e.target.closest('.player__volume') ||
+        e.target.closest('.player__progress-bar')) {
+      return
+    }
+    
     // In full-screen mode, close when clicking outside controls
     if (isFullScreen) {
       // Close speed menu if open
@@ -133,14 +140,17 @@ const Footer = () => {
       if (e.target.closest('.player__fullscreen-controls') || 
           e.target.closest('.player__fullscreen-progress') ||
           e.target.closest('.player__progress-bar') ||
-          e.target.closest('.player__fullscreen-extra-controls')) {
+          e.target.closest('.player__fullscreen-extra-controls') ||
+          e.target.closest('.player__volume-bar')) {
         return
       }
       setIsFullScreen(false)
     } else {
       // In regular mode, open full-screen when clicking on left section
       // Don't open if clicking on controls
-      if (e.target.closest('.player__center') || e.target.closest('.player__right')) {
+      if (e.target.closest('.player__center') || 
+          e.target.closest('.player__right') ||
+          e.target.closest('.player__volume-bar')) {
         return
       }
       setIsFullScreen(true)
@@ -611,10 +621,18 @@ const Footer = () => {
     const isTouch = e.touches && e.touches.length > 0
     if (isTouch) {
       e.preventDefault() // Prevent scrolling on iOS
+      e.stopImmediatePropagation() // Prevent other handlers on iOS
     }
     isDraggingVolumeRef.current = true
     const clientX = isTouch ? e.touches[0].clientX : e.clientX
     updateVolume(clientX)
+    // Force immediate volume update for iOS
+    if (isTouch && audioRef.current && volumeBarRef.current) {
+      const rect = volumeBarRef.current.getBoundingClientRect()
+      const x = clientX - rect.left
+      const percentage = Math.max(0, Math.min(1, x / rect.width))
+      audioRef.current.volume = percentage
+    }
   }, [updateVolume])
 
   // Handle volume bar move (mouse move or touch move)
@@ -624,9 +642,17 @@ const Footer = () => {
     if (isTouch) {
       e.preventDefault()
       e.stopPropagation()
+      e.stopImmediatePropagation() // Prevent other handlers on iOS
     }
     const clientX = isTouch ? e.touches[0].clientX : e.clientX
     updateVolume(clientX)
+    // Force immediate volume update for iOS during drag
+    if (isTouch && audioRef.current && volumeBarRef.current) {
+      const rect = volumeBarRef.current.getBoundingClientRect()
+      const x = clientX - rect.left
+      const percentage = Math.max(0, Math.min(1, x / rect.width))
+      audioRef.current.volume = percentage
+    }
   }, [updateVolume])
 
   // Handle volume bar end (mouse up or touch end)
@@ -645,10 +671,18 @@ const Footer = () => {
     const isTouch = e.touches && e.touches.length > 0
     if (isTouch) {
       e.preventDefault()
+      e.stopImmediatePropagation() // Prevent other handlers on iOS
     }
     if (!isDraggingVolumeRef.current) {
       const clientX = isTouch ? e.touches[0].clientX : e.clientX
       updateVolume(clientX)
+      // Force immediate volume update for iOS on click
+      if (isTouch && audioRef.current && volumeBarRef.current) {
+        const rect = volumeBarRef.current.getBoundingClientRect()
+        const x = clientX - rect.left
+        const percentage = Math.max(0, Math.min(1, x / rect.width))
+        audioRef.current.volume = percentage
+      }
     }
   }, [updateVolume])
 
@@ -666,32 +700,37 @@ const Footer = () => {
     }
     const handleTouchMove = (e) => {
       if (isDraggingVolumeRef.current) {
+        // Prevent default scrolling on iOS
+        e.preventDefault()
         handleVolumeMove(e)
       }
     }
-    const handleTouchEnd = () => {
+    const handleTouchEnd = (e) => {
       if (isDraggingVolumeRef.current) {
+        e.preventDefault()
         handleVolumeEnd()
       }
     }
-    const handleTouchCancel = () => {
+    const handleTouchCancel = (e) => {
       if (isDraggingVolumeRef.current) {
+        e.preventDefault()
         handleVolumeCancel()
       }
     }
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-    document.addEventListener('touchmove', handleTouchMove, { passive: false })
-    document.addEventListener('touchend', handleTouchEnd)
-    document.addEventListener('touchcancel', handleTouchCancel)
+    // Use capture phase and passive: false for better iOS control
+    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
+    document.addEventListener('touchend', handleTouchEnd, { passive: false, capture: true })
+    document.addEventListener('touchcancel', handleTouchCancel, { passive: false, capture: true })
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
-      document.removeEventListener('touchmove', handleTouchMove)
-      document.removeEventListener('touchend', handleTouchEnd)
-      document.removeEventListener('touchcancel', handleTouchCancel)
+      document.removeEventListener('touchmove', handleTouchMove, { capture: true })
+      document.removeEventListener('touchend', handleTouchEnd, { capture: true })
+      document.removeEventListener('touchcancel', handleTouchCancel, { capture: true })
     }
   }, [handleVolumeMove, handleVolumeEnd, handleVolumeCancel])
 
