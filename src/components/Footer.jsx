@@ -259,12 +259,23 @@ const Footer = () => {
     setIsLoading(false)
   }, [])
 
-  // Handle ended - auto-play next track
+  // Handle ended - auto-play next track (works even in background)
   const handleEnded = useCallback(() => {
     setPlaying(false)
     updateTime(0)
-    // Auto-play next track
-    playNextTrack()
+    // Auto-play next track - ensure it works in background
+    // Use requestAnimationFrame for better reliability on iOS
+    requestAnimationFrame(() => {
+      playNextTrack()
+      // Ensure audio plays even in background
+      setTimeout(() => {
+        if (audioRef.current && audioRef.current.paused) {
+          audioRef.current.play().catch(error => {
+            console.error('Error auto-playing next track:', error)
+          })
+        }
+      }, 200)
+    })
   }, [setPlaying, updateTime, playNextTrack])
 
   // Handle pause event
@@ -394,23 +405,41 @@ const Footer = () => {
             console.error('Error playing from media session:', error)
             setPlaying(false)
           })
-          // Don't call togglePlayPause - let the audio play event handle state
+          // Explicitly set playing state for iOS
+          setPlaying(true)
         }
       })
 
       mediaSession.setActionHandler('pause', () => {
         if (audioRef.current) {
           audioRef.current.pause()
-          // Don't call togglePlayPause - let the audio pause event handle state
+          // Explicitly set paused state for iOS - notification center controls
+          setPlaying(false)
         }
       })
 
       mediaSession.setActionHandler('previoustrack', () => {
         playPreviousTrack()
+        // Ensure audio plays even when triggered from notification center
+        setTimeout(() => {
+          if (audioRef.current && audioRef.current.paused && currentTrack) {
+            audioRef.current.play().catch(error => {
+              console.error('Error playing previous track from notification:', error)
+            })
+          }
+        }, 100)
       })
 
       mediaSession.setActionHandler('nexttrack', () => {
         playNextTrack()
+        // Ensure audio plays even when triggered from notification center
+        setTimeout(() => {
+          if (audioRef.current && audioRef.current.paused && currentTrack) {
+            audioRef.current.play().catch(error => {
+              console.error('Error playing next track from notification:', error)
+            })
+          }
+        }, 100)
       })
 
       mediaSession.setActionHandler('seekto', (details) => {
@@ -443,10 +472,30 @@ const Footer = () => {
 
     // Update playback state
     const updatePlaybackState = () => {
-      if (mediaSession.setPlaybackState) {
-        mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
+      if (mediaSession.setPlaybackState && audioRef.current) {
+        // Sync with actual audio state for iOS reliability
+        const actualState = audioRef.current.paused ? 'paused' : 'playing'
+        mediaSession.playbackState = actualState
       }
     }
+    
+    // Initial state update
+    updatePlaybackState()
+
+    // Listen to audio events to update playback state (for iOS notification center)
+    const handleAudioPlay = () => {
+      updatePlaybackState()
+    }
+    const handleAudioPause = () => {
+      updatePlaybackState()
+    }
+
+    if (audioRef.current) {
+      audioRef.current.addEventListener('play', handleAudioPlay)
+      audioRef.current.addEventListener('pause', handleAudioPause)
+    }
+
+    // Also update when isPlaying changes
     updatePlaybackState()
 
     // Update position state for scrubbing
@@ -479,6 +528,11 @@ const Footer = () => {
 
     return () => {
       clearInterval(positionUpdateInterval)
+      // Remove audio event listeners
+      if (audioRef.current) {
+        audioRef.current.removeEventListener('play', handleAudioPlay)
+        audioRef.current.removeEventListener('pause', handleAudioPause)
+      }
       // Clear action handlers
       try {
         mediaSession.setActionHandler('play', null)
