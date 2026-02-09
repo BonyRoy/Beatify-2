@@ -253,6 +253,10 @@
   border-radius: 2px;
   cursor: pointer;
   position: relative;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .player__fullscreen-speed {
@@ -582,6 +586,10 @@ body.footer-fullscreen-active {
   border-radius: 2px;
   cursor: pointer;
   position: relative;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .player__progress-fill {
@@ -660,6 +668,10 @@ body.footer-fullscreen-active {
   border-radius: 2px;
   cursor: pointer;
   position: relative;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .player__volume-fill {

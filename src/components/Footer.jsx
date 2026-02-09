@@ -508,6 +508,9 @@ const Footer = () => {
 
   // Handle progress bar start (mouse down or touch start)
   const handleProgressStart = useCallback((e) => {
+    if (e.touches) {
+      e.preventDefault() // Prevent scrolling on iOS
+    }
     isDraggingProgressRef.current = true
     const clientX = e.touches ? e.touches[0].clientX : e.clientX
     updateProgress(clientX)
@@ -526,6 +529,11 @@ const Footer = () => {
     isDraggingProgressRef.current = false
   }, [])
 
+  // Handle progress bar cancel (touch cancelled)
+  const handleProgressCancel = useCallback(() => {
+    isDraggingProgressRef.current = false
+  }, [])
+
   // Handle progress bar click
   const handleProgressClick = useCallback((e) => {
     if (!isDraggingProgressRef.current) {
@@ -536,25 +544,46 @@ const Footer = () => {
 
   // Add global event listeners for dragging
   useEffect(() => {
-    const handleMouseMove = (e) => handleProgressMove(e)
-    const handleMouseUp = () => handleProgressEnd()
-    const handleTouchMove = (e) => handleProgressMove(e)
-    const handleTouchEnd = () => handleProgressEnd()
-
-    if (isDraggingProgressRef.current) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      document.addEventListener('touchmove', handleTouchMove, { passive: false })
-      document.addEventListener('touchend', handleTouchEnd)
+    const handleMouseMove = (e) => {
+      if (isDraggingProgressRef.current) {
+        handleProgressMove(e)
+      }
     }
+    const handleMouseUp = () => {
+      if (isDraggingProgressRef.current) {
+        handleProgressEnd()
+      }
+    }
+    const handleTouchMove = (e) => {
+      if (isDraggingProgressRef.current) {
+        handleProgressMove(e)
+      }
+    }
+    const handleTouchEnd = () => {
+      if (isDraggingProgressRef.current) {
+        handleProgressEnd()
+      }
+    }
+    const handleTouchCancel = () => {
+      if (isDraggingProgressRef.current) {
+        handleProgressCancel()
+      }
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('touchend', handleTouchEnd)
+    document.addEventListener('touchcancel', handleTouchCancel)
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
       document.removeEventListener('touchmove', handleTouchMove)
       document.removeEventListener('touchend', handleTouchEnd)
+      document.removeEventListener('touchcancel', handleTouchCancel)
     }
-  }, [handleProgressMove, handleProgressEnd])
+  }, [handleProgressMove, handleProgressEnd, handleProgressCancel])
 
   // Update volume based on clientX position
   const updateVolume = useCallback((clientX) => {
@@ -568,6 +597,9 @@ const Footer = () => {
   // Handle volume bar start (mouse down or touch start)
   const handleVolumeStart = useCallback((e) => {
     e.stopPropagation()
+    if (e.touches) {
+      e.preventDefault() // Prevent scrolling on iOS
+    }
     isDraggingVolumeRef.current = true
     const clientX = e.touches ? e.touches[0].clientX : e.clientX
     updateVolume(clientX)
@@ -584,6 +616,11 @@ const Footer = () => {
 
   // Handle volume bar end (mouse up or touch end)
   const handleVolumeEnd = useCallback(() => {
+    isDraggingVolumeRef.current = false
+  }, [])
+
+  // Handle volume bar cancel (touch cancelled)
+  const handleVolumeCancel = useCallback(() => {
     isDraggingVolumeRef.current = false
   }, [])
 
@@ -618,19 +655,26 @@ const Footer = () => {
         handleVolumeEnd()
       }
     }
+    const handleTouchCancel = () => {
+      if (isDraggingVolumeRef.current) {
+        handleVolumeCancel()
+      }
+    }
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
     document.addEventListener('touchmove', handleTouchMove, { passive: false })
     document.addEventListener('touchend', handleTouchEnd)
+    document.addEventListener('touchcancel', handleTouchCancel)
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
       document.removeEventListener('touchmove', handleTouchMove)
       document.removeEventListener('touchend', handleTouchEnd)
+      document.removeEventListener('touchcancel', handleTouchCancel)
     }
-  }, [handleVolumeMove, handleVolumeEnd])
+  }, [handleVolumeMove, handleVolumeEnd, handleVolumeCancel])
 
   // Close speed menu when clicking outside
   useEffect(() => {
@@ -945,6 +989,7 @@ const Footer = () => {
               onClick={handleProgressClick}
               onMouseDown={handleProgressStart}
               onTouchStart={handleProgressStart}
+              style={{ touchAction: 'none' }}
             >
               <div className="player__progress-fill" style={{ width: `${progressPercentage}%` }} />
             </div>
@@ -965,6 +1010,7 @@ const Footer = () => {
               onClick={handleVolumeClick}
               onMouseDown={handleVolumeStart}
               onTouchStart={handleVolumeStart}
+              style={{ touchAction: 'none' }}
             >
               <div className="player__volume-fill" style={{ width: `${volume * 100}%` }} />
             </div>
