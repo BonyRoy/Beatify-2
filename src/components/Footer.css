@@ -599,6 +599,12 @@ body.footer-fullscreen-active {
   transition: width 0.1s;
 }
 
+/* Disable transition during dragging for smoother interaction */
+.player__progress-bar:active .player__progress-fill,
+.player__progress-bar.dragging .player__progress-fill {
+  transition: none;
+}
+
 /* Right Section: Volume */
 .player__right {
   display: flex;
@@ -679,6 +685,12 @@ body.footer-fullscreen-active {
   background-color: var(--text-muted);
   border-radius: 2px;
   transition: width 0.1s;
+}
+
+/* Disable transition during dragging for smoother interaction */
+.player__volume-bar:active .player__volume-fill,
+.player__volume-bar.dragging .player__volume-fill {
+  transition: none;
 }
 
 /* Scrolling text animation for mobile */
