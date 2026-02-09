@@ -164,35 +164,77 @@ const Footer = () => {
       if (audioUrl && audioUrl !== currentSrcRef.current) {
         isSourceChangingRef.current = true
         currentSrcRef.current = audioUrl
+        
+        // Store whether we should be playing - critical for iOS background playback
+        const shouldPlay = isPlaying
+        
+        // Pause current track before changing source
         audioRef.current.pause()
         audioRef.current.src = audioUrl
         audioRef.current.load()
         updateTime(0)
         
-        // If we should be playing, ensure it plays when ready
-        const shouldPlay = isPlaying
-        const handleCanPlayThrough = () => {
-          isSourceChangingRef.current = false
-          if (shouldPlay && audioRef.current) {
-            audioRef.current.play().catch(error => {
-              console.error('Error auto-playing after track change:', error)
-            })
+        // Function to attempt playing - used by multiple event listeners
+        const attemptPlay = () => {
+          if (shouldPlay && audioRef.current && audioRef.current.paused) {
+            const playPromise = audioRef.current.play()
+            if (playPromise !== undefined) {
+              playPromise
+                .then(() => {
+                  isSourceChangingRef.current = false
+                })
+                .catch(error => {
+                  // On iOS, autoplay might be blocked - this is expected in some cases
+                  // The Media Session API or user interaction will handle it
+                  console.log('Play attempt (may be blocked on iOS):', error.message)
+                  isSourceChangingRef.current = false
+                })
+            }
+          } else {
+            isSourceChangingRef.current = false
           }
         }
         
+        // Multiple event listeners for iOS reliability - try playing as soon as possible
+        const handleLoadedData = () => {
+          // Try playing as soon as data is loaded - earliest opportunity
+          attemptPlay()
+        }
+        
+        const handleCanPlay = () => {
+          // Try playing when audio can start playing
+          attemptPlay()
+        }
+        
+        const handleCanPlayThrough = () => {
+          // Try playing when enough data is loaded for smooth playback
+          attemptPlay()
+        }
+        
+        audioRef.current.addEventListener('loadeddata', handleLoadedData, { once: true })
+        audioRef.current.addEventListener('canplay', handleCanPlay, { once: true })
         audioRef.current.addEventListener('canplaythrough', handleCanPlayThrough, { once: true })
         
-        // Fallback: reset flag after delay even if canplaythrough doesn't fire
-        setTimeout(() => {
-          isSourceChangingRef.current = false
-          if (shouldPlay && audioRef.current && audioRef.current.paused) {
-            audioRef.current.play().catch(error => {
-              console.error('Error auto-playing after track change (fallback):', error)
-            })
+        // Aggressive fallback for iOS - try multiple times with increasing delays
+        let attempts = 0
+        const maxAttempts = 8
+        const tryPlayFallback = () => {
+          attempts++
+          if (shouldPlay && audioRef.current && audioRef.current.paused && attempts <= maxAttempts) {
+            attemptPlay()
+            // If still paused after a delay, try again
+            if (attempts < maxAttempts) {
+              setTimeout(tryPlayFallback, 150 * attempts)
+            }
           }
-        }, 500)
+        }
+        
+        // Start fallback attempts after initial delay
+        setTimeout(tryPlayFallback, 200)
         
         return () => {
+          audioRef.current?.removeEventListener('loadeddata', handleLoadedData)
+          audioRef.current?.removeEventListener('canplay', handleCanPlay)
           audioRef.current?.removeEventListener('canplaythrough', handleCanPlayThrough)
         }
       }
@@ -295,7 +337,9 @@ const Footer = () => {
   // Handle ended - auto-play next track (works even in background)
   const handleEnded = useCallback(() => {
     updateTime(0)
-    // Auto-play next track immediately - don't wait
+    // Auto-play next track immediately
+    // playNextTrack() will set isPlaying to true and change currentTrack
+    // The source change effect will handle playing the new track
     playNextTrack()
   }, [updateTime, playNextTrack])
 
@@ -397,10 +441,11 @@ const Footer = () => {
 
     const mediaSession = navigator.mediaSession
 
-    // Update metadata when track changes
+    // Update metadata when track changes - do this immediately for iOS
     if (currentTrack) {
       const albumArtUrl = currentTrack.coverUrl || currentTrack.artworkUrl || currentTrack.albumArtUrl
       
+      // Update metadata immediately - critical for iOS background playback
       mediaSession.metadata = new MediaMetadata({
         title: currentTrack.name || 'Unknown Track',
         artist: currentTrack.artist || 'Unknown Artist',
@@ -414,6 +459,11 @@ const Footer = () => {
           { src: albumArtUrl, sizes: '512x512', type: 'image/png' }
         ] : []
       })
+      
+      // Update playback state immediately when track changes
+      if (mediaSession.setPlaybackState) {
+        mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
+      }
     } else {
       mediaSession.metadata = null
     }
@@ -453,14 +503,15 @@ const Footer = () => {
 
       mediaSession.setActionHandler('nexttrack', () => {
         playNextTrack()
-        // Ensure audio plays even when triggered from notification center
+        // Media Session API will handle playback automatically via the source change effect
+        // But ensure it plays for iOS
         setTimeout(() => {
           if (audioRef.current && audioRef.current.paused && currentTrack) {
             audioRef.current.play().catch(error => {
               console.error('Error playing next track from notification:', error)
             })
           }
-        }, 100)
+        }, 200)
       })
 
       mediaSession.setActionHandler('seekto', (details) => {
@@ -1157,6 +1208,7 @@ const Footer = () => {
         onPause={handlePause}
         preload="auto"
         playsInline
+        crossOrigin="anonymous"
       />
     </footer>
     </>
