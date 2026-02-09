@@ -222,11 +222,11 @@
   height: 32px;
 }
 
-/* Volume and Speed Controls */
+/* Speed Control */
 .player__fullscreen-extra-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 1.5rem;
   flex-shrink: 0;
   width: 100%;

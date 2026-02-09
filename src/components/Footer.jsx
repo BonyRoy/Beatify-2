@@ -891,28 +891,8 @@ const Footer = () => {
                 </button>
               </div>
 
-              {/* Volume and Speed Controls */}
+              {/* Speed Control */}
               <div className="player__fullscreen-extra-controls">
-                {/* Volume Control */}
-                <div className="player__fullscreen-volume">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-                  </svg>
-                  <div 
-                    className="player__volume-bar player__volume-bar--fullscreen" 
-                    ref={volumeBarRef}
-                    onClick={handleVolumeClick}
-                    onMouseDown={handleVolumeStart}
-                    onTouchStart={handleVolumeStart}
-                    onTouchCancel={handleVolumeCancel}
-                    style={{ touchAction: 'none' }}
-                  >
-                    <div className="player__volume-fill" style={{ width: `${volume * 100}%` }} />
-                  </div>
-                </div>
-
-                {/* Speed Control */}
                 <div className="player__fullscreen-speed">
                   <button 
                     className="player__speed-btn"
@@ -1058,26 +1038,8 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Right: Volume & Additional Controls */}
+        {/* Right: Additional Controls */}
         <div className="player__right">
-          <div className="player__volume">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-            </svg>
-            <div 
-              className="player__volume-bar" 
-              ref={volumeBarRef}
-              onClick={handleVolumeClick}
-              onMouseDown={handleVolumeStart}
-              onTouchStart={handleVolumeStart}
-              onTouchCancel={handleVolumeCancel}
-              style={{ touchAction: 'none' }}
-            >
-              <div className="player__volume-fill" style={{ width: `${volume * 100}%` }} />
-            </div>
-          </div>
-          
           {/* Speed Control - Hidden on mobile */}
           {!isMobile && (
             <div className="player__speed">
