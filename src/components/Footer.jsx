@@ -122,13 +122,6 @@ const Footer = () => {
       return
     }
     
-    // Don't toggle if clicking on volume bar or volume controls
-    if (e.target.closest('.player__volume-bar') || 
-        e.target.closest('.player__volume') ||
-        e.target.closest('.player__progress-bar')) {
-      return
-    }
-    
     // In full-screen mode, close when clicking outside controls
     if (isFullScreen) {
       // Close speed menu if open
@@ -140,17 +133,14 @@ const Footer = () => {
       if (e.target.closest('.player__fullscreen-controls') || 
           e.target.closest('.player__fullscreen-progress') ||
           e.target.closest('.player__progress-bar') ||
-          e.target.closest('.player__fullscreen-extra-controls') ||
-          e.target.closest('.player__volume-bar')) {
+          e.target.closest('.player__fullscreen-extra-controls')) {
         return
       }
       setIsFullScreen(false)
     } else {
       // In regular mode, open full-screen when clicking on left section
       // Don't open if clicking on controls
-      if (e.target.closest('.player__center') || 
-          e.target.closest('.player__right') ||
-          e.target.closest('.player__volume-bar')) {
+      if (e.target.closest('.player__center') || e.target.closest('.player__right')) {
         return
       }
       setIsFullScreen(true)
@@ -164,79 +154,15 @@ const Footer = () => {
       if (audioUrl && audioUrl !== currentSrcRef.current) {
         isSourceChangingRef.current = true
         currentSrcRef.current = audioUrl
-        
-        // Store whether we should be playing - critical for iOS background playback
-        const shouldPlay = isPlaying
-        
-        // Pause current track before changing source
         audioRef.current.pause()
         audioRef.current.src = audioUrl
         audioRef.current.load()
         updateTime(0)
         
-        // Function to attempt playing - used by multiple event listeners
-        const attemptPlay = () => {
-          if (shouldPlay && audioRef.current && audioRef.current.paused) {
-            const playPromise = audioRef.current.play()
-            if (playPromise !== undefined) {
-              playPromise
-                .then(() => {
-                  isSourceChangingRef.current = false
-                })
-                .catch(error => {
-                  // On iOS, autoplay might be blocked - this is expected in some cases
-                  // The Media Session API or user interaction will handle it
-                  console.log('Play attempt (may be blocked on iOS):', error.message)
-                  isSourceChangingRef.current = false
-                })
-            }
-          } else {
-            isSourceChangingRef.current = false
-          }
-        }
-        
-        // Multiple event listeners for iOS reliability - try playing as soon as possible
-        const handleLoadedData = () => {
-          // Try playing as soon as data is loaded - earliest opportunity
-          attemptPlay()
-        }
-        
-        const handleCanPlay = () => {
-          // Try playing when audio can start playing
-          attemptPlay()
-        }
-        
-        const handleCanPlayThrough = () => {
-          // Try playing when enough data is loaded for smooth playback
-          attemptPlay()
-        }
-        
-        audioRef.current.addEventListener('loadeddata', handleLoadedData, { once: true })
-        audioRef.current.addEventListener('canplay', handleCanPlay, { once: true })
-        audioRef.current.addEventListener('canplaythrough', handleCanPlayThrough, { once: true })
-        
-        // Aggressive fallback for iOS - try multiple times with increasing delays
-        let attempts = 0
-        const maxAttempts = 8
-        const tryPlayFallback = () => {
-          attempts++
-          if (shouldPlay && audioRef.current && audioRef.current.paused && attempts <= maxAttempts) {
-            attemptPlay()
-            // If still paused after a delay, try again
-            if (attempts < maxAttempts) {
-              setTimeout(tryPlayFallback, 150 * attempts)
-            }
-          }
-        }
-        
-        // Start fallback attempts after initial delay
-        setTimeout(tryPlayFallback, 200)
-        
-        return () => {
-          audioRef.current?.removeEventListener('loadeddata', handleLoadedData)
-          audioRef.current?.removeEventListener('canplay', handleCanPlay)
-          audioRef.current?.removeEventListener('canplaythrough', handleCanPlayThrough)
-        }
+        // Reset flag after a short delay
+        setTimeout(() => {
+          isSourceChangingRef.current = false
+        }, 100)
       }
     } else if (!currentTrack) {
       currentSrcRef.current = null
@@ -246,7 +172,7 @@ const Footer = () => {
         audioRef.current.src = ''
       }
     }
-  }, [currentTrack, updateTime, isPlaying])
+  }, [currentTrack, updateTime])
 
   // Handle play/pause state changes
   useEffect(() => {
@@ -264,35 +190,24 @@ const Footer = () => {
         if (audio.paused && isPlaying && !isSourceChangingRef.current) {
           const playPromise = audio.play()
           if (playPromise !== undefined) {
-            playPromise
-              .then(() => {
-                // Successfully started playing
-              })
-              .catch(error => {
-                console.error('Error playing audio:', error)
-                // Don't set playing to false on error - might be autoplay restriction
-                // The user can manually play
-              })
+            playPromise.catch(error => {
+              console.error('Error playing audio:', error)
+              setPlaying(false)
+            })
           }
         }
       }
 
-      // Try to play immediately if ready, otherwise wait for canplay
       if (audio.readyState >= 2) {
         attemptPlay()
       } else {
         const handleCanPlay = () => {
           attemptPlay()
         }
-        const handleLoadedData = () => {
-          attemptPlay()
-        }
         audio.addEventListener('canplay', handleCanPlay, { once: true })
-        audio.addEventListener('loadeddata', handleLoadedData, { once: true })
         
         return () => {
           audio.removeEventListener('canplay', handleCanPlay)
-          audio.removeEventListener('loadeddata', handleLoadedData)
         }
       }
     } else {
@@ -334,14 +249,13 @@ const Footer = () => {
     setIsLoading(false)
   }, [])
 
-  // Handle ended - auto-play next track (works even in background)
+  // Handle ended - auto-play next track
   const handleEnded = useCallback(() => {
+    setPlaying(false)
     updateTime(0)
-    // Auto-play next track immediately
-    // playNextTrack() will set isPlaying to true and change currentTrack
-    // The source change effect will handle playing the new track
+    // Auto-play next track
     playNextTrack()
-  }, [updateTime, playNextTrack])
+  }, [setPlaying, updateTime, playNextTrack])
 
   // Handle pause event
   const handlePause = useCallback(() => {
@@ -441,11 +355,10 @@ const Footer = () => {
 
     const mediaSession = navigator.mediaSession
 
-    // Update metadata when track changes - do this immediately for iOS
+    // Update metadata when track changes
     if (currentTrack) {
       const albumArtUrl = currentTrack.coverUrl || currentTrack.artworkUrl || currentTrack.albumArtUrl
       
-      // Update metadata immediately - critical for iOS background playback
       mediaSession.metadata = new MediaMetadata({
         title: currentTrack.name || 'Unknown Track',
         artist: currentTrack.artist || 'Unknown Artist',
@@ -459,11 +372,6 @@ const Footer = () => {
           { src: albumArtUrl, sizes: '512x512', type: 'image/png' }
         ] : []
       })
-      
-      // Update playback state immediately when track changes
-      if (mediaSession.setPlaybackState) {
-        mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
-      }
     } else {
       mediaSession.metadata = null
     }
@@ -476,42 +384,23 @@ const Footer = () => {
             console.error('Error playing from media session:', error)
             setPlaying(false)
           })
-          // Explicitly set playing state for iOS
-          setPlaying(true)
+          // Don't call togglePlayPause - let the audio play event handle state
         }
       })
 
       mediaSession.setActionHandler('pause', () => {
         if (audioRef.current) {
           audioRef.current.pause()
-          // Explicitly set paused state for iOS - notification center controls
-          setPlaying(false)
+          // Don't call togglePlayPause - let the audio pause event handle state
         }
       })
 
       mediaSession.setActionHandler('previoustrack', () => {
         playPreviousTrack()
-        // Ensure audio plays even when triggered from notification center
-        setTimeout(() => {
-          if (audioRef.current && audioRef.current.paused && currentTrack) {
-            audioRef.current.play().catch(error => {
-              console.error('Error playing previous track from notification:', error)
-            })
-          }
-        }, 100)
       })
 
       mediaSession.setActionHandler('nexttrack', () => {
         playNextTrack()
-        // Media Session API will handle playback automatically via the source change effect
-        // But ensure it plays for iOS
-        setTimeout(() => {
-          if (audioRef.current && audioRef.current.paused && currentTrack) {
-            audioRef.current.play().catch(error => {
-              console.error('Error playing next track from notification:', error)
-            })
-          }
-        }, 200)
       })
 
       mediaSession.setActionHandler('seekto', (details) => {
@@ -544,30 +433,10 @@ const Footer = () => {
 
     // Update playback state
     const updatePlaybackState = () => {
-      if (mediaSession.setPlaybackState && audioRef.current) {
-        // Sync with actual audio state for iOS reliability
-        const actualState = audioRef.current.paused ? 'paused' : 'playing'
-        mediaSession.playbackState = actualState
+      if (mediaSession.setPlaybackState) {
+        mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
       }
     }
-    
-    // Initial state update
-    updatePlaybackState()
-
-    // Listen to audio events to update playback state (for iOS notification center)
-    const handleAudioPlay = () => {
-      updatePlaybackState()
-    }
-    const handleAudioPause = () => {
-      updatePlaybackState()
-    }
-
-    if (audioRef.current) {
-      audioRef.current.addEventListener('play', handleAudioPlay)
-      audioRef.current.addEventListener('pause', handleAudioPause)
-    }
-
-    // Also update when isPlaying changes
     updatePlaybackState()
 
     // Update position state for scrubbing
@@ -600,11 +469,6 @@ const Footer = () => {
 
     return () => {
       clearInterval(positionUpdateInterval)
-      // Remove audio event listeners
-      if (audioRef.current) {
-        audioRef.current.removeEventListener('play', handleAudioPlay)
-        audioRef.current.removeEventListener('pause', handleAudioPause)
-      }
       // Clear action handlers
       try {
         mediaSession.setActionHandler('play', null)
@@ -644,25 +508,16 @@ const Footer = () => {
 
   // Handle progress bar start (mouse down or touch start)
   const handleProgressStart = useCallback((e) => {
-    const isTouch = e.touches && e.touches.length > 0
-    if (isTouch) {
-      e.preventDefault() // Prevent scrolling on iOS
-      e.stopPropagation() // Prevent event bubbling
-    }
     isDraggingProgressRef.current = true
-    const clientX = isTouch ? e.touches[0].clientX : e.clientX
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
     updateProgress(clientX)
   }, [updateProgress])
 
   // Handle progress bar move (mouse move or touch move)
   const handleProgressMove = useCallback((e) => {
     if (!isDraggingProgressRef.current) return
-    const isTouch = e.touches && e.touches.length > 0
-    if (isTouch) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
-    const clientX = isTouch ? e.touches[0].clientX : e.clientX
+    e.preventDefault()
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
     updateProgress(clientX)
   }, [updateProgress])
 
@@ -671,62 +526,35 @@ const Footer = () => {
     isDraggingProgressRef.current = false
   }, [])
 
-  // Handle progress bar cancel (touch cancelled)
-  const handleProgressCancel = useCallback(() => {
-    isDraggingProgressRef.current = false
-  }, [])
-
   // Handle progress bar click
   const handleProgressClick = useCallback((e) => {
     if (!isDraggingProgressRef.current) {
-      const isTouch = e.touches && e.touches.length > 0
-      const clientX = isTouch ? e.touches[0].clientX : e.clientX
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX
       updateProgress(clientX)
     }
   }, [updateProgress])
 
   // Add global event listeners for dragging
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (isDraggingProgressRef.current) {
-        handleProgressMove(e)
-      }
-    }
-    const handleMouseUp = () => {
-      if (isDraggingProgressRef.current) {
-        handleProgressEnd()
-      }
-    }
-    const handleTouchMove = (e) => {
-      if (isDraggingProgressRef.current) {
-        handleProgressMove(e)
-      }
-    }
-    const handleTouchEnd = () => {
-      if (isDraggingProgressRef.current) {
-        handleProgressEnd()
-      }
-    }
-    const handleTouchCancel = () => {
-      if (isDraggingProgressRef.current) {
-        handleProgressCancel()
-      }
-    }
+    const handleMouseMove = (e) => handleProgressMove(e)
+    const handleMouseUp = () => handleProgressEnd()
+    const handleTouchMove = (e) => handleProgressMove(e)
+    const handleTouchEnd = () => handleProgressEnd()
 
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-    document.addEventListener('touchmove', handleTouchMove, { passive: false })
-    document.addEventListener('touchend', handleTouchEnd)
-    document.addEventListener('touchcancel', handleTouchCancel)
+    if (isDraggingProgressRef.current) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd)
+    }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
       document.removeEventListener('touchmove', handleTouchMove)
       document.removeEventListener('touchend', handleTouchEnd)
-      document.removeEventListener('touchcancel', handleTouchCancel)
     }
-  }, [handleProgressMove, handleProgressEnd, handleProgressCancel])
+  }, [handleProgressMove, handleProgressEnd])
 
   // Update volume based on clientX position
   const updateVolume = useCallback((clientX) => {
@@ -734,51 +562,24 @@ const Footer = () => {
     const rect = volumeBarRef.current.getBoundingClientRect()
     const x = clientX - rect.left
     const percentage = Math.max(0, Math.min(1, x / rect.width))
-    // Update both state and audio element immediately for responsive feedback
     setVolumeLevel(percentage)
-    if (audioRef.current) {
-      audioRef.current.volume = percentage
-    }
   }, [setVolumeLevel])
 
   // Handle volume bar start (mouse down or touch start)
   const handleVolumeStart = useCallback((e) => {
     e.stopPropagation()
-    const isTouch = e.touches && e.touches.length > 0
-    if (isTouch) {
-      e.preventDefault() // Prevent scrolling on iOS
-      e.stopImmediatePropagation() // Prevent other handlers on iOS
-    }
     isDraggingVolumeRef.current = true
-    const clientX = isTouch ? e.touches[0].clientX : e.clientX
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
     updateVolume(clientX)
-    // Force immediate volume update for iOS
-    if (isTouch && audioRef.current && volumeBarRef.current) {
-      const rect = volumeBarRef.current.getBoundingClientRect()
-      const x = clientX - rect.left
-      const percentage = Math.max(0, Math.min(1, x / rect.width))
-      audioRef.current.volume = percentage
-    }
   }, [updateVolume])
 
   // Handle volume bar move (mouse move or touch move)
   const handleVolumeMove = useCallback((e) => {
     if (!isDraggingVolumeRef.current) return
-    const isTouch = e.touches && e.touches.length > 0
-    if (isTouch) {
-      e.preventDefault()
-      e.stopPropagation()
-      e.stopImmediatePropagation() // Prevent other handlers on iOS
-    }
-    const clientX = isTouch ? e.touches[0].clientX : e.clientX
+    e.preventDefault()
+    e.stopPropagation()
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
     updateVolume(clientX)
-    // Force immediate volume update for iOS during drag
-    if (isTouch && audioRef.current && volumeBarRef.current) {
-      const rect = volumeBarRef.current.getBoundingClientRect()
-      const x = clientX - rect.left
-      const percentage = Math.max(0, Math.min(1, x / rect.width))
-      audioRef.current.volume = percentage
-    }
   }, [updateVolume])
 
   // Handle volume bar end (mouse up or touch end)
@@ -786,29 +587,12 @@ const Footer = () => {
     isDraggingVolumeRef.current = false
   }, [])
 
-  // Handle volume bar cancel (touch cancelled)
-  const handleVolumeCancel = useCallback(() => {
-    isDraggingVolumeRef.current = false
-  }, [])
-
   // Handle volume bar click
   const handleVolumeClick = useCallback((e) => {
     e.stopPropagation()
-    const isTouch = e.touches && e.touches.length > 0
-    if (isTouch) {
-      e.preventDefault()
-      e.stopImmediatePropagation() // Prevent other handlers on iOS
-    }
     if (!isDraggingVolumeRef.current) {
-      const clientX = isTouch ? e.touches[0].clientX : e.clientX
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX
       updateVolume(clientX)
-      // Force immediate volume update for iOS on click
-      if (isTouch && audioRef.current && volumeBarRef.current) {
-        const rect = volumeBarRef.current.getBoundingClientRect()
-        const x = clientX - rect.left
-        const percentage = Math.max(0, Math.min(1, x / rect.width))
-        audioRef.current.volume = percentage
-      }
     }
   }, [updateVolume])
 
@@ -826,39 +610,27 @@ const Footer = () => {
     }
     const handleTouchMove = (e) => {
       if (isDraggingVolumeRef.current) {
-        // Prevent default scrolling on iOS
-        e.preventDefault()
         handleVolumeMove(e)
       }
     }
-    const handleTouchEnd = (e) => {
+    const handleTouchEnd = () => {
       if (isDraggingVolumeRef.current) {
-        e.preventDefault()
         handleVolumeEnd()
-      }
-    }
-    const handleTouchCancel = (e) => {
-      if (isDraggingVolumeRef.current) {
-        e.preventDefault()
-        handleVolumeCancel()
       }
     }
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-    // Use capture phase and passive: false for better iOS control
-    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
-    document.addEventListener('touchend', handleTouchEnd, { passive: false, capture: true })
-    document.addEventListener('touchcancel', handleTouchCancel, { passive: false, capture: true })
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('touchend', handleTouchEnd)
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
-      document.removeEventListener('touchmove', handleTouchMove, { capture: true })
-      document.removeEventListener('touchend', handleTouchEnd, { capture: true })
-      document.removeEventListener('touchcancel', handleTouchCancel, { capture: true })
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [handleVolumeMove, handleVolumeEnd, handleVolumeCancel])
+  }, [handleVolumeMove, handleVolumeEnd])
 
   // Close speed menu when clicking outside
   useEffect(() => {
@@ -973,7 +745,6 @@ const Footer = () => {
                   onClick={handleProgressClick}
                   onMouseDown={handleProgressStart}
                   onTouchStart={handleProgressStart}
-                  onTouchCancel={handleProgressCancel}
                   style={{ touchAction: 'none' }}
                 >
                   <div className="player__progress-fill" style={{ width: `${progressPercentage}%` }} />
@@ -1017,8 +788,27 @@ const Footer = () => {
                 </button>
               </div>
 
-              {/* Speed Control */}
+              {/* Volume and Speed Controls */}
               <div className="player__fullscreen-extra-controls">
+                {/* Volume Control */}
+                <div className="player__fullscreen-volume">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                  </svg>
+                  <div 
+                    className="player__volume-bar player__volume-bar--fullscreen" 
+                    ref={volumeBarRef}
+                    onClick={handleVolumeClick}
+                    onMouseDown={handleVolumeStart}
+                    onTouchStart={handleVolumeStart}
+                    style={{ touchAction: 'none' }}
+                  >
+                    <div className="player__volume-fill" style={{ width: `${volume * 100}%` }} />
+                  </div>
+                </div>
+
+                {/* Speed Control */}
                 <div className="player__fullscreen-speed">
                   <button 
                     className="player__speed-btn"
@@ -1155,8 +945,6 @@ const Footer = () => {
               onClick={handleProgressClick}
               onMouseDown={handleProgressStart}
               onTouchStart={handleProgressStart}
-              onTouchCancel={handleProgressCancel}
-              style={{ touchAction: 'none' }}
             >
               <div className="player__progress-fill" style={{ width: `${progressPercentage}%` }} />
             </div>
@@ -1164,8 +952,24 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Right: Additional Controls */}
+        {/* Right: Volume & Additional Controls */}
         <div className="player__right">
+          <div className="player__volume">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+            </svg>
+            <div 
+              className="player__volume-bar" 
+              ref={volumeBarRef}
+              onClick={handleVolumeClick}
+              onMouseDown={handleVolumeStart}
+              onTouchStart={handleVolumeStart}
+            >
+              <div className="player__volume-fill" style={{ width: `${volume * 100}%` }} />
+            </div>
+          </div>
+          
           {/* Speed Control - Hidden on mobile */}
           {!isMobile && (
             <div className="player__speed">
@@ -1208,7 +1012,6 @@ const Footer = () => {
         onPause={handlePause}
         preload="auto"
         playsInline
-        crossOrigin="anonymous"
       />
     </footer>
     </>
