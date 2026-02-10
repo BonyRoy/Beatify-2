@@ -238,9 +238,23 @@ const Footer = () => {
       
       if (isIOS && duration > 0 && currentTime >= duration - 0.5 && isPlaying) {
         // Track has ended, play next track
-        setPlaying(false)
-        updateTime(0)
-        playNextTrack()
+        // Use a flag to prevent multiple triggers
+        if (!audioRef.current.dataset.ending) {
+          audioRef.current.dataset.ending = 'true'
+          setPlaying(false)
+          updateTime(0)
+          
+          // Small delay to ensure state is updated, then play next
+          setTimeout(() => {
+            playNextTrack()
+            // Clear flag after track changes
+            setTimeout(() => {
+              if (audioRef.current) {
+                delete audioRef.current.dataset.ending
+              }
+            }, 500)
+          }, 100)
+        }
       }
     }
   }, [updateTime, duration, isPlaying, setPlaying, playNextTrack])
@@ -357,12 +371,19 @@ const Footer = () => {
     
     if (!isIOS) return // Only for iOS
     
+    let resumeAttempted = false
+    
     // For iOS: Check periodically if we were paused for a call and try to resume
     const checkAndResumeAfterCall = () => {
       if (!currentTrack || !audioRef.current) return
       
+      // Only attempt resume once per call pause
+      if (!pausedForCallRef.current || resumeAttempted) return
+      
       // If we were paused for a call and audio is still paused but should be playing
       if (pausedForCallRef.current && audioRef.current.paused && isPlaying) {
+        resumeAttempted = true
+        
         // Resume from 2 seconds back
         const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
         
@@ -370,51 +391,46 @@ const Footer = () => {
         audioRef.current.currentTime = resumeTime
         seekTo(resumeTime)
         
-        // Wait for seek to complete, then play
-        const tryPlay = () => {
+        // Try to play once
+        setTimeout(() => {
           if (audioRef.current && currentTrack && pausedForCallRef.current && audioRef.current.paused) {
-            const playPromise = audioRef.current.play()
-            
-            if (playPromise !== undefined) {
-              playPromise
-                .then(() => {
-                  // Successfully playing - clear call state
-                  pausedForCallRef.current = false
-                  timeBeforeCallRef.current = 0
-                  setPlaying(true)
-                })
-                .catch(error => {
-                  // If play fails, might still be in call - will retry on next interval
-                  console.log('Resume after call failed, will retry:', error)
-                })
-            } else {
-              // Play started immediately
-              pausedForCallRef.current = false
-              timeBeforeCallRef.current = 0
-              setPlaying(true)
-            }
+            audioRef.current.play()
+              .then(() => {
+                // Successfully playing - clear call state
+                pausedForCallRef.current = false
+                timeBeforeCallRef.current = 0
+                resumeAttempted = false
+                setPlaying(true)
+              })
+              .catch(error => {
+                // If play fails, reset flag to retry later
+                resumeAttempted = false
+                console.log('Resume after call failed:', error)
+              })
+          } else {
+            resumeAttempted = false
           }
-        }
-        
-        // Wait a bit for seek to complete
-        setTimeout(tryPlay, 200)
+        }, 500)
       }
     }
     
     // Check when visibility changes (call might have ended)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        resumeAttempted = false // Reset flag on visibility change
         // Small delay to ensure call has fully ended
         setTimeout(() => {
           checkAndResumeAfterCall()
-        }, 800)
+        }, 1000)
       }
     }
     
-    // For iOS: Periodically check if we can resume after a call
+    // For iOS: Periodically check if we can resume after a call (less frequent to avoid loops)
     const resumeCheckInterval = setInterval(() => {
-      checkAndResumeAfterCall()
-    }, 1500) // Check every 1.5 seconds
+      if (!resumeAttempted) {
+        checkAndResumeAfterCall()
+      }
+    }, 2000) // Check every 2 seconds
     
     document.addEventListener('visibilitychange', handleVisibilityChange)
     
