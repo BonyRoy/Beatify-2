@@ -241,47 +241,8 @@ const Footer = () => {
     if (audioRef.current) {
       const currentTime = audioRef.current.currentTime
       updateTime(currentTime)
-      
-      // iOS: Check if track ended (ended event might not fire in background)
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-      
-      if (isIOS && duration > 0 && currentTime >= duration - 0.5 && isPlaying) {
-        // Track has ended, play next track
-        // Use a flag to prevent multiple triggers
-        if (!audioRef.current.dataset.ending) {
-          audioRef.current.dataset.ending = 'true'
-          setPlaying(false)
-          updateTime(0)
-          
-          // On iOS, use Media Session API to trigger next track (works in background)
-          if ('mediaSession' in navigator) {
-            // Trigger nexttrack handler programmatically - this works on iOS
-            try {
-              const mediaSession = navigator.mediaSession
-              // Simulate nexttrack action - this should work even in background
-              nextTrackPendingRef.current = true
-              playNextTrack()
-            } catch (e) {
-              // Fallback to direct call
-              nextTrackPendingRef.current = true
-              playNextTrack()
-            }
-          } else {
-            nextTrackPendingRef.current = true
-            playNextTrack()
-          }
-          
-          // Clear flag after track changes
-          setTimeout(() => {
-            if (audioRef.current) {
-              delete audioRef.current.dataset.ending
-            }
-          }, 500)
-        }
-      }
     }
-  }, [updateTime, duration, isPlaying, setPlaying, playNextTrack])
+  }, [updateTime])
 
   // Handle loaded metadata
   const handleLoadedMetadata = useCallback(() => {
@@ -397,81 +358,107 @@ const Footer = () => {
 
   const speedOptions = [0.25, 0.5, 1, 1.5, 2]
 
-  // Handle call interruptions - detect and resume after iPhone calls
+  // iOS Background Monitoring - Aggressive workaround for background limitations
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
     
     if (!isIOS) return // Only for iOS
     
+    let lastCheckedTime = 0
+    let lastTrackId = null
     let resumeAttempted = false
     
-    // For iOS: Check periodically if we were paused for a call and try to resume
-    const checkAndResumeAfterCall = () => {
+    // Comprehensive background monitor
+    const iosBackgroundMonitor = () => {
       if (!currentTrack || !audioRef.current) return
       
-      // Only attempt resume once per call pause
-      if (!pausedForCallRef.current || resumeAttempted) return
+      const currentTrackId = currentTrack.uuid || currentTrack.id
+      const audio = audioRef.current
+      const now = Date.now()
       
-      // If we were paused for a call and audio is still paused but should be playing
-      if (pausedForCallRef.current && audioRef.current.paused && isPlaying) {
+      // 1. Check if track ended (for background autoplay)
+      if (duration > 0 && isPlaying && !audio.paused) {
+        const currentAudioTime = audio.currentTime
+        const timeRemaining = duration - currentAudioTime
+        
+        // If track is very close to end or past end
+        if (timeRemaining <= 0.5 && !audio.dataset.ending) {
+          audio.dataset.ending = 'true'
+          setPlaying(false)
+          updateTime(0)
+          
+          // Trigger next track
+          nextTrackPendingRef.current = true
+          playNextTrack()
+          
+          // Clear flag after delay
+          setTimeout(() => {
+            if (audioRef.current) {
+              delete audioRef.current.dataset.ending
+            }
+          }, 1000)
+        }
+      }
+      
+      // 2. Check for call resume
+      if (pausedForCallRef.current && audio.paused && isPlaying && !resumeAttempted) {
         resumeAttempted = true
         
         // Resume from 2 seconds back
         const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
-        
-        // Set time first
-        audioRef.current.currentTime = resumeTime
+        audio.currentTime = resumeTime
         seekTo(resumeTime)
         
-        // Try to play once
+        // Try to play
         setTimeout(() => {
-          if (audioRef.current && currentTrack && pausedForCallRef.current && audioRef.current.paused) {
-            audioRef.current.play()
+          if (audio && currentTrack && pausedForCallRef.current && audio.paused) {
+            audio.play()
               .then(() => {
-                // Successfully playing - clear call state
                 pausedForCallRef.current = false
                 timeBeforeCallRef.current = 0
                 resumeAttempted = false
                 setPlaying(true)
               })
-              .catch(error => {
-                // If play fails, reset flag to retry later
+              .catch(() => {
                 resumeAttempted = false
-                console.log('Resume after call failed:', error)
               })
           } else {
             resumeAttempted = false
           }
         }, 500)
       }
+      
+      // 3. Check if track changed but not playing (should be playing)
+      if (currentTrackId !== lastTrackId && isPlaying && audio.paused && !isSourceChangingRef.current) {
+        // Track changed, should be playing
+        audio.play().catch(() => {
+          // Ignore errors
+        })
+      }
+      
+      lastCheckedTime = now
+      lastTrackId = currentTrackId
     }
     
-    // Check when visibility changes (call might have ended)
+    // Run monitor frequently (every 500ms for responsive background handling)
+    const monitorInterval = setInterval(iosBackgroundMonitor, 500)
+    
+    // Also check on visibility change
     const handleVisibilityChange = () => {
+      resumeAttempted = false
       if (document.visibilityState === 'visible') {
-        resumeAttempted = false // Reset flag on visibility change
-        // Small delay to ensure call has fully ended
-        setTimeout(() => {
-          checkAndResumeAfterCall()
-        }, 1000)
+        setTimeout(iosBackgroundMonitor, 300)
       }
     }
-    
-    // For iOS: Periodically check if we can resume after a call (less frequent to avoid loops)
-    const resumeCheckInterval = setInterval(() => {
-      if (!resumeAttempted) {
-        checkAndResumeAfterCall()
-      }
-    }, 2000) // Check every 2 seconds
     
     document.addEventListener('visibilitychange', handleVisibilityChange)
     
     return () => {
+      clearInterval(monitorInterval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      clearInterval(resumeCheckInterval)
     }
-  }, [isPlaying, currentTrack, setPlaying, seekTo])
+  }, [isPlaying, currentTrack, duration, currentTime, setPlaying, seekTo, updateTime, playNextTrack])
 
   // Handle audio interruptions
   useEffect(() => {
@@ -595,14 +582,23 @@ const Footer = () => {
             // Mark as user interaction since Media Session API counts as interaction
             hasUserInteractedRef.current = true
             nextTrackPendingRef.current = true
+            
+            // Immediately play next track
             playNextTrack()
-            // Update metadata after track change (iOS needs delay)
+            
+            // Force play after track changes (iOS requirement)
             setTimeout(() => {
+              if (audioRef.current && isPlaying && audioRef.current.paused) {
+                audioRef.current.play().catch(() => {
+                  // Will retry in background monitor
+                })
+              }
+              
               updateMetadata()
               if (mediaSession.setPlaybackState && audioRef.current) {
                 mediaSession.playbackState = audioRef.current.paused ? 'paused' : 'playing'
               }
-            }, isIOS ? 300 : 100)
+            }, isIOS ? 500 : 100)
           }
         })
 
