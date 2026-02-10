@@ -261,10 +261,20 @@ const Footer = () => {
 
   // Handle pause event
   const handlePause = useCallback(() => {
-    // Sync state when audio is paused externally (e.g., from media session)
+    // Sync state when audio is paused externally (e.g., from media session or phone call)
     if (isPlaying) {
       setPlaying(false)
-      if (currentTrack) {
+      if (currentTrack && audioRef.current) {
+        // On iOS, if audio is paused while we think it should be playing,
+        // it might be a phone call - save the time
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+        
+        if (isIOS && !pausedForCallRef.current) {
+          // Save current time for potential call resume
+          timeBeforeCallRef.current = audioRef.current.currentTime
+          pausedForCallRef.current = true
+        }
         shouldAutoResumeRef.current = true
       }
     } else {
@@ -275,6 +285,20 @@ const Footer = () => {
   // Handle play event
   const handlePlay = useCallback(() => {
     shouldAutoResumeRef.current = false
+    
+    // On iOS, if we were paused for a call and now playing, resume from 2 seconds back
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    
+    if (isIOS && pausedForCallRef.current && audioRef.current && currentTrack) {
+      // Resume from 2 seconds back
+      const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
+      audioRef.current.currentTime = resumeTime
+      seekTo(resumeTime)
+      pausedForCallRef.current = false
+      timeBeforeCallRef.current = 0
+    }
+    
     setPlaying(true)
     
     // Update media session metadata when playback starts (iOS requirement)
@@ -304,7 +328,7 @@ const Footer = () => {
         console.error('Error updating media session on play:', error)
       }
     }
-  }, [setPlaying, currentTrack])
+  }, [setPlaying, currentTrack, seekTo])
 
   // Update playback speed
   useEffect(() => {
@@ -321,80 +345,58 @@ const Footer = () => {
 
   const speedOptions = [0.25, 0.5, 1, 1.5, 2]
 
-  // Handle call interruptions - only pause on actual phone calls, allow background playback
+  // Handle call interruptions - detect and resume after iPhone calls
   useEffect(() => {
-    // Detect if audio was paused due to a phone call (iOS/Android)
-    // We can't reliably detect calls, so we'll use a different approach:
-    // Only handle cases where audio is paused by the system (not by user)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
     
-    const handleVisibilityChange = () => {
-      // Don't pause on visibility change - allow background playback
-      // Only sync state if audio was paused by system (like a phone call)
-      if (document.visibilityState === 'visible' && currentTrack && audioRef.current) {
-        // Check if audio was paused but we think it should be playing
-        // This might indicate a system interruption (like a call)
-        if (isPlaying && audioRef.current.paused && !pausedForCallRef.current) {
-          // Might have been paused by system (call), save state
-          timeBeforeCallRef.current = audioRef.current.currentTime
-          pausedForCallRef.current = true
-          
-          // Try to resume after a delay (call might have ended)
-          setTimeout(() => {
-            if (audioRef.current && currentTrack && pausedForCallRef.current && document.visibilityState === 'visible') {
-              // Resume from 2 seconds back
-              const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
-              audioRef.current.currentTime = resumeTime
-              seekTo(resumeTime)
-              
-              audioRef.current.play().then(() => {
-                setPlaying(true)
-                pausedForCallRef.current = false
-                timeBeforeCallRef.current = 0
-              }).catch(error => {
-                // If play fails, it might still be a call - keep paused state
-                console.log('Audio might still be interrupted:', error)
-              })
-            }
-          }, 500)
-        } else if (pausedForCallRef.current && !audioRef.current.paused) {
-          // Audio resumed, clear call state
-          pausedForCallRef.current = false
-          timeBeforeCallRef.current = 0
-        }
-      }
-    }
-
-    // Handle page unload (tab close) - don't pause, let browser handle it
-    // Only use this to detect if we're coming back from a potential call
-    const handlePageShow = () => {
-      if (!currentTrack || !audioRef.current) return
-      // If we were paused for a call and page is shown again, try to resume
-      if (pausedForCallRef.current && isPlaying) {
+    // For iOS: Check periodically if we were paused for a call and try to resume
+    const checkAndResumeAfterCall = () => {
+      if (!isIOS || !currentTrack || !audioRef.current) return
+      
+      // If we were paused for a call and audio is still paused, try to resume
+      if (pausedForCallRef.current && audioRef.current.paused && isPlaying) {
+        // Resume from 2 seconds back
         const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
         audioRef.current.currentTime = resumeTime
         seekTo(resumeTime)
         
-        setTimeout(() => {
-          if (audioRef.current && currentTrack && pausedForCallRef.current) {
-            audioRef.current.play().then(() => {
-              setPlaying(true)
-            }).catch(error => {
-              console.error('Error resuming audio after call:', error)
-            })
-            pausedForCallRef.current = false
-            timeBeforeCallRef.current = 0
-          }
-        }, 300)
+        audioRef.current.play().then(() => {
+          setPlaying(true)
+          pausedForCallRef.current = false
+          timeBeforeCallRef.current = 0
+        }).catch(error => {
+          // If play fails, might still be in call - will retry
+          console.log('Resume after call failed, will retry:', error)
+        })
       }
     }
-
-    // Only listen to visibility change for call detection, not for pausing
+    
+    // Check when visibility changes (call might have ended)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isIOS) {
+        // Small delay to ensure call has fully ended
+        setTimeout(() => {
+          checkAndResumeAfterCall()
+        }, 500)
+      }
+    }
+    
+    // For iOS: Periodically check if we can resume after a call
+    let resumeCheckInterval = null
+    if (isIOS) {
+      resumeCheckInterval = setInterval(() => {
+        checkAndResumeAfterCall()
+      }, 1000) // Check every second
+    }
+    
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('pageshow', handlePageShow)
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('pageshow', handlePageShow)
+      if (resumeCheckInterval) {
+        clearInterval(resumeCheckInterval)
+      }
     }
   }, [isPlaying, currentTrack, setPlaying, seekTo])
 
