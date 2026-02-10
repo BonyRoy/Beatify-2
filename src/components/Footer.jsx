@@ -881,14 +881,13 @@ const Footer = () => {
             </div>
             {currentTrack.album && (
               <div className="player__album-wrapper">
-                <span className="player__album-label">Album:</span>
                 <div className="player__album-content">
                   <div className={`player__album-inner ${shouldScrollAlbum ? 'player__text--scroll' : ''}`}>
                     <span 
                       ref={albumRef}
                       className="player__album-text"
                     >
-                      {currentTrack.album}
+                      from "{currentTrack.album}"
                     </span>
                     {shouldScrollAlbum && (
                       <span className="player__album-text player__text--duplicate">
