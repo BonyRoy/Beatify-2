@@ -86,6 +86,8 @@ const Footer = () => {
   const [isMobile, setIsMobile] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
+  const pausedForCallRef = useRef(false)
+  const timeBeforeCallRef = useRef(0)
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -259,12 +261,16 @@ const Footer = () => {
 
   // Handle pause event
   const handlePause = useCallback(() => {
-    if (isPlaying && currentTrack) {
-      shouldAutoResumeRef.current = true
+    // Sync state when audio is paused externally (e.g., from media session)
+    if (isPlaying) {
+      setPlaying(false)
+      if (currentTrack) {
+        shouldAutoResumeRef.current = true
+      }
     } else {
       shouldAutoResumeRef.current = false
     }
-  }, [isPlaying, currentTrack])
+  }, [isPlaying, currentTrack, setPlaying])
 
   // Handle play event
   const handlePlay = useCallback(() => {
@@ -287,43 +293,104 @@ const Footer = () => {
 
   const speedOptions = [0.25, 0.5, 1, 1.5, 2]
 
-  // Handle visibility change (when app comes back to foreground after call)
+  // Handle call interruptions - pause on call, resume 2 seconds back when call ends
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        return
-      }
+      if (!currentTrack || !audioRef.current) return
 
-      if (
-        document.visibilityState === 'visible' &&
-        shouldAutoResumeRef.current &&
-        isPlaying &&
-        currentTrack &&
-        audioRef.current
-      ) {
+      if (document.visibilityState === 'hidden') {
+        // App went to background (likely a call)
+        if (isPlaying && !audioRef.current.paused && !pausedForCallRef.current) {
+          // Save current time and pause
+          timeBeforeCallRef.current = audioRef.current.currentTime
+          pausedForCallRef.current = true
+          audioRef.current.pause()
+          setPlaying(false)
+        }
+      } else if (document.visibilityState === 'visible') {
+        // App came back to foreground (call ended)
+        if (pausedForCallRef.current && currentTrack && audioRef.current) {
+          // Resume from 2 seconds back (or from start if less than 2 seconds)
+          const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
+          audioRef.current.currentTime = resumeTime
+          seekTo(resumeTime)
+          
+          // Resume playback after a short delay
+          setTimeout(() => {
+            if (audioRef.current && currentTrack && document.visibilityState === 'visible' && pausedForCallRef.current) {
+              audioRef.current.play().then(() => {
+                setPlaying(true)
+              }).catch(error => {
+                console.error('Error resuming audio after call:', error)
+              })
+              pausedForCallRef.current = false
+              timeBeforeCallRef.current = 0
+            }
+          }, 300)
+        } else if (shouldAutoResumeRef.current && isPlaying && currentTrack && !pausedForCallRef.current) {
+          // Handle other interruptions (not calls)
+          setTimeout(() => {
+            if (
+              audioRef.current &&
+              shouldAutoResumeRef.current &&
+              isPlaying &&
+              currentTrack &&
+              audioRef.current.paused &&
+              document.visibilityState === 'visible' &&
+              !pausedForCallRef.current
+            ) {
+              audioRef.current.play().catch(error => {
+                console.error('Error resuming audio after interruption:', error)
+                shouldAutoResumeRef.current = false
+              })
+            }
+          }, 2000)
+        }
+      }
+    }
+
+    // Also handle pagehide/pageshow for better call detection
+    const handlePageHide = () => {
+      if (!currentTrack || !audioRef.current) return
+      if (isPlaying && !audioRef.current.paused && !pausedForCallRef.current) {
+        timeBeforeCallRef.current = audioRef.current.currentTime
+        pausedForCallRef.current = true
+        audioRef.current.pause()
+        setPlaying(false)
+      }
+    }
+
+    const handlePageShow = () => {
+      if (!currentTrack || !audioRef.current) return
+      if (pausedForCallRef.current) {
+        const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
+        audioRef.current.currentTime = resumeTime
+        seekTo(resumeTime)
+        
         setTimeout(() => {
-          if (
-            audioRef.current &&
-            shouldAutoResumeRef.current &&
-            isPlaying &&
-            currentTrack &&
-            audioRef.current.paused &&
-            document.visibilityState === 'visible'
-          ) {
-            audioRef.current.play().catch(error => {
-              console.error('Error resuming audio after interruption:', error)
-              shouldAutoResumeRef.current = false
+          if (audioRef.current && currentTrack && pausedForCallRef.current) {
+            audioRef.current.play().then(() => {
+              setPlaying(true)
+            }).catch(error => {
+              console.error('Error resuming audio after call:', error)
             })
+            pausedForCallRef.current = false
+            timeBeforeCallRef.current = 0
           }
-        }, 2000)
+        }, 300)
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pagehide', handlePageHide)
+    window.addEventListener('pageshow', handlePageShow)
+    
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pagehide', handlePageHide)
+      window.removeEventListener('pageshow', handlePageShow)
     }
-  }, [isPlaying, currentTrack])
+  }, [isPlaying, currentTrack, setPlaying, seekTo])
 
   // Handle audio interruptions
   useEffect(() => {
@@ -380,18 +447,25 @@ const Footer = () => {
     try {
       mediaSession.setActionHandler('play', () => {
         if (audioRef.current && currentTrack) {
-          audioRef.current.play().catch(error => {
-            console.error('Error playing from media session:', error)
-            setPlaying(false)
-          })
-          // Don't call togglePlayPause - let the audio play event handle state
+          // Use togglePlayPause to properly update state
+          if (!isPlaying) {
+            togglePlayPause()
+            // Immediately update media session playback state
+            if (mediaSession.setPlaybackState) {
+              mediaSession.playbackState = 'playing'
+            }
+          }
         }
       })
 
       mediaSession.setActionHandler('pause', () => {
-        if (audioRef.current) {
-          audioRef.current.pause()
-          // Don't call togglePlayPause - let the audio pause event handle state
+        if (audioRef.current && isPlaying) {
+          // Use togglePlayPause to properly update state
+          togglePlayPause()
+          // Immediately update media session playback state
+          if (mediaSession.setPlaybackState) {
+            mediaSession.playbackState = 'paused'
+          }
         }
       })
 
@@ -788,27 +862,8 @@ const Footer = () => {
                 </button>
               </div>
 
-              {/* Volume and Speed Controls */}
+              {/* Speed Control */}
               <div className="player__fullscreen-extra-controls">
-                {/* Volume Control */}
-                <div className="player__fullscreen-volume">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-                  </svg>
-                  <div 
-                    className="player__volume-bar player__volume-bar--fullscreen" 
-                    ref={volumeBarRef}
-                    onClick={handleVolumeClick}
-                    onMouseDown={handleVolumeStart}
-                    onTouchStart={handleVolumeStart}
-                    style={{ touchAction: 'none' }}
-                  >
-                    <div className="player__volume-fill" style={{ width: `${volume * 100}%` }} />
-                  </div>
-                </div>
-
-                {/* Speed Control */}
                 <div className="player__fullscreen-speed">
                   <button 
                     className="player__speed-btn"
