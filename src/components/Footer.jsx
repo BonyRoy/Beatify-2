@@ -276,7 +276,35 @@ const Footer = () => {
   const handlePlay = useCallback(() => {
     shouldAutoResumeRef.current = false
     setPlaying(true)
-  }, [setPlaying])
+    
+    // Update media session metadata when playback starts (iOS requirement)
+    if ('mediaSession' in navigator && currentTrack) {
+      const mediaSession = navigator.mediaSession
+      const albumArtUrl = currentTrack.coverUrl || currentTrack.artworkUrl || currentTrack.albumArtUrl
+      const artworkArray = albumArtUrl ? [
+        { src: albumArtUrl, sizes: '96x96', type: 'image/jpeg' },
+        { src: albumArtUrl, sizes: '128x128', type: 'image/jpeg' },
+        { src: albumArtUrl, sizes: '192x192', type: 'image/jpeg' },
+        { src: albumArtUrl, sizes: '256x256', type: 'image/jpeg' },
+        { src: albumArtUrl, sizes: '384x384', type: 'image/jpeg' },
+        { src: albumArtUrl, sizes: '512x512', type: 'image/jpeg' }
+      ] : []
+      
+      try {
+        mediaSession.metadata = new MediaMetadata({
+          title: currentTrack.name || 'Unknown Track',
+          artist: currentTrack.artist || 'Unknown Artist',
+          album: currentTrack.album || '',
+          artwork: artworkArray
+        })
+        if (mediaSession.setPlaybackState) {
+          mediaSession.playbackState = 'playing'
+        }
+      } catch (error) {
+        console.error('Error updating media session on play:', error)
+      }
+    }
+  }, [setPlaying, currentTrack])
 
   // Update playback speed
   useEffect(() => {
@@ -293,76 +321,55 @@ const Footer = () => {
 
   const speedOptions = [0.25, 0.5, 1, 1.5, 2]
 
-  // Handle call interruptions - pause on call, resume 2 seconds back when call ends
+  // Handle call interruptions - only pause on actual phone calls, allow background playback
   useEffect(() => {
+    // Detect if audio was paused due to a phone call (iOS/Android)
+    // We can't reliably detect calls, so we'll use a different approach:
+    // Only handle cases where audio is paused by the system (not by user)
+    
     const handleVisibilityChange = () => {
-      if (!currentTrack || !audioRef.current) return
-
-      if (document.visibilityState === 'hidden') {
-        // App went to background (likely a call)
-        if (isPlaying && !audioRef.current.paused && !pausedForCallRef.current) {
-          // Save current time and pause
+      // Don't pause on visibility change - allow background playback
+      // Only sync state if audio was paused by system (like a phone call)
+      if (document.visibilityState === 'visible' && currentTrack && audioRef.current) {
+        // Check if audio was paused but we think it should be playing
+        // This might indicate a system interruption (like a call)
+        if (isPlaying && audioRef.current.paused && !pausedForCallRef.current) {
+          // Might have been paused by system (call), save state
           timeBeforeCallRef.current = audioRef.current.currentTime
           pausedForCallRef.current = true
-          audioRef.current.pause()
-          setPlaying(false)
-        }
-      } else if (document.visibilityState === 'visible') {
-        // App came back to foreground (call ended)
-        if (pausedForCallRef.current && currentTrack && audioRef.current) {
-          // Resume from 2 seconds back (or from start if less than 2 seconds)
-          const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
-          audioRef.current.currentTime = resumeTime
-          seekTo(resumeTime)
           
-          // Resume playback after a short delay
+          // Try to resume after a delay (call might have ended)
           setTimeout(() => {
-            if (audioRef.current && currentTrack && document.visibilityState === 'visible' && pausedForCallRef.current) {
+            if (audioRef.current && currentTrack && pausedForCallRef.current && document.visibilityState === 'visible') {
+              // Resume from 2 seconds back
+              const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
+              audioRef.current.currentTime = resumeTime
+              seekTo(resumeTime)
+              
               audioRef.current.play().then(() => {
                 setPlaying(true)
+                pausedForCallRef.current = false
+                timeBeforeCallRef.current = 0
               }).catch(error => {
-                console.error('Error resuming audio after call:', error)
-              })
-              pausedForCallRef.current = false
-              timeBeforeCallRef.current = 0
-            }
-          }, 300)
-        } else if (shouldAutoResumeRef.current && isPlaying && currentTrack && !pausedForCallRef.current) {
-          // Handle other interruptions (not calls)
-          setTimeout(() => {
-            if (
-              audioRef.current &&
-              shouldAutoResumeRef.current &&
-              isPlaying &&
-              currentTrack &&
-              audioRef.current.paused &&
-              document.visibilityState === 'visible' &&
-              !pausedForCallRef.current
-            ) {
-              audioRef.current.play().catch(error => {
-                console.error('Error resuming audio after interruption:', error)
-                shouldAutoResumeRef.current = false
+                // If play fails, it might still be a call - keep paused state
+                console.log('Audio might still be interrupted:', error)
               })
             }
-          }, 2000)
+          }, 500)
+        } else if (pausedForCallRef.current && !audioRef.current.paused) {
+          // Audio resumed, clear call state
+          pausedForCallRef.current = false
+          timeBeforeCallRef.current = 0
         }
       }
     }
 
-    // Also handle pagehide/pageshow for better call detection
-    const handlePageHide = () => {
-      if (!currentTrack || !audioRef.current) return
-      if (isPlaying && !audioRef.current.paused && !pausedForCallRef.current) {
-        timeBeforeCallRef.current = audioRef.current.currentTime
-        pausedForCallRef.current = true
-        audioRef.current.pause()
-        setPlaying(false)
-      }
-    }
-
+    // Handle page unload (tab close) - don't pause, let browser handle it
+    // Only use this to detect if we're coming back from a potential call
     const handlePageShow = () => {
       if (!currentTrack || !audioRef.current) return
-      if (pausedForCallRef.current) {
+      // If we were paused for a call and page is shown again, try to resume
+      if (pausedForCallRef.current && isPlaying) {
         const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
         audioRef.current.currentTime = resumeTime
         seekTo(resumeTime)
@@ -381,13 +388,12 @@ const Footer = () => {
       }
     }
 
+    // Only listen to visibility change for call detection, not for pausing
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('pagehide', handlePageHide)
     window.addEventListener('pageshow', handlePageShow)
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('pagehide', handlePageHide)
       window.removeEventListener('pageshow', handlePageShow)
     }
   }, [isPlaying, currentTrack, setPlaying, seekTo])
@@ -421,107 +427,164 @@ const Footer = () => {
     }
 
     const mediaSession = navigator.mediaSession
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
-    // Update metadata when track changes
-    if (currentTrack) {
-      const albumArtUrl = currentTrack.coverUrl || currentTrack.artworkUrl || currentTrack.albumArtUrl
-      
-      mediaSession.metadata = new MediaMetadata({
-        title: currentTrack.name || 'Unknown Track',
-        artist: currentTrack.artist || 'Unknown Artist',
-        album: currentTrack.album || '',
-        artwork: albumArtUrl ? [
-          { src: albumArtUrl, sizes: '96x96', type: 'image/png' },
-          { src: albumArtUrl, sizes: '128x128', type: 'image/png' },
-          { src: albumArtUrl, sizes: '192x192', type: 'image/png' },
-          { src: albumArtUrl, sizes: '256x256', type: 'image/png' },
-          { src: albumArtUrl, sizes: '384x384', type: 'image/png' },
-          { src: albumArtUrl, sizes: '512x512', type: 'image/png' }
+    // Update metadata when track changes or when playback starts (iOS requirement)
+    const updateMetadata = () => {
+      if (currentTrack) {
+        const albumArtUrl = currentTrack.coverUrl || currentTrack.artworkUrl || currentTrack.albumArtUrl
+        
+        // iOS requires artwork URLs to be absolute and properly formatted
+        // Use image/jpeg for better iOS compatibility
+        const artworkArray = albumArtUrl ? [
+          { src: albumArtUrl, sizes: '96x96', type: 'image/jpeg' },
+          { src: albumArtUrl, sizes: '128x128', type: 'image/jpeg' },
+          { src: albumArtUrl, sizes: '192x192', type: 'image/jpeg' },
+          { src: albumArtUrl, sizes: '256x256', type: 'image/jpeg' },
+          { src: albumArtUrl, sizes: '384x384', type: 'image/jpeg' },
+          { src: albumArtUrl, sizes: '512x512', type: 'image/jpeg' }
         ] : []
-      })
-    } else {
-      mediaSession.metadata = null
-    }
-
-    // Set action handlers
-    try {
-      mediaSession.setActionHandler('play', () => {
-        if (audioRef.current && currentTrack) {
-          // Use togglePlayPause to properly update state
-          if (!isPlaying) {
-            togglePlayPause()
-            // Immediately update media session playback state
-            if (mediaSession.setPlaybackState) {
-              mediaSession.playbackState = 'playing'
-            }
+        
+        try {
+          mediaSession.metadata = new MediaMetadata({
+            title: currentTrack.name || 'Unknown Track',
+            artist: currentTrack.artist || 'Unknown Artist',
+            album: currentTrack.album || '',
+            artwork: artworkArray
+          })
+          
+          // iOS: Update playback state when metadata is set
+          if (isIOS && mediaSession.setPlaybackState && audioRef.current) {
+            mediaSession.playbackState = audioRef.current.paused ? 'paused' : 'playing'
           }
+        } catch (error) {
+          console.error('Error setting media session metadata:', error)
         }
-      })
-
-      mediaSession.setActionHandler('pause', () => {
-        if (audioRef.current && isPlaying) {
-          // Use togglePlayPause to properly update state
-          togglePlayPause()
-          // Immediately update media session playback state
-          if (mediaSession.setPlaybackState) {
-            mediaSession.playbackState = 'paused'
-          }
-        }
-      })
-
-      mediaSession.setActionHandler('previoustrack', () => {
-        playPreviousTrack()
-      })
-
-      mediaSession.setActionHandler('nexttrack', () => {
-        playNextTrack()
-      })
-
-      mediaSession.setActionHandler('seekto', (details) => {
-        if (audioRef.current && details.seekTime !== undefined) {
-          const seekTime = details.seekTime
-          audioRef.current.currentTime = seekTime
-          seekTo(seekTime)
-        }
-      })
-
-      // Optional: Seek backward/forward
-      mediaSession.setActionHandler('seekbackward', (details) => {
-        if (audioRef.current) {
-          const skipTime = details.seekOffset || 10
-          audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - skipTime)
-          seekTo(audioRef.current.currentTime)
-        }
-      })
-
-      mediaSession.setActionHandler('seekforward', (details) => {
-        if (audioRef.current && duration) {
-          const skipTime = details.seekOffset || 10
-          audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + skipTime)
-          seekTo(audioRef.current.currentTime)
-        }
-      })
-    } catch (error) {
-      console.error('Error setting media session action handlers:', error)
-    }
-
-    // Update playback state
-    const updatePlaybackState = () => {
-      if (mediaSession.setPlaybackState) {
-        mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
+      } else {
+        mediaSession.metadata = null
       }
     }
+
+    // Update metadata immediately when track changes
+    updateMetadata()
+    
+    // Also update metadata when playback starts (iOS requirement)
+    if (isPlaying && currentTrack && audioRef.current && !audioRef.current.paused) {
+      // Delay slightly for iOS to ensure audio is ready
+      setTimeout(() => updateMetadata(), isIOS ? 200 : 0)
+    }
+
+    // Set action handlers - iOS requires these to be set every time
+    const setupActionHandlers = () => {
+      try {
+        // Clear existing handlers first (iOS requirement)
+        mediaSession.setActionHandler('play', null)
+        mediaSession.setActionHandler('pause', null)
+        mediaSession.setActionHandler('previoustrack', null)
+        mediaSession.setActionHandler('nexttrack', null)
+        
+        // Set play handler
+        mediaSession.setActionHandler('play', () => {
+          if (audioRef.current && currentTrack && !isPlaying) {
+            // Simply toggle play/pause - let existing useEffect handle the actual playback
+            togglePlayPause()
+          }
+        })
+
+        // Set pause handler
+        mediaSession.setActionHandler('pause', () => {
+          if (audioRef.current && isPlaying) {
+            // Simply toggle play/pause - let existing useEffect handle the actual pause
+            togglePlayPause()
+          }
+        })
+
+        // Set previous track handler
+        mediaSession.setActionHandler('previoustrack', () => {
+          if (currentTrack) {
+            playPreviousTrack()
+            // Update metadata after track change (iOS needs delay)
+            setTimeout(() => {
+              updateMetadata()
+              if (mediaSession.setPlaybackState && audioRef.current) {
+                mediaSession.playbackState = audioRef.current.paused ? 'paused' : 'playing'
+              }
+            }, isIOS ? 300 : 100)
+          }
+        })
+
+        // Set next track handler
+        mediaSession.setActionHandler('nexttrack', () => {
+          if (currentTrack) {
+            playNextTrack()
+            // Update metadata after track change (iOS needs delay)
+            setTimeout(() => {
+              updateMetadata()
+              if (mediaSession.setPlaybackState && audioRef.current) {
+                mediaSession.playbackState = audioRef.current.paused ? 'paused' : 'playing'
+              }
+            }, isIOS ? 300 : 100)
+          }
+        })
+
+        // Set seek handlers
+        mediaSession.setActionHandler('seekto', (details) => {
+          if (audioRef.current && details.seekTime !== undefined) {
+            const seekTime = details.seekTime
+            audioRef.current.currentTime = seekTime
+            seekTo(seekTime)
+          }
+        })
+
+        // Optional: Seek backward/forward
+        mediaSession.setActionHandler('seekbackward', (details) => {
+          if (audioRef.current) {
+            const skipTime = details.seekOffset || 10
+            audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - skipTime)
+            seekTo(audioRef.current.currentTime)
+          }
+        })
+
+        mediaSession.setActionHandler('seekforward', (details) => {
+          if (audioRef.current && duration) {
+            const skipTime = details.seekOffset || 10
+            audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + skipTime)
+            seekTo(audioRef.current.currentTime)
+          }
+        })
+      } catch (error) {
+        console.error('Error setting media session action handlers:', error)
+      }
+    }
+    
+    // Setup handlers
+    setupActionHandlers()
+
+    // Update playback state - iOS requires frequent updates
+    const updatePlaybackState = () => {
+      if (mediaSession.setPlaybackState && audioRef.current) {
+        // Use actual audio state for iOS compatibility
+        const actualState = audioRef.current.paused ? 'paused' : 'playing'
+        mediaSession.playbackState = actualState
+      }
+    }
+    
+    // Update immediately
     updatePlaybackState()
 
     // Update position state for scrubbing
     const updatePositionState = () => {
-      if (mediaSession.setPositionState && audioRef.current && duration > 0 && !isNaN(duration) && !isNaN(currentTime)) {
+      if (mediaSession.setPositionState && audioRef.current && duration > 0 && !isNaN(duration)) {
         try {
-          mediaSession.setPositionState({
-            duration: duration,
-            playbackRate: playbackSpeed,
-            position: audioRef.current.currentTime || currentTime
-          })
+          const currentPos = audioRef.current.currentTime || currentTime
+          if (!isNaN(currentPos)) {
+            mediaSession.setPositionState({
+              duration: duration,
+              playbackRate: playbackSpeed,
+              position: currentPos
+            })
+          }
         } catch (error) {
           // Some browsers may not support setPositionState
           // This is expected on some mobile browsers
@@ -530,19 +593,22 @@ const Footer = () => {
     }
 
     // Update position state when time changes
-    if (isPlaying && currentTrack && duration > 0) {
+    if (isPlaying && currentTrack && duration > 0 && audioRef.current && !audioRef.current.paused) {
       updatePositionState()
     }
 
-    // Update position state periodically for accurate scrubbing
-    const positionUpdateInterval = setInterval(() => {
-      if (isPlaying && currentTrack && audioRef.current && duration > 0) {
-        updatePositionState()
+    // Update playback state and position state periodically (iOS requirement)
+    const stateUpdateInterval = setInterval(() => {
+      if (currentTrack && audioRef.current) {
+        updatePlaybackState()
+        if (duration > 0 && !audioRef.current.paused) {
+          updatePositionState()
+        }
       }
-    }, 500) // Update more frequently for smoother scrubbing
+    }, 500) // Update frequently for iOS compatibility
 
     return () => {
-      clearInterval(positionUpdateInterval)
+      clearInterval(stateUpdateInterval)
       // Clear action handlers
       try {
         mediaSession.setActionHandler('play', null)
@@ -556,7 +622,7 @@ const Footer = () => {
         // Ignore errors when clearing handlers
       }
     }
-  }, [currentTrack, isPlaying, currentTime, duration, playbackSpeed, playNextTrack, playPreviousTrack, seekTo, setPlaying])
+  }, [currentTrack, isPlaying, currentTime, duration, playbackSpeed, playNextTrack, playPreviousTrack, seekTo, setPlaying, togglePlayPause])
 
   // Format time helper
   const formatTime = (seconds) => {
