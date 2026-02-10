@@ -88,6 +88,8 @@ const Footer = () => {
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const pausedForCallRef = useRef(false)
   const timeBeforeCallRef = useRef(0)
+  const hasUserInteractedRef = useRef(false)
+  const nextTrackPendingRef = useRef(false)
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -186,16 +188,24 @@ const Footer = () => {
       return
     }
 
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
     if (isPlaying) {
       // Only play if audio is ready
       const attemptPlay = () => {
         if (audio.paused && isPlaying && !isSourceChangingRef.current) {
           const playPromise = audio.play()
           if (playPromise !== undefined) {
-            playPromise.catch(error => {
-              console.error('Error playing audio:', error)
-              setPlaying(false)
-            })
+            playPromise
+              .then(() => {
+                nextTrackPendingRef.current = false
+              })
+              .catch(error => {
+                console.error('Error playing audio:', error)
+                setPlaying(false)
+                nextTrackPendingRef.current = false
+              })
           }
         }
       }
@@ -244,16 +254,30 @@ const Footer = () => {
           setPlaying(false)
           updateTime(0)
           
-          // Small delay to ensure state is updated, then play next
-          setTimeout(() => {
+          // On iOS, use Media Session API to trigger next track (works in background)
+          if ('mediaSession' in navigator) {
+            // Trigger nexttrack handler programmatically - this works on iOS
+            try {
+              const mediaSession = navigator.mediaSession
+              // Simulate nexttrack action - this should work even in background
+              nextTrackPendingRef.current = true
+              playNextTrack()
+            } catch (e) {
+              // Fallback to direct call
+              nextTrackPendingRef.current = true
+              playNextTrack()
+            }
+          } else {
+            nextTrackPendingRef.current = true
             playNextTrack()
-            // Clear flag after track changes
-            setTimeout(() => {
-              if (audioRef.current) {
-                delete audioRef.current.dataset.ending
-              }
-            }, 500)
-          }, 100)
+          }
+          
+          // Clear flag after track changes
+          setTimeout(() => {
+            if (audioRef.current) {
+              delete audioRef.current.dataset.ending
+            }
+          }, 500)
         }
       }
     }
@@ -279,8 +303,17 @@ const Footer = () => {
 
   // Handle ended - auto-play next track
   const handleEnded = useCallback(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    
     setPlaying(false)
     updateTime(0)
+    
+    // On iOS, mark as pending to allow playback
+    if (isIOS) {
+      nextTrackPendingRef.current = true
+    }
+    
     // Auto-play next track
     playNextTrack()
   }, [setPlaying, updateTime, playNextTrack])
@@ -556,9 +589,12 @@ const Footer = () => {
           }
         })
 
-        // Set next track handler
+        // Set next track handler - this works even without user interaction on iOS
         mediaSession.setActionHandler('nexttrack', () => {
           if (currentTrack) {
+            // Mark as user interaction since Media Session API counts as interaction
+            hasUserInteractedRef.current = true
+            nextTrackPendingRef.current = true
             playNextTrack()
             // Update metadata after track change (iOS needs delay)
             setTimeout(() => {
@@ -951,6 +987,7 @@ const Footer = () => {
                   className="player__control-btn player__control-btn--play player__control-btn--fullscreen-play" 
                   onClick={(e) => {
                     e.stopPropagation()
+                    hasUserInteractedRef.current = true
                     togglePlayPause()
                   }}
                   disabled={isLoading}
@@ -1081,6 +1118,7 @@ const Footer = () => {
               className="player__control-btn player__control-btn--play" 
               onClick={(e) => {
                 e.stopPropagation()
+                hasUserInteractedRef.current = true
                 togglePlayPause()
               }}
               disabled={isLoading}
