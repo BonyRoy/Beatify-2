@@ -158,6 +158,9 @@ const Footer = () => {
     if (currentTrack && audioRef.current) {
       const audioUrl = currentTrack.fileUrl || currentTrack.url
       if (audioUrl && audioUrl !== currentSrcRef.current) {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+        
         isSourceChangingRef.current = true
         isChangingTrackRef.current = true
         lastTrackChangeTimeRef.current = Date.now()
@@ -166,6 +169,42 @@ const Footer = () => {
         audioRef.current.src = audioUrl
         audioRef.current.load()
         updateTime(0)
+        
+        // iOS: Force play when track is ready if should be playing
+        if (isIOS && isPlaying) {
+          const forcePlayWhenReady = () => {
+            if (audioRef.current && audioRef.current.src === audioUrl && isPlaying) {
+              // Try multiple times to ensure playback starts
+              const tryPlay = (attempt = 0) => {
+                if (audioRef.current && audioRef.current.paused && isPlaying && !isSourceChangingRef.current) {
+                  audioRef.current.play()
+                    .then(() => {
+                      // Success - playback started
+                    })
+                    .catch(() => {
+                      // Retry if failed and we haven't tried too many times
+                      if (attempt < 3) {
+                        setTimeout(() => tryPlay(attempt + 1), 500)
+                      }
+                    })
+                }
+              }
+              
+              // Try immediately if ready
+              if (audioRef.current.readyState >= 2) {
+                tryPlay()
+              } else {
+                // Wait for canplay event
+                audioRef.current.addEventListener('canplay', () => {
+                  tryPlay()
+                }, { once: true })
+              }
+            }
+          }
+          
+          // Try after a delay to ensure source is set
+          setTimeout(forcePlayWhenReady, 200)
+        }
         
         // Reset flags after track loads
         setTimeout(() => {
@@ -184,7 +223,7 @@ const Footer = () => {
         audioRef.current.src = ''
       }
     }
-  }, [currentTrack, updateTime])
+  }, [currentTrack, updateTime, isPlaying])
 
   // Handle play/pause state changes
   useEffect(() => {
@@ -201,18 +240,36 @@ const Footer = () => {
 
     if (isPlaying) {
       // Only play if audio is ready
-      const attemptPlay = () => {
+      const attemptPlay = (retryCount = 0) => {
         if (audio.paused && isPlaying && !isSourceChangingRef.current) {
           const playPromise = audio.play()
           if (playPromise !== undefined) {
             playPromise
               .then(() => {
                 nextTrackPendingRef.current = false
+                // iOS: Verify it's actually playing
+                if (isIOS) {
+                  setTimeout(() => {
+                    if (audio && audio.paused && isPlaying && retryCount < 2) {
+                      // Still paused, retry once more
+                      attemptPlay(retryCount + 1)
+                    }
+                  }, 300)
+                }
               })
               .catch(error => {
                 console.error('Error playing audio:', error)
-                setPlaying(false)
-                nextTrackPendingRef.current = false
+                // On iOS, retry if it's a background play issue
+                if (isIOS && retryCount < 2 && nextTrackPendingRef.current) {
+                  setTimeout(() => {
+                    if (audio && isPlaying && !isSourceChangingRef.current) {
+                      attemptPlay(retryCount + 1)
+                    }
+                  }, 500)
+                } else {
+                  setPlaying(false)
+                  nextTrackPendingRef.current = false
+                }
               })
           }
         }
@@ -257,8 +314,26 @@ const Footer = () => {
     if (audioRef.current) {
       updateDuration(audioRef.current.duration)
       setIsLoading(false)
+      
+      // iOS: If should be playing and track just loaded, force play
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      
+      if (isIOS && isPlaying && nextTrackPendingRef.current && audioRef.current.paused) {
+        setTimeout(() => {
+          if (audioRef.current && isPlaying && audioRef.current.paused && !isSourceChangingRef.current) {
+            audioRef.current.play()
+              .then(() => {
+                nextTrackPendingRef.current = false
+              })
+              .catch(() => {
+                // Will retry in play/pause handler
+              })
+          }
+        }, 200)
+      }
     }
-  }, [updateDuration])
+  }, [updateDuration, isPlaying])
 
   // Handle load start
   const handleLoadStart = useCallback(() => {
@@ -268,7 +343,31 @@ const Footer = () => {
   // Handle can play (audio is ready)
   const handleCanPlay = useCallback(() => {
     setIsLoading(false)
-  }, [])
+    
+    // iOS: If should be playing and audio is ready, force play (especially for next track)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    
+    if (isIOS && isPlaying && audioRef.current && audioRef.current.paused && !isSourceChangingRef.current) {
+      // This is crucial for background playback - when new track is ready, play it
+      setTimeout(() => {
+        if (audioRef.current && isPlaying && audioRef.current.paused && !isSourceChangingRef.current) {
+          audioRef.current.play()
+            .then(() => {
+              nextTrackPendingRef.current = false
+            })
+            .catch(() => {
+              // Retry once more
+              setTimeout(() => {
+                if (audioRef.current && isPlaying && audioRef.current.paused && !isSourceChangingRef.current) {
+                  audioRef.current.play().catch(() => {})
+                }
+              }, 500)
+            })
+        }
+      }, 100)
+    }
+  }, [isPlaying])
 
   // Handle ended - auto-play next track
   const handleEnded = useCallback(() => {
@@ -407,10 +506,24 @@ const Footer = () => {
           setPlaying(false)
           updateTime(0)
           
-          // Trigger next track
+          // Trigger next track - mark as pending to force play
           nextTrackPendingRef.current = true
+          hasUserInteractedRef.current = true // Media Session counts as interaction
           lastTrackChangeTimeRef.current = now
-          playNextTrack()
+          
+          // Use Media Session API to trigger next track (works better on iOS)
+          if ('mediaSession' in navigator) {
+            // Trigger the nexttrack handler which will handle playback
+            const mediaSession = navigator.mediaSession
+            try {
+              // Call playNextTrack which will update track, then force play
+              playNextTrack()
+            } catch (e) {
+              playNextTrack()
+            }
+          } else {
+            playNextTrack()
+          }
           
           // Clear flags after delay
           setTimeout(() => {
@@ -452,23 +565,47 @@ const Footer = () => {
       
       // 3. Check if track changed but not playing (should be playing) - only if enough time has passed
       if (currentTrackId !== lastTrackId && isPlaying && audio.paused && !isSourceChangingRef.current && timeSinceTrackChange > 1000) {
-        // Track changed, should be playing - but only try once
-        if (!audio.dataset.playAttempted) {
-          audio.dataset.playAttempted = 'true'
+        // Track changed, should be playing - try multiple times
+        if (!audio.dataset.playAttempted || (now - parseInt(audio.dataset.playAttempted || '0')) > 2000) {
+          audio.dataset.playAttempted = now.toString()
+          
+          // Try to play immediately
           audio.play()
             .then(() => {
               delete audio.dataset.playAttempted
             })
             .catch(() => {
-              // Retry after delay
-              setTimeout(() => {
-                if (audio && audio.paused && isPlaying) {
-                  audio.play().catch(() => {})
-                }
+              // Retry after delay - up to 3 times
+              const retryCount = parseInt(audio.dataset.retryCount || '0')
+              if (retryCount < 3) {
+                audio.dataset.retryCount = (retryCount + 1).toString()
+                setTimeout(() => {
+                  if (audio && audio.paused && isPlaying && !isSourceChangingRef.current) {
+                    audio.play()
+                      .then(() => {
+                        delete audio.dataset.playAttempted
+                        delete audio.dataset.retryCount
+                      })
+                      .catch(() => {
+                        delete audio.dataset.playAttempted
+                        delete audio.dataset.retryCount
+                      })
+                  }
+                }, 1000 * (retryCount + 1))
+              } else {
                 delete audio.dataset.playAttempted
-              }, 1000)
+                delete audio.dataset.retryCount
+              }
             })
         }
+      }
+      
+      // 4. Check if should be playing but isn't (general fallback)
+      if (isPlaying && audio.paused && !isSourceChangingRef.current && !isChangingTrackRef.current && timeSinceTrackChange > 2000) {
+        // Should be playing but isn't - try to start
+        audio.play().catch(() => {
+          // Ignore errors - will retry on next check
+        })
       }
       
       lastCheckedTime = now
@@ -623,19 +760,37 @@ const Footer = () => {
             // Immediately play next track
             playNextTrack()
             
-            // Force play after track changes (iOS requirement)
-            setTimeout(() => {
-              if (audioRef.current && isPlaying && audioRef.current.paused) {
-                audioRef.current.play().catch(() => {
-                  // Will retry in background monitor
-                })
-              }
-              
-              updateMetadata()
-              if (mediaSession.setPlaybackState && audioRef.current) {
-                mediaSession.playbackState = audioRef.current.paused ? 'paused' : 'playing'
-              }
-            }, isIOS ? 500 : 100)
+            // Force play after track changes (iOS requirement) - multiple attempts
+            const forcePlayNext = (attempt = 0) => {
+              setTimeout(() => {
+                if (audioRef.current && isPlaying) {
+                  if (audioRef.current.paused) {
+                    audioRef.current.play()
+                      .then(() => {
+                        // Success
+                        updateMetadata()
+                        if (mediaSession.setPlaybackState) {
+                          mediaSession.playbackState = 'playing'
+                        }
+                      })
+                      .catch(() => {
+                        // Retry if failed
+                        if (attempt < 3) {
+                          forcePlayNext(attempt + 1)
+                        }
+                      })
+                  } else {
+                    // Already playing
+                    updateMetadata()
+                    if (mediaSession.setPlaybackState) {
+                      mediaSession.playbackState = 'playing'
+                    }
+                  }
+                }
+              }, isIOS ? (attempt * 300 + 500) : 100)
+            }
+            
+            forcePlayNext()
           }
         })
 
