@@ -90,6 +90,8 @@ const Footer = () => {
   const timeBeforeCallRef = useRef(0)
   const hasUserInteractedRef = useRef(false)
   const nextTrackPendingRef = useRef(false)
+  const isChangingTrackRef = useRef(false)
+  const lastTrackChangeTimeRef = useRef(0)
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -157,15 +159,21 @@ const Footer = () => {
       const audioUrl = currentTrack.fileUrl || currentTrack.url
       if (audioUrl && audioUrl !== currentSrcRef.current) {
         isSourceChangingRef.current = true
+        isChangingTrackRef.current = true
+        lastTrackChangeTimeRef.current = Date.now()
         currentSrcRef.current = audioUrl
         audioRef.current.pause()
         audioRef.current.src = audioUrl
         audioRef.current.load()
         updateTime(0)
         
-        // Reset flag after a short delay
+        // Reset flags after track loads
         setTimeout(() => {
           isSourceChangingRef.current = false
+          // Keep isChangingTrackRef for a bit longer to prevent rapid skipping
+          setTimeout(() => {
+            isChangingTrackRef.current = false
+          }, 1500)
         }, 100)
       }
     } else if (!currentTrack) {
@@ -264,19 +272,23 @@ const Footer = () => {
 
   // Handle ended - auto-play next track
   const handleEnded = useCallback(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    // Prevent multiple triggers
+    if (isChangingTrackRef.current) return
     
+    isChangingTrackRef.current = true
+    lastTrackChangeTimeRef.current = Date.now()
     setPlaying(false)
     updateTime(0)
     
-    // On iOS, mark as pending to allow playback
-    if (isIOS) {
-      nextTrackPendingRef.current = true
-    }
+    nextTrackPendingRef.current = true
     
     // Auto-play next track
     playNextTrack()
+    
+    // Clear flag after delay
+    setTimeout(() => {
+      isChangingTrackRef.current = false
+    }, 2000)
   }, [setPlaying, updateTime, playNextTrack])
 
   // Handle pause event
@@ -376,33 +388,42 @@ const Footer = () => {
       const currentTrackId = currentTrack.uuid || currentTrack.id
       const audio = audioRef.current
       const now = Date.now()
+      const timeSinceTrackChange = now - lastTrackChangeTimeRef.current
+      
+      // Prevent rapid track changes - wait at least 2 seconds after track change
+      if (isChangingTrackRef.current || timeSinceTrackChange < 2000) {
+        return
+      }
       
       // 1. Check if track ended (for background autoplay)
-      if (duration > 0 && isPlaying && !audio.paused) {
+      if (duration > 0 && isPlaying && !audio.paused && !isChangingTrackRef.current) {
         const currentAudioTime = audio.currentTime
         const timeRemaining = duration - currentAudioTime
         
         // If track is very close to end or past end
         if (timeRemaining <= 0.5 && !audio.dataset.ending) {
           audio.dataset.ending = 'true'
+          isChangingTrackRef.current = true
           setPlaying(false)
           updateTime(0)
           
           // Trigger next track
           nextTrackPendingRef.current = true
+          lastTrackChangeTimeRef.current = now
           playNextTrack()
           
-          // Clear flag after delay
+          // Clear flags after delay
           setTimeout(() => {
+            isChangingTrackRef.current = false
             if (audioRef.current) {
               delete audioRef.current.dataset.ending
             }
-          }, 1000)
+          }, 3000) // Wait 3 seconds before allowing next check
         }
       }
       
       // 2. Check for call resume
-      if (pausedForCallRef.current && audio.paused && isPlaying && !resumeAttempted) {
+      if (pausedForCallRef.current && audio.paused && isPlaying && !resumeAttempted && !isChangingTrackRef.current) {
         resumeAttempted = true
         
         // Resume from 2 seconds back
@@ -429,16 +450,32 @@ const Footer = () => {
         }, 500)
       }
       
-      // 3. Check if track changed but not playing (should be playing)
-      if (currentTrackId !== lastTrackId && isPlaying && audio.paused && !isSourceChangingRef.current) {
-        // Track changed, should be playing
-        audio.play().catch(() => {
-          // Ignore errors
-        })
+      // 3. Check if track changed but not playing (should be playing) - only if enough time has passed
+      if (currentTrackId !== lastTrackId && isPlaying && audio.paused && !isSourceChangingRef.current && timeSinceTrackChange > 1000) {
+        // Track changed, should be playing - but only try once
+        if (!audio.dataset.playAttempted) {
+          audio.dataset.playAttempted = 'true'
+          audio.play()
+            .then(() => {
+              delete audio.dataset.playAttempted
+            })
+            .catch(() => {
+              // Retry after delay
+              setTimeout(() => {
+                if (audio && audio.paused && isPlaying) {
+                  audio.play().catch(() => {})
+                }
+                delete audio.dataset.playAttempted
+              }, 1000)
+            })
+        }
       }
       
       lastCheckedTime = now
-      lastTrackId = currentTrackId
+      if (currentTrackId !== lastTrackId) {
+        lastTrackId = currentTrackId
+        lastTrackChangeTimeRef.current = now
+      }
     }
     
     // Run monitor frequently (every 500ms for responsive background handling)
