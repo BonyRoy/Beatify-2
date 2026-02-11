@@ -166,55 +166,63 @@ const Footer = () => {
         isChangingTrackRef.current = true
         lastTrackChangeTimeRef.current = Date.now()
         currentSrcRef.current = audioUrl
-        audioRef.current.pause()
-        audioRef.current.src = audioUrl
-        audioRef.current.load()
+        const audio = audioRef.current
+        audio.pause()
+        audio.src = audioUrl
+        audio.load()
         updateTime(0)
         
-        // iOS: Force play when track is ready if should be playing
-        if (isIOS && isPlaying) {
-          const forcePlayWhenReady = () => {
-            if (audioRef.current && audioRef.current.src === audioUrl && isPlaying) {
-              // Try multiple times to ensure playback starts
-              const tryPlay = (attempt = 0) => {
-                if (audioRef.current && audioRef.current.paused && isPlaying && !isSourceChangingRef.current) {
-                  audioRef.current.play()
-                    .then(() => {
-                      // Success - playback started
-                    })
-                    .catch(() => {
-                      // Retry if failed and we haven't tried too many times
-                      if (attempt < 3) {
-                        setTimeout(() => tryPlay(attempt + 1), 500)
-                      }
-                    })
-                }
-              }
-              
-              // Try immediately if ready
-              if (audioRef.current.readyState >= 2) {
-                tryPlay()
-              } else {
-                // Wait for canplay event
-                audioRef.current.addEventListener('canplay', () => {
-                  tryPlay()
-                }, { once: true })
-              }
-            }
-          }
+        // CRITICAL: Auto-play when track is ready
+        // Store the audio URL to verify we're still on the same track
+        const trackAudioUrl = audioUrl
+        
+        const tryStartPlayback = () => {
+          const currentAudio = audioRef.current
+          if (!currentAudio || currentAudio.src !== trackAudioUrl) return
           
-          // Try after a delay to ensure source is set
-          setTimeout(forcePlayWhenReady, 200)
+          // Clear the flag first so play/pause effect can also work
+          isSourceChangingRef.current = false
+          
+          // If audio is paused, try to play it (regardless of isPlaying state)
+          // The play/pause effect will sync the state
+          if (currentAudio.paused) {
+            currentAudio.play()
+              .then(() => {
+                // Success - ensure playing state is set
+                setPlaying(true)
+              })
+              .catch((error) => {
+                console.error('Error playing audio after load:', error)
+                // Don't set playing to false here - let play/pause effect handle it
+              })
+          }
         }
         
-        // Reset flags after track loads
+        // Set up event listeners BEFORE load() to catch ready events
+        audio.addEventListener('canplay', tryStartPlayback, { once: true })
+        audio.addEventListener('loadeddata', tryStartPlayback, { once: true })
+        audio.addEventListener('canplaythrough', tryStartPlayback, { once: true })
+        
+        // Also try immediately if already ready
+        if (audio.readyState >= 2) {
+          setTimeout(tryStartPlayback, 100)
+        }
+        
+        // Fallback: try after delays to ensure playback starts
+        setTimeout(tryStartPlayback, 300)
+        setTimeout(tryStartPlayback, 800)
+        
+        // Final fallback - clear flag after 1.5s so play/pause effect can handle it
         setTimeout(() => {
-          isSourceChangingRef.current = false
-          // Keep isChangingTrackRef for a bit longer to prevent rapid skipping
-          setTimeout(() => {
-            isChangingTrackRef.current = false
-          }, 1500)
-        }, 100)
+          if (isSourceChangingRef.current) {
+            isSourceChangingRef.current = false
+          }
+        }, 1500)
+        
+        // Keep isChangingTrackRef for a bit longer to prevent rapid skipping
+        setTimeout(() => {
+          isChangingTrackRef.current = false
+        }, 1500)
       }
     } else if (!currentTrack) {
       currentSrcRef.current = null
@@ -224,16 +232,28 @@ const Footer = () => {
         audioRef.current.src = ''
       }
     }
-  }, [currentTrack, updateTime, isPlaying])
+  }, [currentTrack, updateTime, isPlaying, setPlaying])
 
   // Handle play/pause state changes
   useEffect(() => {
     const audio = audioRef.current
     if (!audio || !currentTrack) return
     
-    // Don't try to play if source is currently changing
+    // If source is changing, wait a bit then try again
     if (isSourceChangingRef.current) {
-      return
+      // Wait for source to finish loading, then retry
+      const checkAndPlay = setTimeout(() => {
+        if (!isSourceChangingRef.current && audio && isPlaying && audio.paused) {
+          audio.play()
+            .then(() => {
+              setPlaying(true)
+            })
+            .catch((error) => {
+              console.error('Error playing after source change:', error)
+            })
+        }
+      }, 500)
+      return () => clearTimeout(checkAndPlay)
     }
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
@@ -421,13 +441,16 @@ const Footer = () => {
     if (isPlaying) {
       setPlaying(false)
       if (currentTrack && audioRef.current) {
-        // On iOS, if audio is paused while we think it should be playing,
-        // it might be a phone call - save the time
+        // Detect if this might be a phone call interruption
+        // On iOS/mobile, if audio is paused while we think it should be playing,
+        // and the page is hidden, it's likely a phone call
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+        const isPageHidden = document.hidden || document.visibilityState === 'hidden'
         
-        if (isIOS && !pausedForCallRef.current) {
-          // Save current time for potential call resume
+        // If page is hidden or on iOS, likely a phone call - save the time
+        if ((isIOS || isPageHidden) && !pausedForCallRef.current && !isSourceChangingRef.current) {
+          // Save current time for potential call resume (will resume 2 seconds back)
           timeBeforeCallRef.current = audioRef.current.currentTime
           pausedForCallRef.current = true
         }
@@ -561,25 +584,27 @@ const Footer = () => {
         }
       }
       
-      // 2. Check for call resume
+      // 2. Check for call resume - when page becomes visible again after being paused for call
       if (pausedForCallRef.current && audio.paused && isPlaying && !resumeAttempted && !isChangingTrackRef.current) {
-        resumeAttempted = true
-        
-        // Resume from 2 seconds back
-        const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
-        audio.currentTime = resumeTime
-        seekTo(resumeTime)
-        
-        // Try to play
-        setTimeout(() => {
-          if (audio && currentTrack && pausedForCallRef.current && audio.paused) {
-            audio.play()
-              .then(() => {
-                pausedForCallRef.current = false
-                timeBeforeCallRef.current = 0
-                resumeAttempted = false
-                setPlaying(true)
-              })
+        // Only resume if page is visible (call ended)
+        if (document.visibilityState === 'visible') {
+          resumeAttempted = true
+          
+          // Resume from 2 seconds back (or from saved time if less than 2 seconds)
+          const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
+          audio.currentTime = resumeTime
+          seekTo(resumeTime)
+          
+          // Try to play
+          setTimeout(() => {
+            if (audio && currentTrack && pausedForCallRef.current && audio.paused && isPlaying) {
+              audio.play()
+                .then(() => {
+                  pausedForCallRef.current = false
+                  timeBeforeCallRef.current = 0
+                  resumeAttempted = false
+                  setPlaying(true)
+                })
               .catch(() => {
                 resumeAttempted = false
               })
@@ -587,6 +612,7 @@ const Footer = () => {
             resumeAttempted = false
           }
         }, 500)
+        }
       }
       
       // 3. Check if track changed but not playing (should be playing) - only if enough time has passed
@@ -644,10 +670,30 @@ const Footer = () => {
     // Run monitor frequently (every 500ms for responsive background handling)
     const monitorInterval = setInterval(iosBackgroundMonitor, 500)
     
-    // Also check on visibility change
+    // Also check on visibility change (e.g., when returning from phone call)
     const handleVisibilityChange = () => {
       resumeAttempted = false
       if (document.visibilityState === 'visible') {
+        // Check if we were paused for a call and should resume
+        if (pausedForCallRef.current && audioRef.current && isPlaying && audioRef.current.paused) {
+          const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
+          audioRef.current.currentTime = resumeTime
+          seekTo(resumeTime)
+          
+          // Try to resume playback
+          setTimeout(() => {
+            if (audioRef.current && pausedForCallRef.current && audioRef.current.paused && isPlaying) {
+              audioRef.current.play()
+                .then(() => {
+                  pausedForCallRef.current = false
+                  timeBeforeCallRef.current = 0
+                })
+                .catch(() => {
+                  // Will retry in monitor
+                })
+            }
+          }, 500)
+        }
         setTimeout(iosBackgroundMonitor, 300)
       }
     }
@@ -658,7 +704,7 @@ const Footer = () => {
       clearInterval(monitorInterval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [isPlaying, currentTrack, duration, currentTime, setPlaying, seekTo, updateTime, playNextTrack])
+  }, [isPlaying, currentTrack, duration, currentTime, setPlaying, seekTo, updateTime, playNextTrack, updateDuration])
 
   // Handle audio interruptions
   useEffect(() => {
@@ -748,17 +794,39 @@ const Footer = () => {
         
         // Set play handler
         mediaSession.setActionHandler('play', () => {
-          if (audioRef.current && currentTrack && !isPlaying) {
-            // Simply toggle play/pause - let existing useEffect handle the actual playback
-            togglePlayPause()
+          if (audioRef.current && currentTrack) {
+            // Directly play audio and update state - don't rely on isPlaying state
+            const audio = audioRef.current
+            if (audio.paused) {
+              audio.play()
+                .then(() => {
+                  setPlaying(true)
+                  // Update playback state immediately
+                  if (mediaSession.setPlaybackState) {
+                    mediaSession.playbackState = 'playing'
+                  }
+                })
+                .catch((error) => {
+                  console.error('Error playing from media session:', error)
+                  setPlaying(false)
+                })
+            }
           }
         })
 
         // Set pause handler
         mediaSession.setActionHandler('pause', () => {
-          if (audioRef.current && isPlaying) {
-            // Simply toggle play/pause - let existing useEffect handle the actual pause
-            togglePlayPause()
+          if (audioRef.current) {
+            // Directly pause audio and update state
+            const audio = audioRef.current
+            if (!audio.paused) {
+              audio.pause()
+              setPlaying(false)
+              // Update playback state immediately
+              if (mediaSession.setPlaybackState) {
+                mediaSession.playbackState = 'paused'
+              }
+            }
           }
         })
 
