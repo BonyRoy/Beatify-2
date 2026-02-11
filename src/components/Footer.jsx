@@ -92,6 +92,7 @@ const Footer = () => {
   const nextTrackPendingRef = useRef(false)
   const isChangingTrackRef = useRef(false)
   const lastTrackChangeTimeRef = useRef(0)
+  const nextTrackHandlerRef = useRef(null)
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -340,7 +341,7 @@ const Footer = () => {
     setIsLoading(true)
   }, [])
 
-  // Handle can play (audio is ready)
+  // Handle can play (audio is ready) - CRITICAL for iOS background autoplay
   const handleCanPlay = useCallback(() => {
     setIsLoading(false)
     
@@ -350,22 +351,31 @@ const Footer = () => {
     
     if (isIOS && isPlaying && audioRef.current && audioRef.current.paused && !isSourceChangingRef.current) {
       // This is crucial for background playback - when new track is ready, play it
-      setTimeout(() => {
-        if (audioRef.current && isPlaying && audioRef.current.paused && !isSourceChangingRef.current) {
-          audioRef.current.play()
-            .then(() => {
-              nextTrackPendingRef.current = false
-            })
-            .catch(() => {
-              // Retry once more
-              setTimeout(() => {
-                if (audioRef.current && isPlaying && audioRef.current.paused && !isSourceChangingRef.current) {
-                  audioRef.current.play().catch(() => {})
+      // Use aggressive retry for iOS background
+      const attemptPlay = (retry = 0) => {
+        setTimeout(() => {
+          if (audioRef.current && isPlaying && audioRef.current.paused && !isSourceChangingRef.current) {
+            audioRef.current.play()
+              .then(() => {
+                nextTrackPendingRef.current = false
+                // Update Media Session state
+                if ('mediaSession' in navigator && navigator.mediaSession.setPlaybackState) {
+                  navigator.mediaSession.playbackState = 'playing'
                 }
-              }, 500)
-            })
-        }
-      }, 100)
+              })
+              .catch(() => {
+                // Retry multiple times for iOS background
+                if (retry < 4) {
+                  attemptPlay(retry + 1)
+                } else {
+                  nextTrackPendingRef.current = false
+                }
+              })
+          }
+        }, retry * 200 + 100)
+      }
+      
+      attemptPlay()
     }
   }, [isPlaying])
 
@@ -374,15 +384,30 @@ const Footer = () => {
     // Prevent multiple triggers
     if (isChangingTrackRef.current) return
     
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    
     isChangingTrackRef.current = true
     lastTrackChangeTimeRef.current = Date.now()
     setPlaying(false)
     updateTime(0)
     
     nextTrackPendingRef.current = true
+    hasUserInteractedRef.current = true
     
-    // Auto-play next track
-    playNextTrack()
+    // CRITICAL for iOS: Use Media Session API handler if available
+    // This is the workaround for iOS background autoplay bug
+    if (isIOS && 'mediaSession' in navigator && nextTrackHandlerRef.current) {
+      // Call the stored handler directly - iOS respects Media Session handlers more
+      try {
+        nextTrackHandlerRef.current()
+      } catch (e) {
+        // Fallback
+        playNextTrack()
+      }
+    } else {
+      playNextTrack()
+    }
     
     // Clear flag after delay
     setTimeout(() => {
@@ -506,22 +531,23 @@ const Footer = () => {
           setPlaying(false)
           updateTime(0)
           
-          // Trigger next track - mark as pending to force play
+          // Mark as pending and user interacted (Media Session counts as interaction)
           nextTrackPendingRef.current = true
-          hasUserInteractedRef.current = true // Media Session counts as interaction
+          hasUserInteractedRef.current = true
           lastTrackChangeTimeRef.current = now
           
-          // Use Media Session API to trigger next track (works better on iOS)
-          if ('mediaSession' in navigator) {
-            // Trigger the nexttrack handler which will handle playback
-            const mediaSession = navigator.mediaSession
+          // CRITICAL: Use Media Session API's nexttrack handler - iOS respects this more
+          // This is the key workaround for iOS background autoplay bug
+          if ('mediaSession' in navigator && nextTrackHandlerRef.current) {
+            // Call the stored handler directly - iOS respects Media Session handlers
             try {
-              // Call playNextTrack which will update track, then force play
-              playNextTrack()
+              nextTrackHandlerRef.current()
             } catch (e) {
+              // Fallback to direct call
               playNextTrack()
             }
           } else {
+            // Fallback: direct call
             playNextTrack()
           }
           
@@ -531,7 +557,7 @@ const Footer = () => {
             if (audioRef.current) {
               delete audioRef.current.dataset.ending
             }
-          }, 3000) // Wait 3 seconds before allowing next check
+          }, 3000)
         }
       }
       
@@ -750,8 +776,9 @@ const Footer = () => {
           }
         })
 
-        // Set next track handler - this works even without user interaction on iOS
-        mediaSession.setActionHandler('nexttrack', () => {
+        // Set next track handler - CRITICAL for iOS background autoplay
+        // Store handler reference so we can call it programmatically
+        const nextTrackHandler = () => {
           if (currentTrack) {
             // Mark as user interaction since Media Session API counts as interaction
             hasUserInteractedRef.current = true
@@ -760,39 +787,56 @@ const Footer = () => {
             // Immediately play next track
             playNextTrack()
             
-            // Force play after track changes (iOS requirement) - multiple attempts
+            // CRITICAL: Force play immediately and multiple times for iOS
+            // iOS requires aggressive retry in background
             const forcePlayNext = (attempt = 0) => {
+              const delay = isIOS ? (attempt * 200 + 300) : 100
+              
               setTimeout(() => {
-                if (audioRef.current && isPlaying) {
-                  if (audioRef.current.paused) {
-                    audioRef.current.play()
-                      .then(() => {
-                        // Success
-                        updateMetadata()
-                        if (mediaSession.setPlaybackState) {
-                          mediaSession.playbackState = 'playing'
-                        }
-                      })
-                      .catch(() => {
-                        // Retry if failed
-                        if (attempt < 3) {
-                          forcePlayNext(attempt + 1)
-                        }
-                      })
-                  } else {
-                    // Already playing
-                    updateMetadata()
-                    if (mediaSession.setPlaybackState) {
-                      mediaSession.playbackState = 'playing'
-                    }
+                if (!audioRef.current || !isPlaying) return
+                
+                const audio = audioRef.current
+                
+                // Try to play if paused
+                if (audio.paused) {
+                  audio.play()
+                    .then(() => {
+                      // Success - update metadata and state
+                      nextTrackPendingRef.current = false
+                      updateMetadata()
+                      if (mediaSession.setPlaybackState) {
+                        mediaSession.playbackState = 'playing'
+                      }
+                    })
+                    .catch((error) => {
+                      // Retry if failed (iOS often needs multiple attempts in background)
+                      if (attempt < 5) {
+                        forcePlayNext(attempt + 1)
+                      } else {
+                        console.log('iOS background play failed after max attempts')
+                      }
+                    })
+                } else {
+                  // Already playing
+                  nextTrackPendingRef.current = false
+                  updateMetadata()
+                  if (mediaSession.setPlaybackState) {
+                    mediaSession.playbackState = 'playing'
                   }
                 }
-              }, isIOS ? (attempt * 300 + 500) : 100)
+              }, delay)
             }
             
+            // Start forcing play
             forcePlayNext()
           }
-        })
+        }
+        
+        // Store handler reference for programmatic calls (iOS workaround)
+        nextTrackHandlerRef.current = nextTrackHandler
+        
+        // Register the handler
+        mediaSession.setActionHandler('nexttrack', nextTrackHandler)
 
         // Set seek handlers
         mediaSession.setActionHandler('seekto', (details) => {
