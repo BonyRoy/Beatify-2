@@ -61,6 +61,8 @@ const MusicTrack = ({ track, onDownloadClick, onFavoriteToggle, onTrackClick, fa
   const artistRef = useRef(null)
   const [shouldScrollTitle, setShouldScrollTitle] = useState(false)
   const [shouldScrollArtist, setShouldScrollArtist] = useState(false)
+  const [titleDuration, setTitleDuration] = useState(20)
+  const [artistDuration, setArtistDuration] = useState(20)
   
   // Get album art URL - check multiple possible field names
   const albumArtUrl = track.coverUrl || track.artworkUrl || track.albumArtUrl
@@ -70,6 +72,9 @@ const MusicTrack = ({ track, onDownloadClick, onFavoriteToggle, onTrackClick, fa
     ? (typeof track.fileSize === 'number' ? formatFileSize(track.fileSize) : track.fileSize)
     : 'Unknown'
   
+  // Constant scrolling speed in pixels per second
+  const SCROLL_SPEED = 15 // pixels per second
+  
   // Check if text overflows and needs scrolling
   useEffect(() => {
     const checkOverflow = () => {
@@ -78,17 +83,37 @@ const MusicTrack = ({ track, onDownloadClick, onFavoriteToggle, onTrackClick, fa
           if (titleRef.current) {
             const titleEl = titleRef.current
             const wrapperEl = titleEl.closest('.track-row__title-wrapper')
-            if (wrapperEl) {
+            const innerEl = titleEl.closest('.track-row__title-inner')
+            if (wrapperEl && innerEl) {
               const isOverflowing = titleEl.scrollWidth > wrapperEl.offsetWidth + 5
               setShouldScrollTitle(isOverflowing)
+              
+              // Calculate duration based on inner container width (includes duplicate) for consistent speed
+              // Animation moves -50% of inner container width, so distance = innerEl.scrollWidth / 2
+              if (isOverflowing) {
+                const totalWidth = innerEl.scrollWidth
+                const distance = totalWidth / 2 // Animation moves -50%
+                const duration = distance / SCROLL_SPEED
+                setTitleDuration(Math.max(duration, 10)) // Minimum 10 seconds
+              }
             }
           }
           if (artistRef.current) {
             const artistEl = artistRef.current
             const wrapperEl = artistEl.closest('.track-row__artist-wrapper')
-            if (wrapperEl) {
+            const innerEl = artistEl.closest('.track-row__artist-inner')
+            if (wrapperEl && innerEl) {
               const isOverflowing = artistEl.scrollWidth > wrapperEl.offsetWidth + 5
               setShouldScrollArtist(isOverflowing)
+              
+              // Calculate duration based on inner container width (includes duplicate) for consistent speed
+              // Animation moves -50% of inner container width, so distance = innerEl.scrollWidth / 2
+              if (isOverflowing) {
+                const totalWidth = innerEl.scrollWidth
+                const distance = totalWidth / 2 // Animation moves -50%
+                const duration = distance / SCROLL_SPEED
+                setArtistDuration(Math.max(duration, 10)) // Minimum 10 seconds
+              }
             }
           }
         }, 100)
@@ -124,7 +149,10 @@ const MusicTrack = ({ track, onDownloadClick, onFavoriteToggle, onTrackClick, fa
       </div>
       <div className="track-row__info">
         <div className="track-row__title-wrapper">
-          <div className={`track-row__title-inner ${shouldScrollTitle ? 'track-row__text--scroll' : ''}`}>
+          <div 
+            className={`track-row__title-inner ${shouldScrollTitle ? 'track-row__text--scroll' : ''}`}
+            style={shouldScrollTitle ? { '--scroll-duration': `${titleDuration}s` } : {}}
+          >
             <p ref={titleRef} className="track-row__title">{track.name}</p>
             {shouldScrollTitle && (
               <p className="track-row__title track-row__text--duplicate">{track.name}</p>
@@ -132,7 +160,10 @@ const MusicTrack = ({ track, onDownloadClick, onFavoriteToggle, onTrackClick, fa
           </div>
         </div>
         <div className="track-row__artist-wrapper">
-          <div className={`track-row__artist-inner ${shouldScrollArtist ? 'track-row__text--scroll' : ''}`}>
+          <div 
+            className={`track-row__artist-inner ${shouldScrollArtist ? 'track-row__text--scroll' : ''}`}
+            style={shouldScrollArtist ? { '--scroll-duration': `${artistDuration}s` } : {}}
+          >
             <p ref={artistRef} className="track-row__artist">{track.artist}</p>
             {shouldScrollArtist && (
               <p className="track-row__artist track-row__text--duplicate">{track.artist}</p>

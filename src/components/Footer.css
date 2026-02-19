@@ -164,6 +164,11 @@
 .player__fullscreen-info {
   text-align: center;
   flex-shrink: 0;
+  max-width: 100%;
+  width: 100%;
+  overflow: hidden;
+  padding: 0 2rem;
+  box-sizing: border-box;
 }
 
 .player__fullscreen-title {
@@ -173,10 +178,43 @@
   margin: 0 0 0.5rem 0;
 }
 
+.player__fullscreen-artist-wrapper {
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+  width: 100%;
+  max-width: 100%;
+  height: 20px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.player__fullscreen-artist-inner {
+  display: inline-flex;
+  white-space: nowrap;
+  width: auto;
+}
+
 .player__fullscreen-artist {
   font-size: 1rem;
   color: var(--text-muted, #a1a1aa);
   margin: 0;
+  white-space: nowrap;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.player__fullscreen-artist--duplicate {
+  margin-left: 1.5rem;
+}
+
+.player__fullscreen-artist-inner.player__fullscreen-artist--scroll {
+  animation: scroll-text-marquee var(--scroll-duration, 12s) linear infinite;
+  will-change: transform;
+}
+
+.player__fullscreen-artist-wrapper:hover .player__fullscreen-artist-inner.player__fullscreen-artist--scroll {
+  animation-play-state: paused;
 }
 
 .player__fullscreen-progress {
@@ -724,7 +762,7 @@ body.footer-fullscreen-active {
 
   .player__title-inner.player__text--scroll {
     animation-name: scroll-text-marquee;
-    animation-duration: 15s;
+    animation-duration: var(--scroll-duration, 15s);
     animation-timing-function: linear;
     animation-iteration-count: infinite;
     animation-delay: 0s;
@@ -733,7 +771,7 @@ body.footer-fullscreen-active {
 
   .player__artist-inner.player__text--scroll {
     animation-name: scroll-text-marquee;
-    animation-duration: 12s;
+    animation-duration: var(--scroll-duration, 12s);
     animation-timing-function: linear;
     animation-iteration-count: infinite;
     animation-delay: 0s;
@@ -810,7 +848,7 @@ body.footer-fullscreen-active {
 
   .player__album-inner.player__text--scroll {
     animation-name: scroll-text-marquee;
-    animation-duration: 12s;
+    animation-duration: var(--scroll-duration, 12s);
     animation-timing-function: linear;
     animation-iteration-count: infinite;
     animation-delay: 0s;

@@ -76,11 +76,17 @@ const Footer = () => {
   const titleRef = useRef(null)
   const artistRef = useRef(null)
   const albumRef = useRef(null)
+  const fullscreenArtistRef = useRef(null)
   const isDraggingProgressRef = useRef(false)
   const isDraggingVolumeRef = useRef(false)
   const [shouldScrollTitle, setShouldScrollTitle] = useState(false)
   const [shouldScrollArtist, setShouldScrollArtist] = useState(false)
   const [shouldScrollAlbum, setShouldScrollAlbum] = useState(false)
+  const [shouldScrollFullscreenArtist, setShouldScrollFullscreenArtist] = useState(false)
+  const [titleDuration, setTitleDuration] = useState(15)
+  const [artistDuration, setArtistDuration] = useState(12)
+  const [albumDuration, setAlbumDuration] = useState(12)
+  const [fullscreenArtistDuration, setFullscreenArtistDuration] = useState(12)
   const [isLoading, setIsLoading] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -1366,6 +1372,9 @@ const Footer = () => {
     return () => document.removeEventListener('click', handleClickOutside)
   }, [showSpeedMenu])
 
+  // Constant scrolling speed in pixels per second
+  const SCROLL_SPEED = 15 // pixels per second
+
   // Check if text overflows and needs scrolling
   useEffect(() => {
     const checkOverflow = () => {
@@ -1375,28 +1384,81 @@ const Footer = () => {
           if (titleRef.current) {
             const titleEl = titleRef.current
             const wrapperEl = titleEl.closest('.player__title-wrapper')
-            if (wrapperEl) {
+            const innerEl = titleEl.closest('.player__title-inner')
+            if (wrapperEl && innerEl) {
               const isOverflowing = titleEl.scrollWidth > wrapperEl.offsetWidth + 5
               setShouldScrollTitle(isOverflowing)
+              
+              // Calculate duration based on inner container width (includes duplicate) for consistent speed
+              // Animation moves -50% of inner container width, so distance = innerEl.scrollWidth / 2
+              if (isOverflowing) {
+                const totalWidth = innerEl.scrollWidth
+                const distance = totalWidth / 2 // Animation moves -50%
+                const duration = distance / SCROLL_SPEED
+                setTitleDuration(Math.max(duration, 10)) // Minimum 10 seconds
+              }
             }
           }
           if (artistRef.current) {
             const artistEl = artistRef.current
             const wrapperEl = artistEl.closest('.player__artist-wrapper')
-            if (wrapperEl) {
+            const innerEl = artistEl.closest('.player__artist-inner')
+            if (wrapperEl && innerEl) {
               const isOverflowing = artistEl.scrollWidth > wrapperEl.offsetWidth + 5
               setShouldScrollArtist(isOverflowing)
+              
+              // Calculate duration based on inner container width (includes duplicate) for consistent speed
+              // Animation moves -50% of inner container width, so distance = innerEl.scrollWidth / 2
+              if (isOverflowing) {
+                const totalWidth = innerEl.scrollWidth
+                const distance = totalWidth / 2 // Animation moves -50%
+                const duration = distance / SCROLL_SPEED
+                setArtistDuration(Math.max(duration, 10)) // Minimum 10 seconds
+              }
             }
           }
           if (albumRef.current) {
             const albumEl = albumRef.current
             const contentEl = albumEl.closest('.player__album-content')
-            if (contentEl) {
+            const innerEl = albumEl.closest('.player__album-inner')
+            if (contentEl && innerEl) {
               const isOverflowing = albumEl.scrollWidth > contentEl.offsetWidth + 5
               setShouldScrollAlbum(isOverflowing)
+              
+              // Calculate duration based on inner container width (includes duplicate) for consistent speed
+              // Animation moves -50% of inner container width, so distance = innerEl.scrollWidth / 2
+              if (isOverflowing) {
+                const totalWidth = innerEl.scrollWidth
+                const distance = totalWidth / 2 // Animation moves -50%
+                const duration = distance / SCROLL_SPEED
+                setAlbumDuration(Math.max(duration, 10)) // Minimum 10 seconds
+              }
             }
           }
-        }, 200)
+          if (fullscreenArtistRef.current && isFullScreen) {
+            const artistEl = fullscreenArtistRef.current
+            const wrapperEl = artistEl.closest('.player__fullscreen-artist-wrapper')
+            const innerEl = artistEl.closest('.player__fullscreen-artist-inner')
+            if (wrapperEl && innerEl) {
+              const isOverflowing = artistEl.scrollWidth > wrapperEl.offsetWidth + 5
+              setShouldScrollFullscreenArtist(isOverflowing)
+              
+              // Calculate duration based on inner container width (includes duplicate) for consistent speed
+              // Animation moves -50% of inner container width, so distance = innerEl.scrollWidth / 2
+              // Use setTimeout to recalculate after duplicate is rendered
+              if (isOverflowing) {
+                setTimeout(() => {
+                  if (innerEl) {
+                    const totalWidth = innerEl.scrollWidth
+                    const distance = totalWidth / 2 // Animation moves -50%
+                    const duration = distance / SCROLL_SPEED
+                    setFullscreenArtistDuration(Math.max(duration, 10)) // Minimum 10 seconds
+                  }
+                }, 50)
+              }
+            }
+          }
+        }, isFullScreen ? 300 : 200) // Longer delay for fullscreen to ensure DOM is ready
       })
     }
 
@@ -1408,7 +1470,7 @@ const Footer = () => {
       window.removeEventListener('resize', resizeHandler)
       window.removeEventListener('load', checkOverflow)
     }
-  }, [currentTrack])
+  }, [currentTrack, isFullScreen])
 
   // Get album art URL - check multiple possible field names
   const albumArtUrl = currentTrack?.coverUrl || currentTrack?.artworkUrl || currentTrack?.albumArtUrl
@@ -1456,7 +1518,17 @@ const Footer = () => {
               {/* Song Info */}
               <div className="player__fullscreen-info">
                 <h3 className="player__fullscreen-title">{currentTrack.name || 'Unknown Track'}</h3>
-                <p className="player__fullscreen-artist">{currentTrack.artist || 'Unknown Artist'}</p>
+                <div className="player__fullscreen-artist-wrapper">
+                  <div 
+                    className={`player__fullscreen-artist-inner ${shouldScrollFullscreenArtist ? 'player__fullscreen-artist--scroll' : ''}`}
+                    style={shouldScrollFullscreenArtist ? { '--scroll-duration': `${fullscreenArtistDuration}s` } : {}}
+                  >
+                    <p ref={fullscreenArtistRef} className="player__fullscreen-artist">{currentTrack.artist || 'Unknown Artist'}</p>
+                    {shouldScrollFullscreenArtist && (
+                      <p className="player__fullscreen-artist player__fullscreen-artist--duplicate">{currentTrack.artist || 'Unknown Artist'}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Progress Bar */}
@@ -1555,7 +1627,10 @@ const Footer = () => {
           )}
           <div className="player__info">
             <div className="player__title-wrapper">
-              <div className={`player__title-inner ${shouldScrollTitle ? 'player__text--scroll' : ''}`}>
+              <div 
+                className={`player__title-inner ${shouldScrollTitle ? 'player__text--scroll' : ''}`}
+                style={shouldScrollTitle ? { '--scroll-duration': `${titleDuration}s` } : {}}
+              >
                 <p 
                   ref={titleRef}
                   className="player__title"
@@ -1570,7 +1645,10 @@ const Footer = () => {
               </div>
             </div>
             <div className="player__artist-wrapper">
-              <div className={`player__artist-inner ${shouldScrollArtist ? 'player__text--scroll' : ''}`}>
+              <div 
+                className={`player__artist-inner ${shouldScrollArtist ? 'player__text--scroll' : ''}`}
+                style={shouldScrollArtist ? { '--scroll-duration': `${artistDuration}s` } : {}}
+              >
                 <p 
                   ref={artistRef}
                   className="player__artist"
@@ -1587,7 +1665,10 @@ const Footer = () => {
             {currentTrack.album && (
               <div className="player__album-wrapper">
                 <div className="player__album-content">
-                  <div className={`player__album-inner ${shouldScrollAlbum ? 'player__text--scroll' : ''}`}>
+                  <div 
+                    className={`player__album-inner ${shouldScrollAlbum ? 'player__text--scroll' : ''}`}
+                    style={shouldScrollAlbum ? { '--scroll-duration': `${albumDuration}s` } : {}}
+                  >
                     <span 
                       ref={albumRef}
                       className="player__album-text"

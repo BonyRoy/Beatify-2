@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { PlayerProvider } from './context/PlayerContext'
 import Navbar from './components/Navbar'
@@ -9,20 +9,31 @@ import Home from './pages/Home'
 import Admin from './pages/Admin'
 import './App.css'
 
+const AppContent = () => {
+  const location = useLocation()
+  const isAdminPage = location.pathname === '/admin'
+
+  return (
+    <>
+      {!isAdminPage && <Navbar />}
+      <main className="app__content">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/admin" element={<Admin />} />
+        </Routes>
+      </main>
+      {!isAdminPage && <Footer />}
+      {!isAdminPage && <PromotionalModal />}
+    </>
+  )
+}
+
 const App = () => {
   return (
     <ThemeProvider>
       <PlayerProvider>
         <Router>
-          <Navbar />
-          <main className="app__content">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/admin" element={<Admin />} />
-            </Routes>
-          </main>
-          <Footer />
-          <PromotionalModal />
+          <AppContent />
         </Router>
       </PlayerProvider>
     </ThemeProvider>
