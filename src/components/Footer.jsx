@@ -87,12 +87,15 @@ const Footer = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const pausedForCallRef = useRef(false)
+  const pausedForMediaRef = useRef(false)
   const timeBeforeCallRef = useRef(0)
+  const timeBeforeMediaRef = useRef(0)
   const hasUserInteractedRef = useRef(false)
   const nextTrackPendingRef = useRef(false)
   const isChangingTrackRef = useRef(false)
   const lastTrackChangeTimeRef = useRef(0)
   const nextTrackHandlerRef = useRef(null)
+  const wasPlayingBeforeInterruptionRef = useRef(false)
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -437,27 +440,37 @@ const Footer = () => {
 
   // Handle pause event
   const handlePause = useCallback(() => {
-    // Sync state when audio is paused externally (e.g., from media session or phone call)
-    if (isPlaying) {
-      setPlaying(false)
-      if (currentTrack && audioRef.current) {
-        // Detect if this might be a phone call interruption
-        // On iOS/mobile, if audio is paused while we think it should be playing,
-        // and the page is hidden, it's likely a phone call
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-        const isPageHidden = document.hidden || document.visibilityState === 'hidden'
-        
-        // If page is hidden or on iOS, likely a phone call - save the time
-        if ((isIOS || isPageHidden) && !pausedForCallRef.current && !isSourceChangingRef.current) {
-          // Save current time for potential call resume (will resume 2 seconds back)
-          timeBeforeCallRef.current = audioRef.current.currentTime
-          pausedForCallRef.current = true
-        }
+    // Sync state when audio is paused externally (e.g., from media session, phone call, or other media)
+    if (isPlaying && currentTrack && audioRef.current && !isSourceChangingRef.current) {
+      const isPageHidden = document.hidden || document.visibilityState === 'hidden'
+      const wasPlaying = wasPlayingBeforeInterruptionRef.current || isPlaying
+      
+      // Save that we were playing before interruption
+      wasPlayingBeforeInterruptionRef.current = true
+      
+      // Detect phone call: page is hidden (user switched to phone app)
+      if (isPageHidden && !pausedForCallRef.current) {
+        timeBeforeCallRef.current = audioRef.current.currentTime
+        pausedForCallRef.current = true
+        shouldAutoResumeRef.current = true
+        setPlaying(false)
+      }
+      // Detect other media interruption: page is visible but audio was paused externally
+      else if (!isPageHidden && !pausedForCallRef.current && !pausedForMediaRef.current && wasPlaying) {
+        timeBeforeMediaRef.current = audioRef.current.currentTime
+        pausedForMediaRef.current = true
+        shouldAutoResumeRef.current = true
+        setPlaying(false)
+      }
+      // If already tracking an interruption, just update state
+      else if (wasPlaying) {
+        setPlaying(false)
         shouldAutoResumeRef.current = true
       }
     } else {
+      // User manually paused or no track
       shouldAutoResumeRef.current = false
+      wasPlayingBeforeInterruptionRef.current = false
     }
   }, [isPlaying, currentTrack, setPlaying])
 
@@ -465,12 +478,17 @@ const Footer = () => {
   const handlePlay = useCallback(() => {
     shouldAutoResumeRef.current = false
     
-    // Clear call pause state when audio actually starts playing
+    // Clear interruption states when audio actually starts playing
     if (pausedForCallRef.current) {
       pausedForCallRef.current = false
       timeBeforeCallRef.current = 0
     }
+    if (pausedForMediaRef.current) {
+      pausedForMediaRef.current = false
+      timeBeforeMediaRef.current = 0
+    }
     
+    wasPlayingBeforeInterruptionRef.current = false
     setPlaying(true)
     
     // Update media session metadata when playback starts (iOS requirement)
@@ -584,8 +602,8 @@ const Footer = () => {
         }
       }
       
-      // 2. Check for call resume - when page becomes visible again after being paused for call
-      if (pausedForCallRef.current && audio.paused && isPlaying && !resumeAttempted && !isChangingTrackRef.current) {
+      // 2. Check for phone call resume - when page becomes visible again after being paused for call
+      if (pausedForCallRef.current && audio.paused && wasPlayingBeforeInterruptionRef.current && !resumeAttempted && !isChangingTrackRef.current) {
         // Only resume if page is visible (call ended)
         if (document.visibilityState === 'visible') {
           resumeAttempted = true
@@ -597,25 +615,75 @@ const Footer = () => {
           
           // Try to play
           setTimeout(() => {
-            if (audio && currentTrack && pausedForCallRef.current && audio.paused && isPlaying) {
+            if (audio && currentTrack && pausedForCallRef.current && audio.paused) {
               audio.play()
                 .then(() => {
                   pausedForCallRef.current = false
                   timeBeforeCallRef.current = 0
+                  wasPlayingBeforeInterruptionRef.current = false
                   resumeAttempted = false
                   setPlaying(true)
                 })
               .catch(() => {
                 resumeAttempted = false
               })
-          } else {
-            resumeAttempted = false
-          }
-        }, 500)
+            } else {
+              resumeAttempted = false
+            }
+          }, 500)
         }
       }
       
-      // 3. Check if track changed but not playing (should be playing) - only if enough time has passed
+      // 3. Check for other media interruption resume - when audio becomes available again
+      if (pausedForMediaRef.current && audio.paused && wasPlayingBeforeInterruptionRef.current && !resumeAttempted && !isChangingTrackRef.current) {
+        // Check if we can resume (page is visible and audio context is available)
+        if (document.visibilityState === 'visible') {
+          resumeAttempted = true
+          
+          // Resume from saved time
+          const resumeTime = Math.max(0, timeBeforeMediaRef.current)
+          audio.currentTime = resumeTime
+          seekTo(resumeTime)
+          
+          // Try to play after a short delay to ensure audio context is ready
+          setTimeout(() => {
+            if (audio && currentTrack && pausedForMediaRef.current && audio.paused) {
+              audio.play()
+                .then(() => {
+                  pausedForMediaRef.current = false
+                  timeBeforeMediaRef.current = 0
+                  wasPlayingBeforeInterruptionRef.current = false
+                  resumeAttempted = false
+                  setPlaying(true)
+                })
+              .catch(() => {
+                // Retry once more after a longer delay
+                setTimeout(() => {
+                  if (audio && pausedForMediaRef.current && audio.paused) {
+                    audio.play()
+                      .then(() => {
+                        pausedForMediaRef.current = false
+                        timeBeforeMediaRef.current = 0
+                        wasPlayingBeforeInterruptionRef.current = false
+                        resumeAttempted = false
+                        setPlaying(true)
+                      })
+                      .catch(() => {
+                        resumeAttempted = false
+                      })
+                  } else {
+                    resumeAttempted = false
+                  }
+                }, 1000)
+              })
+            } else {
+              resumeAttempted = false
+            }
+          }, 300)
+        }
+      }
+      
+      // 4. Check if track changed but not playing (should be playing) - only if enough time has passed
       if (currentTrackId !== lastTrackId && isPlaying && audio.paused && !isSourceChangingRef.current && timeSinceTrackChange > 1000) {
         // Track changed, should be playing - try multiple times
         if (!audio.dataset.playAttempted || (now - parseInt(audio.dataset.playAttempted || '0')) > 2000) {
@@ -652,8 +720,8 @@ const Footer = () => {
         }
       }
       
-      // 4. Check if should be playing but isn't (general fallback)
-      if (isPlaying && audio.paused && !isSourceChangingRef.current && !isChangingTrackRef.current && timeSinceTrackChange > 2000) {
+      // 5. Check if should be playing but isn't (general fallback)
+      if (isPlaying && audio.paused && !isSourceChangingRef.current && !isChangingTrackRef.current && timeSinceTrackChange > 2000 && !pausedForCallRef.current && !pausedForMediaRef.current) {
         // Should be playing but isn't - try to start
         audio.play().catch(() => {
           // Ignore errors - will retry on next check
@@ -674,19 +742,21 @@ const Footer = () => {
     const handleVisibilityChange = () => {
       resumeAttempted = false
       if (document.visibilityState === 'visible') {
-        // Check if we were paused for a call and should resume
-        if (pausedForCallRef.current && audioRef.current && isPlaying && audioRef.current.paused) {
+        // Check if we were paused for a phone call and should resume
+        if (pausedForCallRef.current && audioRef.current && wasPlayingBeforeInterruptionRef.current && audioRef.current.paused) {
           const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
           audioRef.current.currentTime = resumeTime
           seekTo(resumeTime)
           
           // Try to resume playback
           setTimeout(() => {
-            if (audioRef.current && pausedForCallRef.current && audioRef.current.paused && isPlaying) {
+            if (audioRef.current && pausedForCallRef.current && audioRef.current.paused) {
               audioRef.current.play()
                 .then(() => {
                   pausedForCallRef.current = false
                   timeBeforeCallRef.current = 0
+                  wasPlayingBeforeInterruptionRef.current = false
+                  setPlaying(true)
                 })
                 .catch(() => {
                   // Will retry in monitor
@@ -694,7 +764,31 @@ const Footer = () => {
             }
           }, 500)
         }
+        // Also check for media interruption resume when page becomes visible
+        else if (pausedForMediaRef.current && audioRef.current && wasPlayingBeforeInterruptionRef.current && audioRef.current.paused) {
+          const resumeTime = Math.max(0, timeBeforeMediaRef.current)
+          audioRef.current.currentTime = resumeTime
+          seekTo(resumeTime)
+          
+          setTimeout(() => {
+            if (audioRef.current && pausedForMediaRef.current && audioRef.current.paused) {
+              audioRef.current.play()
+                .then(() => {
+                  pausedForMediaRef.current = false
+                  timeBeforeMediaRef.current = 0
+                  wasPlayingBeforeInterruptionRef.current = false
+                  setPlaying(true)
+                })
+                .catch(() => {
+                  // Will retry in monitor
+                })
+            }
+          }, 300)
+        }
         setTimeout(iosBackgroundMonitor, 300)
+      } else {
+        // Page became hidden - might be a phone call starting
+        // Don't clear interruption flags here, let handlePause handle it
       }
     }
     
@@ -706,27 +800,138 @@ const Footer = () => {
     }
   }, [isPlaying, currentTrack, duration, currentTime, setPlaying, seekTo, updateTime, playNextTrack, updateDuration])
 
-  // Handle audio interruptions
+  // Handle audio interruptions - phone calls and other media
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
 
     const handleSuspend = () => {
-      if (isPlaying && currentTrack) {
+      // Audio was suspended (e.g., by system or other media)
+      if (isPlaying && currentTrack && !isSourceChangingRef.current) {
+        const isPageHidden = document.hidden || document.visibilityState === 'hidden'
+        
+        if (isPageHidden && !pausedForCallRef.current) {
+          // Likely a phone call
+          timeBeforeCallRef.current = audio.currentTime
+          pausedForCallRef.current = true
+          wasPlayingBeforeInterruptionRef.current = true
+        } else if (!isPageHidden && !pausedForCallRef.current && !pausedForMediaRef.current) {
+          // Likely other media interruption
+          timeBeforeMediaRef.current = audio.currentTime
+          pausedForMediaRef.current = true
+          wasPlayingBeforeInterruptionRef.current = true
+        }
         shouldAutoResumeRef.current = true
       }
     }
+
+    // Monitor for interruptions when audio is paused externally
+    const checkForInterruption = () => {
+      if (audio.paused && isPlaying && currentTrack && !isSourceChangingRef.current) {
+        const isPageHidden = document.hidden || document.visibilityState === 'hidden'
+        
+        // If we're paused but should be playing, it's an interruption
+        if (isPageHidden && !pausedForCallRef.current) {
+          timeBeforeCallRef.current = audio.currentTime
+          pausedForCallRef.current = true
+          wasPlayingBeforeInterruptionRef.current = true
+          shouldAutoResumeRef.current = true
+        } else if (!isPageHidden && !pausedForCallRef.current && !pausedForMediaRef.current) {
+          timeBeforeMediaRef.current = audio.currentTime
+          pausedForMediaRef.current = true
+          wasPlayingBeforeInterruptionRef.current = true
+          shouldAutoResumeRef.current = true
+        }
+      }
+    }
+
+    // Check periodically for interruptions
+    const interruptionCheckInterval = setInterval(checkForInterruption, 500)
 
     audio.addEventListener('pause', handlePause)
     audio.addEventListener('play', handlePlay)
     audio.addEventListener('suspend', handleSuspend)
 
     return () => {
+      clearInterval(interruptionCheckInterval)
       audio.removeEventListener('pause', handlePause)
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('suspend', handleSuspend)
     }
   }, [isPlaying, currentTrack, handlePause, handlePlay])
+
+  // Monitor for resuming after interruptions (works for all platforms)
+  useEffect(() => {
+    if (!currentTrack || !audioRef.current) return
+
+    const audio = audioRef.current
+    let resumeCheckInterval = null
+
+    const checkForResume = () => {
+      // Check for phone call resume
+      if (pausedForCallRef.current && wasPlayingBeforeInterruptionRef.current && audio.paused && document.visibilityState === 'visible') {
+        const resumeTime = Math.max(0, timeBeforeCallRef.current - 2)
+        audio.currentTime = resumeTime
+        seekTo(resumeTime)
+        
+        setTimeout(() => {
+          if (audio && pausedForCallRef.current && audio.paused) {
+            audio.play()
+              .then(() => {
+                pausedForCallRef.current = false
+                timeBeforeCallRef.current = 0
+                wasPlayingBeforeInterruptionRef.current = false
+                setPlaying(true)
+              })
+              .catch(() => {
+                // Will retry
+              })
+          }
+        }, 500)
+      }
+      
+      // Check for other media interruption resume
+      if (pausedForMediaRef.current && wasPlayingBeforeInterruptionRef.current && audio.paused && document.visibilityState === 'visible') {
+        const resumeTime = Math.max(0, timeBeforeMediaRef.current)
+        audio.currentTime = resumeTime
+        seekTo(resumeTime)
+        
+        setTimeout(() => {
+          if (audio && pausedForMediaRef.current && audio.paused) {
+            audio.play()
+              .then(() => {
+                pausedForMediaRef.current = false
+                timeBeforeMediaRef.current = 0
+                wasPlayingBeforeInterruptionRef.current = false
+                setPlaying(true)
+              })
+              .catch(() => {
+                // Will retry
+              })
+          }
+        }, 300)
+      }
+    }
+
+    // Check every second for resume opportunities
+    resumeCheckInterval = setInterval(checkForResume, 1000)
+
+    // Also check on visibility change
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(checkForResume, 300)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      if (resumeCheckInterval) {
+        clearInterval(resumeCheckInterval)
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [currentTrack, setPlaying, seekTo])
 
   // Media Session API for background playback and system controls
   useEffect(() => {
