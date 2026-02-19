@@ -167,6 +167,7 @@ const MusicTrack = ({ track, onDownloadClick, onFavoriteToggle, onTrackClick, fa
 
 // Playlist UUID mappings - keys must match playlist labels exactly
 const playlistTrackIds = {
+  'Old Melodies': ["5361a7e4-722e-4d7b-9ac0-9963298a1944","73ba5f68-fa63-4802-9779-72b74e9973dc","fed96082-164f-4475-ad30-79ac4feddff6","84070486-3b69-466d-9c0a-5c884068427c","73a50722-eb73-4e2e-b2ac-e12ef372c463","8f16dac0-825d-4023-9675-8cda1360110e","0ac36e60-942a-4d5f-9fa5-193de4777d52","0dd8b012-531f-4c18-b6df-7d7a1060d53a","5ffeb49c-da15-4553-8450-68513e8b8a31","b7850062-2046-437d-948c-123d8b679cfa","a43e7869-ce4a-44b6-aef8-44f763d44bd6","4b04f8f1-f9e7-4c42-b97a-2729cf4d0cf7","3a9c8277-ab46-4a3d-83d6-2f77102595ec","7022381d-b9e9-4ef5-b5a2-ca8e81bd4458","126f2f75-dda5-4241-8304-66f21d1d28b1","3ab2d91f-985e-4723-b200-4d18cd638a31","b0cb472c-9836-46c9-b640-bda829424cac","a89be279-e2e5-46ce-add8-bf9bd0c1ca2f","917933d6-0467-4294-ae5a-776406656523","6ea91ca0-fa39-4f2c-a07d-51b41d49d162","759e9e50-6e80-4792-9a16-6c920524ae4b","6449d53f-ae23-43b8-bf92-28665091ccf6","3208e62f-420a-4867-a4cd-9bc10592cff5","5a464a0f-a048-4dd9-9155-153c676f2a62","1d71dd3b-fd1e-48f3-8ab3-2cd3a1e70334","f8ec6743-410b-40f7-977a-f55c564856f4","2aab71f0-df83-4cad-9fa3-4b53eb43fca3","31ee93ce-ed90-46ec-8fc4-453ed2f5cd7b","a7fe48c3-ad08-48a4-a910-c13396d91760","91604ad9-0f22-474c-9b93-73386edf30e8","5c75a39c-cbc4-4a0b-8c7f-8491cf23837b","4d412cdd-6ea7-4719-8619-9c6ec8854a36","bf1ad7c1-ee08-4068-b09d-a78101ef3954","ec543875-2c11-49de-b23c-005625f12f24"],
   'Bharat': [
     '32d36fc7-d69a-4217-b004-baf9412988ec',
     '1cd9f324-4f86-4814-a04e-ec8f30bf287d',
@@ -188,8 +189,6 @@ const playlistTrackIds = {
     'd729a181-13e4-46f7-aee1-89f5011ca03c'
   ],
   Holi: ["d7ea68c3-fb56-4cc7-a5fe-b20362af0c8f","fd890f01-6ebc-41ae-bbd5-34193d330402","69eedce3-ff05-4273-9128-4b9fded4fd00","917933d6-0467-4294-ae5a-776406656523","41b39f05-e3c4-4bf9-a2c0-9bdb7130f466","804e4bac-62d2-4055-a269-f0255c1c3582"],
-
-  'Old Melodies': [],
   'Romantic': [
     'f4134ccd-adb5-4d62-b0a8-a9fd8d74e23e',
     '1a707f3c-fb6b-45d3-b5c1-a3ebeb896425',
