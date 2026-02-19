@@ -16,7 +16,7 @@ const AppContent = () => {
   return (
     <>
       {!isAdminPage && <Navbar />}
-      <main className="app__content">
+      <main className={`app__content ${isAdminPage ? 'app__content--admin' : ''}`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/admin" element={<Admin />} />

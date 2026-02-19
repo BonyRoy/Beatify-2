@@ -13,6 +13,15 @@
   overflow-x: hidden;
 }
 
+/* Admin page styling - no padding, allow scrolling */
+.app__content--admin {
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100vh;
+}
+
 /* Reduce padding when artists section is hidden */
 body.artists-hidden .app__content {
   padding-top: 73px;
@@ -30,6 +39,10 @@ body.artists-hidden .app__content {
     padding-top: 73px;
     /* Only navbar height */
   }
+
+  .app__content--admin {
+    padding-top: 0;
+  }
 }
 
 /* Mobile adjustments - account for navbar + artists section */
@@ -43,6 +56,10 @@ body.artists-hidden .app__content {
     padding-top: 70px;
     /* Only navbar height on mobile */
   }
+
+  .app__content--admin {
+    padding-top: 0;
+  }
 }
 
 @media (max-width: 480px) {
@@ -54,5 +71,9 @@ body.artists-hidden .app__content {
   body.artists-hidden .app__content {
     padding-top: 70px;
     /* Only navbar height on mobile */
+  }
+
+  .app__content--admin {
+    padding-top: 0;
   }
 }
