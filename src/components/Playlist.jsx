@@ -73,7 +73,7 @@ const PlaylistIconGradient = () => (
 
 // Playlist images with labels - update this list with actual image filenames from /public/playlist
 const playlistImages = [
-  { image: "Sallu.png", label: "Sallu Bhai" },
+  { image: "Sallu.png", label: "Sallu-Bhai" },
   { image: "Disney.png", label: "Disney & Pixar" },
   { image: "oldmelodies.png", label: "Old Melodies" },
   { image: "bharat.png", label: "Bharat" },
