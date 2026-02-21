@@ -1237,7 +1237,7 @@ const Admin = () => {
                     type="button"
                     className="admin-bulk-excel-btn admin-bulk-download-btn"
                     onClick={handleExcelDownload}
-                    disabled
+                    disabled={existingTracks.length === 0}
                   >
                     <Download size={18} className="admin-icon-inline" />{" "}
                     Download Excel
