@@ -4,7 +4,9 @@
   padding: 2rem;
   background-color: var(--bg);
   color: var(--text-primary);
-  transition: background-color 0.25s, color 0.25s;
+  transition:
+    background-color 0.25s,
+    color 0.25s;
 }
 
 /* Password Modal */
@@ -70,7 +72,9 @@
   color: var(--text-primary);
   font-size: 1rem;
   font-family: inherit;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 
 .admin-password-input:focus {
@@ -100,7 +104,9 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
 }
 
 .admin-password-submit-btn:hover {
@@ -168,7 +174,9 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: color 0.2s, border-color 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
 }
 
 .admin-tab:hover {
@@ -229,7 +237,10 @@
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s, opacity 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    opacity 0.2s;
 }
 
 .admin-bulk-download-btn {
@@ -269,7 +280,9 @@
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
   background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
 }
 
@@ -288,8 +301,12 @@
 }
 
 @keyframes admin-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .admin-bulk-table-wrapper {
@@ -407,7 +424,9 @@
   color: var(--text-primary);
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background-color 0.2s, opacity 0.2s;
+  transition:
+    background-color 0.2s,
+    opacity 0.2s;
 }
 
 .admin-bulk-page-btn:hover:not(:disabled) {
@@ -443,7 +462,9 @@
   width: 56px;
   height: 28px;
   border-radius: 9999px;
-  transition: background-color 0.3s ease, box-shadow 0.2s;
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.2s;
 }
 
 .admin-theme-toggle--dark .admin-theme-toggle__track {
@@ -510,7 +531,10 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  transition: transform 0.3s ease, background-color 0.25s, box-shadow 0.2s;
+  transition:
+    transform 0.3s ease,
+    background-color 0.25s,
+    box-shadow 0.2s;
   pointer-events: none;
 }
 
@@ -603,8 +627,8 @@
   color: #60a5fa;
 }
 
-.admin-form-group input[type='text'],
-.admin-form-group input[type='date'] {
+.admin-form-group input[type="text"],
+.admin-form-group input[type="date"] {
   width: 100%;
   padding: 0.75rem 1rem;
   background-color: var(--track-bg);
@@ -613,11 +637,13 @@
   color: var(--text-primary);
   font-size: 0.95rem;
   font-family: inherit;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 
-.admin-form-group input[type='text']:focus,
-.admin-form-group input[type='date']:focus {
+.admin-form-group input[type="text"]:focus,
+.admin-form-group input[type="date"]:focus {
   outline: none;
   border-color: var(--text-muted);
   background-color: var(--track-bg-hover);
@@ -646,7 +672,7 @@
   border-radius: 8px;
   color: var(--text-muted);
   font-size: 0.85rem;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   cursor: not-allowed;
 }
 
@@ -687,7 +713,9 @@
   color: var(--text-primary);
   font-size: 0.95rem;
   cursor: pointer;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 
 .admin-dropdown-toggle:hover {
@@ -857,7 +885,9 @@ button .admin-icon-inline {
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
 }
 
 .admin-upload-button:hover:not(:disabled) {
@@ -959,7 +989,9 @@ button .admin-icon-inline {
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 
 .admin-sort-dropdown-toggle:hover {
@@ -1022,7 +1054,9 @@ button .admin-icon-inline {
   color: var(--text-primary);
   font-size: 0.95rem;
   font-family: inherit;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 
 .admin-search-input:focus {

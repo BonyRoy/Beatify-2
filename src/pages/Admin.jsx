@@ -936,16 +936,23 @@ const Admin = () => {
   };
 
   const sortOptions = [
-    { field: "releaseDate", order: "asc", label: "Release Date (Oldest first)" },
-    { field: "releaseDate", order: "desc", label: "Release Date (Newest first)" },
+    {
+      field: "releaseDate",
+      order: "asc",
+      label: "Release Date (Oldest first)",
+    },
+    {
+      field: "releaseDate",
+      order: "desc",
+      label: "Release Date (Newest first)",
+    },
     { field: "uploadedAt", order: "asc", label: "Upload Date (Oldest first)" },
     { field: "uploadedAt", order: "desc", label: "Upload Date (Newest first)" },
   ];
 
   const activeSortLabel =
-    sortOptions.find(
-      (o) => o.field === sortBy && o.order === sortOrder,
-    )?.label || "Sort by...";
+    sortOptions.find((o) => o.field === sortBy && o.order === sortOrder)
+      ?.label || "Sort by...";
 
   const sortDropdown = (
     <div className="admin-sort-dropdown" ref={sortDropdownRef}>
@@ -970,7 +977,9 @@ const Admin = () => {
             <div
               key={`${opt.field}-${opt.order}`}
               className={`admin-sort-dropdown-item ${
-                sortBy === opt.field && sortOrder === opt.order ? "selected" : ""
+                sortBy === opt.field && sortOrder === opt.order
+                  ? "selected"
+                  : ""
               }`}
               onClick={() => {
                 handleSort(opt.field, opt.order);
@@ -1268,13 +1277,13 @@ const Admin = () => {
                     </div>
                     <div className="admin-search-sort-row">
                       <div className="admin-search-container">
-                      <input
-                        type="text"
-                        placeholder="Search tracks by name, artist, genre, album..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="admin-search-input"
-                      />
+                        <input
+                          type="text"
+                          placeholder="Search tracks by name, artist, genre, album..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="admin-search-input"
+                        />
                       </div>
                       {sortDropdown}
                     </div>
