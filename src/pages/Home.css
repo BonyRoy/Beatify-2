@@ -433,7 +433,7 @@ body:has(.footer--player) .home__sidebar-content {
   }
 
   .track-row {
-    min-height: 56px;
+    min-height: 80px;
     padding: 1rem;
   }
 }
