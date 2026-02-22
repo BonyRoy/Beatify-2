@@ -386,3 +386,45 @@
   transition: transform 0.3s ease, background-color 0.25s, box-shadow 0.2s;
   pointer-events: none;
 }
+
+/* Playlist image header - replaces Artists on mobile when a playlist is playing */
+.playlist-header-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .playlist-header-mobile {
+    display: block;
+    position: fixed;
+    top: 73px;
+    left: 0;
+    right: 0;
+    z-index: 99;
+    width: 100%;
+    height: 132px;
+    overflow: hidden;
+    background-color: var(--nav-bg, #1a1a1a);
+    background-size: cover;
+    background-position: center;
+  }
+
+  .playlist-header-mobile__image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+  }
+
+  .playlist-header-mobile__label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+  }
+}

@@ -52,6 +52,12 @@ body.artists-hidden .app__content {
     padding-top: 200px;
   }
 
+  /* When playlist header replaces artists (playlist playing on mobile) */
+  body.playlist-header-visible .app__content {
+    padding-top: 205px;
+    /* Navbar ~73px + playlist image header ~132px */
+  }
+
   body.artists-hidden .app__content {
     padding-top: 70px;
     /* Only navbar height on mobile */
@@ -66,6 +72,11 @@ body.artists-hidden .app__content {
   .app__content {
     /* Navbar ~70px + Artists section ~116px (70px image + padding + text) = ~186px */
     padding-top: 185px;
+  }
+
+  body.playlist-header-visible .app__content {
+    padding-top: 205px;
+    /* Navbar ~73px + playlist header ~132px */
   }
 
   body.artists-hidden .app__content {

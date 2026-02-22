@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import Sidebar from './Sidebar'
 import Artists from './Artists'
+import { playlistImages } from './Playlist'
 import './Navbar.css'
 
 const SunIcon = () => (
@@ -124,10 +125,30 @@ const allArtists = [
 const Navbar = () => {
   const { isDark, toggleTheme } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
   const [searchParams, setSearchParams] = useSearchParams()
   const showFavorites = searchParams.get('favorites') === 'true'
   const selectedArtist = searchParams.get('artist')
+  const selectedPlaylist = searchParams.get('playlist') || ''
+  const view = searchParams.get('view') || (isMobile ? 'track' : 'playlist')
   const searchQuery = searchParams.get('search') || ''
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  const showPlaylistHeader = isMobile && selectedPlaylist && view === 'track'
+  useEffect(() => {
+    if (showPlaylistHeader) {
+      document.body.classList.add('playlist-header-visible')
+    } else {
+      document.body.classList.remove('playlist-header-visible')
+    }
+    return () => document.body.classList.remove('playlist-header-visible')
+  }, [showPlaylistHeader])
 
   // Remove artist filter on page reload
   useEffect(() => {
@@ -230,12 +251,34 @@ const Navbar = () => {
 
         <Sidebar isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
       </nav>
-      <Artists 
-        artists={allArtists} 
-        selectedArtist={selectedArtist}
-        searchQuery={searchQuery}
-        onArtistClick={handleArtistClick}
-      />
+      {isMobile && selectedPlaylist && view === 'track' ? (
+        <div
+          className="playlist-header-mobile"
+          style={{
+            backgroundImage: `url(${`/playlist/${playlistImages.find((p) => p.label === selectedPlaylist)?.image || 'thar.png'}`})`,
+          }}
+        >
+          <img
+            src={`/playlist/${playlistImages.find((p) => p.label === selectedPlaylist)?.image || 'thar.png'}`}
+            alt={selectedPlaylist}
+            className="playlist-header-mobile__image"
+            onError={(e) => {
+              const fallback = playlistImages.find((p) => p.label === selectedPlaylist)
+              const fallbackSrc = fallback ? `/playlistbg/${fallback.image}` : '/playlistbg/thar.png'
+              e.target.src = fallbackSrc
+              e.target.parentElement.style.backgroundImage = `url(${fallbackSrc})`
+            }}
+          />
+          <div className="playlist-header-mobile__label">{selectedPlaylist}</div>
+        </div>
+      ) : (
+        <Artists
+          artists={allArtists}
+          selectedArtist={selectedArtist}
+          searchQuery={searchQuery}
+          onArtistClick={handleArtistClick}
+        />
+      )}
     </>
   )
 }
