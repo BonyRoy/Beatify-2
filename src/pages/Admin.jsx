@@ -36,6 +36,8 @@ import {
   FileSpreadsheet,
   Download,
   FileUp,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import * as XLSX from "xlsx";
@@ -140,6 +142,10 @@ const Admin = () => {
   const [bulkSelectedIds, setBulkSelectedIds] = useState(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [bulkCurrentPage, setBulkCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState(null); // 'releaseDate' | 'uploadedAt'
+  const [sortOrder, setSortOrder] = useState("asc"); // 'asc' | 'desc'
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef(null);
 
   const excelFileInputRef = useRef(null);
 
@@ -212,6 +218,21 @@ const Admin = () => {
       setBulkCurrentPage(1);
     }
   }, [activeTab, existingTracks]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        sortDropdownRef.current &&
+        !sortDropdownRef.current.contains(e.target)
+      ) {
+        setSortDropdownOpen(false);
+      }
+    };
+    if (sortDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [sortDropdownOpen]);
 
   const fetchExistingTracks = async () => {
     try {
@@ -880,6 +901,95 @@ const Admin = () => {
     );
   });
 
+  const sortTracks = (tracks) => {
+    if (!sortBy) return tracks;
+    return [...tracks].sort((a, b) => {
+      if (sortBy === "releaseDate") {
+        const aVal = a.releaseDate || "";
+        const bVal = b.releaseDate || "";
+        return sortOrder === "asc"
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      // uploadedAt: Firestore Timestamp or number
+      const getTime = (t) => {
+        const ts = t.uploadedAt;
+        if (!ts) return 0;
+        if (typeof ts?.toMillis === "function") return ts.toMillis();
+        if (typeof ts?.seconds === "number") return ts.seconds * 1000;
+        if (typeof ts === "number") return ts;
+        return 0;
+      };
+      const aVal = getTime(a);
+      const bVal = getTime(b);
+      return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+    });
+  };
+
+  const sortedFilteredTracks = sortTracks(filteredTracks);
+  const sortedExistingTracks = sortTracks(existingTracks);
+
+  const handleSort = (field, order) => {
+    setSortBy(field);
+    setSortOrder(order);
+    if (activeTab === "hip") setBulkCurrentPage(1);
+  };
+
+  const sortOptions = [
+    { field: "releaseDate", order: "asc", label: "Release Date (Oldest first)" },
+    { field: "releaseDate", order: "desc", label: "Release Date (Newest first)" },
+    { field: "uploadedAt", order: "asc", label: "Upload Date (Oldest first)" },
+    { field: "uploadedAt", order: "desc", label: "Upload Date (Newest first)" },
+  ];
+
+  const activeSortLabel =
+    sortOptions.find(
+      (o) => o.field === sortBy && o.order === sortOrder,
+    )?.label || "Sort by...";
+
+  const sortDropdown = (
+    <div className="admin-sort-dropdown" ref={sortDropdownRef}>
+      <button
+        type="button"
+        className="admin-sort-dropdown-toggle"
+        onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+        aria-expanded={sortDropdownOpen}
+      >
+        <span>{activeSortLabel}</span>
+        <span className="admin-sort-dropdown-arrow">
+          {sortDropdownOpen ? (
+            <ChevronUp size={16} />
+          ) : (
+            <ChevronDown size={16} />
+          )}
+        </span>
+      </button>
+      {sortDropdownOpen && (
+        <div className="admin-sort-dropdown-menu">
+          {sortOptions.map((opt) => (
+            <div
+              key={`${opt.field}-${opt.order}`}
+              className={`admin-sort-dropdown-item ${
+                sortBy === opt.field && sortOrder === opt.order ? "selected" : ""
+              }`}
+              onClick={() => {
+                handleSort(opt.field, opt.order);
+                setSortDropdownOpen(false);
+              }}
+            >
+              {opt.label}
+              {opt.order === "asc" ? (
+                <ArrowUp size={14} className="admin-sort-item-icon" />
+              ) : (
+                <ArrowDown size={14} className="admin-sort-item-icon" />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="admin-container">
       <div className="admin-header">
@@ -1156,7 +1266,8 @@ const Admin = () => {
                         )}
                       </span>
                     </div>
-                    <div className="admin-search-container">
+                    <div className="admin-search-sort-row">
+                      <div className="admin-search-container">
                       <input
                         type="text"
                         placeholder="Search tracks by name, artist, genre, album..."
@@ -1164,6 +1275,8 @@ const Admin = () => {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="admin-search-input"
                       />
+                      </div>
+                      {sortDropdown}
                     </div>
                     {existingTracks.length === 0 ? (
                       <div className="admin-no-tracks">
@@ -1172,7 +1285,7 @@ const Admin = () => {
                     ) : (
                       <div className="admin-tracks-list-container">
                         <div className="admin-tracks-list">
-                          {filteredTracks.map((track) => (
+                          {sortedFilteredTracks.map((track) => (
                             <div key={track.id} className="admin-track-item">
                               <div className="admin-track-item-info">
                                 <h3>{track.name}</h3>
@@ -1232,6 +1345,7 @@ const Admin = () => {
                   Edit metadata below. Track files cannot be changed here.
                   Download Excel to edit offline, then upload to apply changes.
                 </p>
+                {sortDropdown}
                 <div className="admin-bulk-actions">
                   <button
                     type="button"
@@ -1303,7 +1417,7 @@ const Admin = () => {
                               checked={(() => {
                                 const start =
                                   (bulkCurrentPage - 1) * BULK_RECORDS_PER_PAGE;
-                                const paginated = existingTracks.slice(
+                                const paginated = sortedExistingTracks.slice(
                                   start,
                                   start + BULK_RECORDS_PER_PAGE,
                                 );
@@ -1317,7 +1431,7 @@ const Admin = () => {
                               onChange={() => {
                                 const start =
                                   (bulkCurrentPage - 1) * BULK_RECORDS_PER_PAGE;
-                                const paginated = existingTracks.slice(
+                                const paginated = sortedExistingTracks.slice(
                                   start,
                                   start + BULK_RECORDS_PER_PAGE,
                                 );
@@ -1342,7 +1456,7 @@ const Admin = () => {
                         {(() => {
                           const start =
                             (bulkCurrentPage - 1) * BULK_RECORDS_PER_PAGE;
-                          const paginatedTracks = existingTracks.slice(
+                          const paginatedTracks = sortedExistingTracks.slice(
                             start,
                             start + BULK_RECORDS_PER_PAGE,
                           );
