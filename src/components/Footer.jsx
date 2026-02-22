@@ -138,21 +138,14 @@ const Footer = () => {
       return
     }
     
-    // In full-screen mode, close when clicking outside controls
+    // In full-screen mode, only close via X button (not backdrop click)
     if (isFullScreen) {
-      // Close speed menu if open
+      // Close speed menu if open when clicking elsewhere
       if (showSpeedMenu) {
         setShowSpeedMenu(false)
-        return
       }
-      // Don't close if clicking on controls, progress bar, or extra controls
-      if (e.target.closest('.player__fullscreen-controls') || 
-          e.target.closest('.player__fullscreen-progress') ||
-          e.target.closest('.player__progress-bar') ||
-          e.target.closest('.player__fullscreen-extra-controls')) {
-        return
-      }
-      setIsFullScreen(false)
+      // Don't close full-screen on backdrop click - only the X button closes it
+      return
     } else {
       // In regular mode, open full-screen when clicking on left section
       // Don't open if clicking on controls

@@ -107,7 +107,9 @@
   justify-content: center;
   color: var(--text-primary, #fff);
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   z-index: 10001;
   padding: 0;
 }
@@ -213,7 +215,8 @@
   will-change: transform;
 }
 
-.player__fullscreen-artist-wrapper:hover .player__fullscreen-artist-inner.player__fullscreen-artist--scroll {
+.player__fullscreen-artist-wrapper:hover
+  .player__fullscreen-artist-inner.player__fullscreen-artist--scroll {
   animation-play-state: paused;
 }
 
@@ -306,7 +309,9 @@
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   min-width: 60px;
 }
 
@@ -475,7 +480,6 @@ body.footer-fullscreen-active {
   margin-bottom: 0;
 }
 
-
 .player__album-content {
   width: 100%;
   min-width: 0;
@@ -623,7 +627,9 @@ body.footer-fullscreen-active {
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   min-width: 50px;
   white-space: nowrap;
 }
@@ -795,7 +801,7 @@ body.footer-fullscreen-active {
 
   .player__title-wrapper::after,
   .player__artist-wrapper::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     right: 0;
@@ -819,7 +825,7 @@ body.footer-fullscreen-active {
   }
 
   .player__album-wrapper::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     right: 0;
@@ -829,7 +835,6 @@ body.footer-fullscreen-active {
     pointer-events: none;
     z-index: 1;
   }
-
 
   .player__album-content {
     flex: 1;
@@ -929,7 +934,6 @@ body.footer-fullscreen-active {
     font-size: 0.75rem;
     animation-duration: 10s;
   }
-
 
   .player__album-text {
     font-size: 0.65rem;
