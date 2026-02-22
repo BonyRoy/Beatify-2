@@ -80,7 +80,7 @@ const playlistImages = [
   // { image: 'chillvibes.png', label: 'Chill Vibes' },
   { image: "edm.png", label: "EDM" },
   // { image: 'Globalmusic.png', label: 'Global Music' },
-  // { image: 'gym.png', label: 'Gym' },
+  { image: "gym.png", label: "Gym" },
   { image: "holi.png", label: "Holi" },
   // { image: 'party.png', label: 'Party' },
   { image: "romantic.png", label: "Romantic" },

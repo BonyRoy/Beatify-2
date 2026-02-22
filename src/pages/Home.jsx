@@ -351,7 +351,16 @@ const playlistTrackIds = {
   ],
   Party: [],
   "Chill Vibes": [],
-  Gym: [],
+  Gym: [
+    "a46a37d3-d5ed-4f13-8689-d43501a7a8db",
+    "a8014355-3445-410b-901e-91c03b1970f6",
+    "7317619e-fa40-4ad3-87d4-181384017f72",
+    "b51a92ed-94cc-4301-bdee-89c9cdf11b6b",
+    "49afff7e-ccea-42fa-a82e-a0bc5d4adb39",
+    "b7784a66-a029-4e4b-bf92-5d38b6ef906a",
+    "3157f95f-33bd-47db-a6f6-380bbd4a986e",
+    "56645bf7-e909-4b9f-bb92-80571d82159b",
+  ],
   EDM: [
     "230435c9-f724-404c-8263-13757a513632",
     "825a5117-34c3-454a-bb88-e993bbdc97f8",
