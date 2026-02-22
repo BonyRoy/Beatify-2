@@ -1840,12 +1840,14 @@ const Footer = () => {
                 <div className="player__fullscreen-art-wrapper">
                   {albumArtUrl ? (
                     <img
-                      className="player__fullscreen-art"
+                      className={`player__fullscreen-art ${isPlaying ? "player__fullscreen-art--playing" : ""}`}
                       src={albumArtUrl}
                       alt={`${currentTrack.name} album art`}
                     />
                   ) : (
-                    <div className="player__fullscreen-art player__fullscreen-art--placeholder">
+                    <div
+                      className={`player__fullscreen-art player__fullscreen-art--placeholder ${isPlaying ? "player__fullscreen-art--playing" : ""}`}
+                    >
                       <MusicIcon />
                     </div>
                   )}
@@ -1990,17 +1992,21 @@ const Footer = () => {
               {/* Regular footer layout */}
               {/* Left: Album Art & Track Info */}
               <div className="player__left">
-                {albumArtUrl ? (
-                  <img
-                    className="player__art"
-                    src={albumArtUrl}
-                    alt={`${currentTrack.name} album art`}
-                  />
-                ) : (
-                  <div className="player__art player__art--placeholder">
-                    <MusicIcon />
-                  </div>
-                )}
+                <div
+                  className={`player__art-wrapper ${isPlaying ? "player__art-wrapper--playing" : ""}`}
+                >
+                  {albumArtUrl ? (
+                    <img
+                      className="player__art"
+                      src={albumArtUrl}
+                      alt={`${currentTrack.name} album art`}
+                    />
+                  ) : (
+                    <div className="player__art player__art--placeholder">
+                      <MusicIcon />
+                    </div>
+                  )}
+                </div>
                 <div className="player__info">
                   <div className="player__title-wrapper">
                     <div

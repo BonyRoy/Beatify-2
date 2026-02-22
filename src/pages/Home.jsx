@@ -96,6 +96,7 @@ const MusicTrack = ({
   favorites,
   downloads,
   isSelected,
+  isPlaying = false,
 }) => {
   // Use UUID if available, otherwise fall back to track ID (matching reference implementation)
   const trackIdentifier = track.uuid || track.id;
@@ -191,7 +192,9 @@ const MusicTrack = ({
       className={`track-row ${isSelected ? "track-row--selected" : ""}`}
       onClick={handleRowClick}
     >
-      <div className="track-row__art-wrapper">
+      <div
+        className={`track-row__art-wrapper ${isPlaying ? "track-row__art-wrapper--playing" : ""}`}
+      >
         {albumArtUrl ? (
           <img
             className="track-row__art"
@@ -496,7 +499,7 @@ const Home = () => {
   const selectedArtist = searchParams.get("artist");
   const selectedPlaylist = searchParams.get("playlist");
   const searchQuery = searchParams.get("search") || "";
-  const { selectTrack, currentTrack, setPlaylist } = usePlayer();
+  const { selectTrack, currentTrack, setPlaylist, isPlaying } = usePlayer();
 
   const [musicList, setMusicList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -754,6 +757,7 @@ const Home = () => {
                     favorites={favorites}
                     downloads={downloads}
                     isSelected={trackIdentifier === currentTrackId}
+                    isPlaying={isPlaying && trackIdentifier === currentTrackId}
                   />
                 );
               })

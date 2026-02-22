@@ -90,7 +90,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  gap: 2rem;
+  gap: 10px;
 }
 
 .player__fullscreen-close {
@@ -131,15 +131,16 @@
   flex: 0 0 auto;
   width: 100%;
   max-width: 100%;
-  padding: 1rem 0;
+  padding: 2rem 0;
 }
 
 .player__fullscreen-art {
+  transition: box-shadow 0.3s ease;
   width: 70%;
   max-width: 400px;
   height: auto;
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: 50%;
   object-fit: cover;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
@@ -148,7 +149,7 @@
   width: 70%;
   max-width: 400px;
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
   display: flex;
   align-items: center;
@@ -161,6 +162,26 @@
   width: 80px;
   height: 80px;
   opacity: 0.8;
+}
+
+.player__fullscreen-art--playing {
+  animation: fullscreen-art-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes fullscreen-art-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.3),
+      0 0 20px rgba(249, 115, 22, 0.5),
+      0 0 40px rgba(236, 72, 153, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.3),
+      0 0 32px rgba(249, 115, 22, 0.7),
+      0 0 56px rgba(236, 72, 153, 0.4);
+  }
 }
 
 .player__fullscreen-info {
@@ -417,10 +438,36 @@ body.footer-fullscreen-active {
   min-width: 0;
 }
 
+.player__art-wrapper {
+  flex-shrink: 0;
+  position: relative;
+  padding: 3px;
+  border-radius: 50%;
+  transition: box-shadow 0.3s ease;
+}
+
+.player__art-wrapper--playing {
+  animation: player-art-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes player-art-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 10px rgba(249, 115, 22, 0.5),
+      0 0 20px rgba(236, 72, 153, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 18px rgba(249, 115, 22, 0.7),
+      0 0 32px rgba(236, 72, 153, 0.4);
+  }
+}
+
 .player__art {
   width: 56px;
   height: 56px;
-  border-radius: 6px;
+  border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
 }
@@ -431,7 +478,9 @@ body.footer-fullscreen-active {
   justify-content: center;
   background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
   color: white;
-  border-radius: 6px;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
 }
 
 .player__art--placeholder svg {

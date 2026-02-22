@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { fetchMusicList } from '../services/musicService'
 import './Artists.css'
 
-// Map image names from JSON to actual filenames in public/Artists folder
-const getImagePath = (imageName) => {
+// Map image names from JSON to actual filenames in public/Artists folder (exported for reuse)
+export const getImagePath = (imageName) => {
   const imageMap = {
     arjit: 'arjitsingh.jpeg',
     mohit: 'mohit.webp',

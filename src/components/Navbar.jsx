@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
+import { useListeningHistory } from '../context/ListeningHistoryContext'
 import Sidebar from './Sidebar'
 import Artists from './Artists'
+import TopArtistsModal from './TopArtistsModal'
 import { playlistImages } from './Playlist'
 import './Navbar.css'
 
@@ -56,6 +58,15 @@ const ThemeToggle = ({ isDark, toggleTheme }) => (
 const FavoriteIcon = ({ filled }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+)
+
+const ChartIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 3v18h18" />
+    <path d="M18 17V9" />
+    <path d="M13 17V5" />
+    <path d="M8 17v-3" />
   </svg>
 )
 
@@ -124,7 +135,9 @@ const allArtists = [
 
 const Navbar = () => {
   const { isDark, toggleTheme } = useTheme()
+  const { getTopArtists } = useListeningHistory()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [topArtistsModalOpen, setTopArtistsModalOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768)
   const [searchParams, setSearchParams] = useSearchParams()
   const showFavorites = searchParams.get('favorites') === 'true'
@@ -225,8 +238,16 @@ const Navbar = () => {
           />
         </div>
 
-        {/* Desktop: theme toggle and favorites filter visible */}
+        {/* Desktop: top artists, favorites, theme toggle */}
         <div className="navbar__desktop">
+          <button
+            type="button"
+            className="navbar__top-artists-btn"
+            onClick={() => setTopArtistsModalOpen(true)}
+            aria-label="View your top artists"
+          >
+            <ChartIcon />
+          </button>
           <button
             type="button"
             className={`navbar__favorites-btn ${showFavorites ? 'navbar__favorites-btn--active' : ''}`}
@@ -249,7 +270,20 @@ const Navbar = () => {
           <HamburgerIcon open={menuOpen} />
         </button>
 
-        <Sidebar isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
+        <Sidebar
+          isOpen={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          onOpenTopArtists={() => {
+            setMenuOpen(false)
+            setTopArtistsModalOpen(true)
+          }}
+        />
+        <TopArtistsModal
+          isOpen={topArtistsModalOpen}
+          onClose={() => setTopArtistsModalOpen(false)}
+          topArtists={getTopArtists(3)}
+          allArtists={allArtists}
+        />
       </nav>
       {isMobile && selectedPlaylist && view === 'track' ? (
         <div

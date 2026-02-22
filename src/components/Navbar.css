@@ -65,6 +65,27 @@
   flex-shrink: 0;
 }
 
+.navbar__top-artists-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--nav-border, #333);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.navbar__top-artists-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+  background-color: var(--track-bg-hover, rgba(255, 255, 255, 0.06));
+}
+
 .navbar__favorites-btn {
   display: flex;
   align-items: center;
