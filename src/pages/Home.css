@@ -441,7 +441,7 @@ body:has(.footer--player) .home__sidebar-content {
 /* Very small screens */
 @media (max-width: 480px) {
   .home__grid {
-    height: calc(100vh - 165px - 70px);
+    height: calc(100vh - 175px - 70px);
   }
 
   .home__sidebar {
