@@ -448,6 +448,13 @@ const playlistTrackIds = {
     "776e8424-eae4-4c13-84e9-d4bb060be4f3",
     "5642a24c-e580-4d71-b48f-1199acde0279",
   ],
+  Dhurandhar: [
+    "4a27a9f3-e6ca-4729-a1eb-3cd20b8fc86c",
+    "c0e9a3b3-ae6c-4e3d-8349-6e2d21a9e6d2",
+    "6c259636-4a67-4474-917a-313206f1a017",
+    "7e01a7c6-10ea-4faa-9037-4818c8a6945d",
+    "0e9b25ca-95fb-418f-8a29-3ba9c640f8fd",
+  ],
 };
 
 const ClearIcon = () => (
