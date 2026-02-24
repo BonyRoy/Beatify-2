@@ -152,6 +152,8 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [hasFavorites, setHasFavorites] = useState(false);
+  const [showEmptyFavModal, setShowEmptyFavModal] = useState(false);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -162,6 +164,26 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  // Read favorites from localStorage when sidebar opens
+  useEffect(() => {
+    if (isOpen) {
+      try {
+        const saved = localStorage.getItem("favorites");
+        const list = saved ? JSON.parse(saved) : [];
+        setHasFavorites(Array.isArray(list) && list.length > 0);
+      } catch {
+        setHasFavorites(false);
+      }
+    }
+  }, [isOpen]);
+
+  // Auto-close empty favorites modal after 4 seconds
+  useEffect(() => {
+    if (!showEmptyFavModal) return;
+    const timer = setTimeout(() => setShowEmptyFavModal(false), 4000);
+    return () => clearTimeout(timer);
+  }, [showEmptyFavModal]);
 
   // Default to 'track' on mobile, 'playlist' on desktop if no view param is set
   const defaultView = isMobile ? "track" : "playlist";
@@ -174,6 +196,10 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
   };
 
   const handleToggleFavorites = () => {
+    if (!hasFavorites) {
+      setShowEmptyFavModal(true);
+      return;
+    }
     const newParams = new URLSearchParams(searchParams);
     if (showFavorites) {
       newParams.delete("favorites");
@@ -189,6 +215,25 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
 
   return (
     <>
+      {showEmptyFavModal && (
+        <div className="sidebar__empty-fav-modal-overlay" onClick={() => setShowEmptyFavModal(false)}>
+          <div className="sidebar__empty-fav-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="sidebar__empty-fav-modal__close"
+              onClick={() => setShowEmptyFavModal(false)}
+              aria-label="Close"
+            >
+              <CloseIcon />
+            </button>
+            <span className="sidebar__empty-fav-modal__icon">
+              <FavoriteIcon filled />
+            </span>
+            <p className="sidebar__empty-fav-modal__text">Nothing in My Favorites</p>
+            <p className="sidebar__empty-fav-modal__hint">Add songs by clicking the heart icon on any track</p>
+          </div>
+        </div>
+      )}
       <div
         className={`sidebar__overlay ${isOpen ? "sidebar__overlay--open" : ""}`}
         onClick={onClose}
@@ -220,10 +265,11 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
 
           <button
             type="button"
-            className={`sidebar__item sidebar__item--button ${showFavorites ? "sidebar__item--active" : ""}`}
+            className={`sidebar__item sidebar__item--button ${showFavorites ? "sidebar__item--active" : ""} ${!hasFavorites ? "sidebar__item--disabled" : ""}`}
             onClick={handleToggleFavorites}
+            aria-label={hasFavorites ? "Show my favorites" : "No favorites yet - click to see message"}
           >
-            <span className="sidebar__label">Favorites</span>
+            <span className="sidebar__label">My Favorites</span>
             <span className="sidebar__icon">
               <FavoriteIcon filled={showFavorites} />
             </span>

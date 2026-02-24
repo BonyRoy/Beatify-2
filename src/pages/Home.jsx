@@ -4,6 +4,7 @@ import DownloadModal from "../components/DownloadModal";
 import Playlist from "../components/Playlist";
 import { fetchMusicList } from "../services/musicService";
 import { usePlayer } from "../context/PlayerContext";
+import { fuzzyMatchesAny } from "../utils/searchUtils";
 import "./Home.css";
 
 const DownloadIcon = ({ filled }) => (
@@ -574,6 +575,15 @@ const Home = () => {
     }
   }, []);
 
+  // When in favorites view and user removes all favorites, exit favorites view
+  useEffect(() => {
+    if (showFavorites && favorites.length === 0) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("favorites");
+      setSearchParams(newParams);
+    }
+  }, [showFavorites, favorites.length, searchParams, setSearchParams]);
+
   const loadMusicList = async () => {
     try {
       setLoading(true);
@@ -664,19 +674,16 @@ const Home = () => {
       });
     }
 
-    // Finally apply search filter if present (searches within already filtered results)
+    // Finally apply search filter if present (fuzzy match, ~75% similarity)
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((track) => {
-        const trackName = (track.name || "").toLowerCase();
-        const trackArtist = (track.artist || "").toLowerCase();
-        const trackAlbum = (track.album || "").toLowerCase();
-        return (
-          trackName.includes(query) ||
-          trackArtist.includes(query) ||
-          trackAlbum.includes(query)
-        );
-      });
+      filtered = filtered.filter((track) =>
+        fuzzyMatchesAny(
+          searchQuery,
+          track.name,
+          track.artist,
+          track.album,
+        ),
+      );
     }
 
     return filtered;
@@ -733,7 +740,7 @@ const Home = () => {
             <div className="home__sidebar-header">
               <h3 className="home__sidebar-title">
                 <FavoriteIcon filled={true} />
-                Favorites
+                My Favorites
               </h3>
             </div>
           )}
@@ -778,7 +785,7 @@ const Home = () => {
                 </p>
                 <p className="home__empty-hint">
                   {showFavorites ? (
-                    "Add songs to your favorites by clicking the heart icon!"
+                    "Add songs to My Favorites by clicking the heart icon!"
                   ) : (
                     <>
                       For any issues, please reach out to{" "}
@@ -816,21 +823,7 @@ const Home = () => {
           </div>
         </aside>
         <main className="home__main">
-          {!showFavorites ? (
-            <Playlist />
-          ) : (
-            <>
-              <h4>Favorites</h4>
-              {!loading &&
-                !error &&
-                searchQuery &&
-                filteredMusicList.length === 0 && (
-                  <p className="home__empty-hint">
-                    No tracks found matching "{searchQuery}"
-                  </p>
-                )}
-            </>
-          )}
+          <Playlist hasFavorites={favorites.length > 0} />
         </main>
       </div>
 

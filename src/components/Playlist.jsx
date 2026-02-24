@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { fuzzyMatches } from "../utils/searchUtils";
 import "./Playlist.css";
 
 const PlaylistIconGradient = () => (
@@ -89,11 +90,28 @@ export const playlistImages = [
   { image: "valentine.png", label: "Valentine" },
 ];
 
-const Playlist = () => {
+const FavoriteHeartIcon = ({ className = "" }) => (
+  <svg
+    className={`playlist__favorites-heart ${className}`}
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+);
+
+const FAVORITES_LABEL = "My Favorites";
+
+const Playlist = ({ hasFavorites = false }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const searchQuery = searchParams.get("search") || "";
   const selectedPlaylist = searchParams.get("playlist") || "";
+  const showFavorites = searchParams.get("favorites") === "true";
   const [isMobile, setIsMobile] = useState(false);
 
   // Check if mobile on mount and resize
@@ -106,17 +124,48 @@ const Playlist = () => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Filter playlists based on search query
+  // Filter playlists based on search query (fuzzy match, ~75% similarity)
   const filteredPlaylists = useMemo(() => {
-    if (!searchQuery) {
-      return playlistImages;
-    }
-
-    const query = searchQuery.toLowerCase();
+    if (!searchQuery) return playlistImages;
     return playlistImages.filter((playlist) =>
-      playlist.label.toLowerCase().includes(query),
+      fuzzyMatches(searchQuery, playlist.label),
     );
   }, [searchQuery]);
+
+  // Include My Favorites card only when user has favorites, and when search matches or no search
+  const showFavoritesCard =
+    hasFavorites && (!searchQuery || fuzzyMatches(searchQuery, FAVORITES_LABEL));
+
+  // On mobile: if in playlist view, search is active, but no playlists match - switch to track view so user sees track results
+  const view = searchParams.get("view") || (isMobile ? "track" : "playlist");
+  useEffect(() => {
+    if (
+      isMobile &&
+      searchQuery.trim() &&
+      view === "playlist" &&
+      filteredPlaylists.length === 0
+    ) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set("view", "track");
+      setSearchParams(newParams);
+    }
+  }, [isMobile, searchQuery, view, filteredPlaylists.length, searchParams, setSearchParams]);
+
+  const handleFavoritesClick = () => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (showFavorites) {
+      newSearchParams.delete("favorites");
+    } else {
+      newSearchParams.set("favorites", "true");
+      newSearchParams.delete("playlist");
+    }
+    if (isMobile) {
+      newSearchParams.set("view", "track");
+      navigate(`/?${newSearchParams.toString()}`);
+    } else {
+      setSearchParams(newSearchParams);
+    }
+  };
 
   const handlePlaylistClick = (playlistLabel) => {
     const newSearchParams = new URLSearchParams(searchParams);
@@ -149,12 +198,24 @@ const Playlist = () => {
         </h4>
       </div>
       <div className="playlist__grid">
-        {filteredPlaylists.length === 0 ? (
+        {!showFavoritesCard && filteredPlaylists.length === 0 ? (
           <div className="playlist__empty">
             <p>No playlists found matching "{searchQuery}"</p>
           </div>
         ) : (
-          filteredPlaylists.map((playlist, index) => {
+          <>
+            {showFavoritesCard && (
+              <div
+                className={`playlist__item playlist__item--favorites ${showFavorites ? "playlist__item--selected" : ""}`}
+                onClick={handleFavoritesClick}
+              >
+                <div className="playlist__image-wrapper playlist__image-wrapper--favorites">
+                  <FavoriteHeartIcon />
+                  <div className="playlist__label">{FAVORITES_LABEL}</div>
+                </div>
+              </div>
+            )}
+            {filteredPlaylists.map((playlist, index) => {
             const isSelected = selectedPlaylist === playlist.label;
             return (
               <div
@@ -176,7 +237,8 @@ const Playlist = () => {
                 </div>
               </div>
             );
-          })
+          })}
+          </>
         )}
       </div>
     </div>

@@ -94,6 +94,28 @@ body:has(.footer--player) .playlist__grid {
   display: block;
 }
 
+/* Favorites card - heart icon with gradient */
+.playlist__image-wrapper--favorites {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+  color: white;
+}
+
+.playlist__image-wrapper--favorites svg {
+  width: 40%;
+  height: auto;
+  flex-shrink: 0;
+}
+
+.playlist__image-wrapper--favorites .playlist__label {
+  position: relative;
+  background: transparent;
+  padding-top: 0.25rem;
+}
+
 .playlist__label {
   position: absolute;
   bottom: 0;
@@ -116,6 +138,13 @@ body:has(.footer--player) .playlist__grid {
   text-align: center;
   color: var(--text-muted);
 }
+
+.playlist__empty-hint {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
 
 /* Responsive grid adjustments */
 @media (min-width: 768px) {

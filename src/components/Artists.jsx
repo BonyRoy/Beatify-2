@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { fetchMusicList } from '../services/musicService'
+import { fuzzyMatches, fuzzyMatchesAny } from '../utils/searchUtils'
 import './Artists.css'
 
 // Map image names from JSON to actual filenames in public/Artists folder (exported for reuse)
@@ -68,19 +69,12 @@ const Artists = ({ artists, selectedArtist, searchQuery, onArtistClick }) => {
     }
   }, [searchQuery]) // eslint-disable-line react-hooks/exhaustive-deps
   
-  // Filter tracks based on search query
+  // Filter tracks based on search query (fuzzy match, ~75% similarity)
   const filteredTracks = React.useMemo(() => {
     if (!searchQuery || musicList.length === 0) return []
-    
-    const query = searchQuery.toLowerCase()
-    return musicList.filter(track => {
-      const trackName = (track.name || '').toLowerCase()
-      const trackArtist = (track.artist || '').toLowerCase()
-      const trackAlbum = (track.album || '').toLowerCase()
-      return trackName.includes(query) || 
-             trackArtist.includes(query) || 
-             trackAlbum.includes(query)
-    })
+    return musicList.filter((track) =>
+      fuzzyMatchesAny(searchQuery, track.name, track.artist, track.album),
+    )
   }, [musicList, searchQuery])
   
   // Filter and reorder artists
@@ -90,23 +84,16 @@ const Artists = ({ artists, selectedArtist, searchQuery, onArtistClick }) => {
     // First, filter by search query if present
     let filteredArtists = artists
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filteredArtists = artists.filter(artist => {
-        const artistName = (artist.name || '').toLowerCase()
-        // Check if artist name matches search
-        const nameMatches = artistName.includes(query)
-        
-        // Check if this artist has any matching tracks
+      filteredArtists = artists.filter((artist) => {
+        const artistName = artist.name || ''
+        const nameMatches = fuzzyMatches(searchQuery, artistName)
         if (filteredTracks.length > 0) {
-          const hasMatchingTracks = filteredTracks.some(track => {
-            const trackArtist = (track.artist || '').toLowerCase()
-            return trackArtist.includes(artistName) || artistName.includes(trackArtist)
-          })
-          // Only show artist if name matches OR has matching tracks
+          const artistName = artist.name || ''
+          const hasMatchingTracks = filteredTracks.some((track) =>
+            fuzzyMatches(artistName, track.artist || ''),
+          )
           return nameMatches || hasMatchingTracks
         }
-        
-        // If no matching tracks, only show if name matches
         return nameMatches
       })
     } else if (filteredTracks.length > 0) {

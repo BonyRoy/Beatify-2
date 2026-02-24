@@ -6,6 +6,7 @@ import Sidebar from './Sidebar'
 import Artists from './Artists'
 import TopArtistsModal from './TopArtistsModal'
 import { playlistImages } from './Playlist'
+import { fuzzyMatches } from '../utils/searchUtils'
 import './Navbar.css'
 
 const SunIcon = () => (
@@ -180,9 +181,8 @@ const Navbar = () => {
     if (value.trim()) {
       newSearchParams.set('search', value)
       if (isMobile) {
-        const query = value.toLowerCase().trim()
         const matchesPlaylist = playlistImages.some((p) =>
-          p.label.toLowerCase().includes(query),
+          fuzzyMatches(value.trim(), p.label),
         )
         if (matchesPlaylist) {
           newSearchParams.set('view', 'playlist')
@@ -192,6 +192,15 @@ const Navbar = () => {
       newSearchParams.delete('search')
     }
     setSearchParams(newSearchParams)
+  }
+
+  const handleBrandClick = (e) => {
+    if (isMobile) {
+      e.preventDefault()
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.set('view', view === 'track' ? 'playlist' : 'track')
+      setSearchParams(newSearchParams)
+    }
   }
 
   const toggleFavorites = () => {
@@ -231,7 +240,11 @@ const Navbar = () => {
   return (
     <>
       <nav className="navbar">
-        <Link to="/" className="navbar__brand">
+        <Link
+          to="/"
+          className="navbar__brand"
+          onClick={handleBrandClick}
+        >
           <MusicIcon />
           Beatify
         </Link>
@@ -263,7 +276,7 @@ const Navbar = () => {
             type="button"
             className={`navbar__favorites-btn ${showFavorites ? 'navbar__favorites-btn--active' : ''}`}
             onClick={toggleFavorites}
-            aria-label={showFavorites ? 'Show all tracks' : 'Show favorites only'}
+            aria-label={showFavorites ? 'Show all tracks' : 'Show my favorites only'}
           >
             <FavoriteIcon filled={showFavorites} />
           </button>
