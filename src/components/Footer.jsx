@@ -121,6 +121,7 @@ const Footer = () => {
     currentTime,
     duration,
     volume,
+    playlist,
     togglePlayPause,
     seekTo,
     setVolumeLevel,
@@ -167,6 +168,8 @@ const Footer = () => {
   const lastTrackChangeTimeRef = useRef(0);
   const nextTrackHandlerRef = useRef(null);
   const wasPlayingBeforeInterruptionRef = useRef(false);
+  const preloadAudioRef = useRef(null);
+  const preloadStartedRef = useRef(false);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -403,13 +406,53 @@ const Footer = () => {
     }
   }, [volume]);
 
+  // Reset preload flag when track changes
+  useEffect(() => {
+    preloadStartedRef.current = false;
+    if (preloadAudioRef.current) {
+      preloadAudioRef.current.src = "";
+    }
+  }, [currentTrack]);
+
   // Handle time updates
   const handleTimeUpdate = useCallback(() => {
     if (audioRef.current) {
       const currentTime = audioRef.current.currentTime;
       updateTime(currentTime);
+
+      // Preload next track when in last 5 seconds
+      const audioDuration = audioRef.current.duration;
+      if (
+        audioDuration > 5 &&
+        currentTime >= audioDuration - 5 &&
+        !preloadStartedRef.current &&
+        currentTrack &&
+        playlist.length > 0
+      ) {
+        const trackId = currentTrack.uuid || currentTrack.id;
+        const currentIndex = playlist.findIndex(
+          (t) => (t.uuid || t.id) === trackId,
+        );
+        const nextTrack =
+          currentIndex >= 0 && currentIndex < playlist.length - 1
+            ? playlist[currentIndex + 1]
+            : playlist.length > 1
+              ? playlist[0]
+              : null;
+        if (nextTrack) {
+          const nextUrl = nextTrack.fileUrl || nextTrack.url;
+          if (nextUrl) {
+            preloadStartedRef.current = true;
+            if (!preloadAudioRef.current) {
+              preloadAudioRef.current = new Audio();
+            }
+            preloadAudioRef.current.src = nextUrl;
+            preloadAudioRef.current.load();
+          }
+        }
+      }
     }
-  }, [updateTime]);
+  }, [updateTime, currentTrack, playlist]);
 
   // Handle loaded metadata
   const handleLoadedMetadata = useCallback(() => {

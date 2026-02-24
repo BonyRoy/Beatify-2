@@ -179,6 +179,7 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
       newParams.delete("favorites");
     } else {
       newParams.set("favorites", "true");
+      newParams.delete("playlist");
     }
     setSearchParams(newParams);
     onClose();

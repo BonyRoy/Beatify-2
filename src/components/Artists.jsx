@@ -160,6 +160,49 @@ const Artists = ({ artists, selectedArtist, searchQuery, onArtistClick }) => {
     }
   }, [])
 
+  // Auto-scroll back to selected artist after 10s of inactivity
+  useEffect(() => {
+    if (!selectedArtist || !containerRef.current || !selectedCardRef.current) return
+
+    const scrollContainer = containerRef.current
+    const selectedCard = selectedCardRef.current
+    let inactivityTimer = null
+
+    const scrollToSelectedArtist = () => {
+      const rect = selectedCard.getBoundingClientRect()
+      const containerRect = scrollContainer.getBoundingClientRect()
+      const isVisible =
+        rect.left >= containerRect.left && rect.right <= containerRect.right
+      if (!isVisible) {
+        selectedCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+      }
+    }
+
+    const resetTimer = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer)
+      inactivityTimer = setTimeout(() => {
+        scrollToSelectedArtist()
+      }, 10000)
+    }
+
+    const handleScroll = () => resetTimer()
+    const handleUserActivity = () => resetTimer()
+
+    resetTimer()
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('click', handleUserActivity)
+    window.addEventListener('keydown', handleUserActivity)
+    window.addEventListener('touchstart', handleUserActivity)
+
+    return () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer)
+      scrollContainer.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('click', handleUserActivity)
+      window.removeEventListener('keydown', handleUserActivity)
+      window.removeEventListener('touchstart', handleUserActivity)
+    }
+  }, [selectedArtist])
+
   // Don't render if no artists match and update body class
   useEffect(() => {
     if (reorderedArtists.length === 0) {

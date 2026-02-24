@@ -191,6 +191,7 @@ const MusicTrack = ({
     <div
       className={`track-row ${isSelected ? "track-row--selected" : ""}`}
       onClick={handleRowClick}
+      data-track-id={trackIdentifier}
     >
       <div
         className={`track-row__art-wrapper ${isPlaying ? "track-row__art-wrapper--playing" : ""}`}
@@ -457,6 +458,8 @@ const playlistTrackIds = {
     "6c259636-4a67-4474-917a-313206f1a017",
     "7e01a7c6-10ea-4faa-9037-4818c8a6945d",
     "0e9b25ca-95fb-418f-8a29-3ba9c640f8fd",
+    "d18748a5-6ae9-4dc7-9e09-81bb9ab48c51",
+    "16b935a3-404a-4f63-8393-cb093cf9cf72",
   ],
 };
 
@@ -508,6 +511,54 @@ const Home = () => {
   const [downloads, setDownloads] = useState([]);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState(null);
+  const sidebarContentRef = useRef(null);
+
+  // Auto-scroll back to playing track after 10s of inactivity
+  useEffect(() => {
+    if (!isPlaying || !currentTrack || !sidebarContentRef.current) return;
+
+    const scrollContainer = sidebarContentRef.current;
+    const trackId = currentTrack.uuid || currentTrack.id;
+    let inactivityTimer = null;
+
+    const scrollToPlayingTrack = () => {
+      const trackEl = scrollContainer.querySelector(
+        `[data-track-id="${trackId}"]`,
+      );
+      if (!trackEl) return;
+      const rect = trackEl.getBoundingClientRect();
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const isVisible =
+        rect.top >= containerRect.top && rect.bottom <= containerRect.bottom;
+      if (!isVisible) {
+        trackEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    };
+
+    const resetTimer = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        scrollToPlayingTrack();
+      }, 10000);
+    };
+
+    const handleScroll = () => resetTimer();
+    const handleUserActivity = () => resetTimer();
+
+    resetTimer();
+    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("click", handleUserActivity);
+    window.addEventListener("keydown", handleUserActivity);
+    window.addEventListener("touchstart", handleUserActivity);
+
+    return () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      scrollContainer.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("click", handleUserActivity);
+      window.removeEventListener("keydown", handleUserActivity);
+      window.removeEventListener("touchstart", handleUserActivity);
+    };
+  }, [isPlaying, currentTrack]);
 
   useEffect(() => {
     loadMusicList();
@@ -706,7 +757,7 @@ const Home = () => {
               </h3>
             </div>
           )}
-          <div className="home__sidebar-content">
+          <div className="home__sidebar-content" ref={sidebarContentRef}>
             {loading ? (
               <div className="home__loading">
                 <p>Loading music...</p>

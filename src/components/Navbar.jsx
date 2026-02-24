@@ -179,6 +179,15 @@ const Navbar = () => {
     const value = e.target.value
     if (value.trim()) {
       newSearchParams.set('search', value)
+      if (isMobile) {
+        const query = value.toLowerCase().trim()
+        const matchesPlaylist = playlistImages.some((p) =>
+          p.label.toLowerCase().includes(query),
+        )
+        if (matchesPlaylist) {
+          newSearchParams.set('view', 'playlist')
+        }
+      }
     } else {
       newSearchParams.delete('search')
     }
@@ -186,12 +195,14 @@ const Navbar = () => {
   }
 
   const toggleFavorites = () => {
+    const newSearchParams = new URLSearchParams(searchParams)
     if (showFavorites) {
-      searchParams.delete('favorites')
+      newSearchParams.delete('favorites')
     } else {
-      searchParams.set('favorites', 'true')
+      newSearchParams.set('favorites', 'true')
+      newSearchParams.delete('playlist')
     }
-    setSearchParams(searchParams)
+    setSearchParams(newSearchParams)
   }
 
   const handleArtistClick = (artistName) => {
