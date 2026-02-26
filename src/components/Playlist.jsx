@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { fuzzyMatches } from "../utils/searchUtils";
+import { playlistImages } from "../constants/playlistImages";
 import "./Playlist.css";
 
 const PlaylistIconGradient = () => (
@@ -72,24 +73,6 @@ const PlaylistIconGradient = () => (
   </svg>
 );
 
-// Playlist images with labels - update this list with actual image filenames from /public/playlist (exported for reuse in Navbar)
-export const playlistImages = [
-  { image: "dhurandhar.png", label: "Dhurandhar" },
-  { image: "Sallu.png", label: "Sallu-Bhai" },
-  { image: "Disney.png", label: "Disney & Pixar" },
-  { image: "oldmelodies.png", label: "Old Melodies" },
-  { image: "bharat.png", label: "Bharat" },
-  // { image: 'chillvibes.png', label: 'Chill Vibes' },
-  { image: "edm.png", label: "EDM" },
-  // { image: 'Globalmusic.png', label: 'Global Music' },
-  { image: "gym.png", label: "Gym" },
-  { image: "holi.png", label: "Holi" },
-  // { image: 'party.png', label: 'Party' },
-  { image: "romantic.png", label: "Romantic" },
-  { image: "thar.png", label: "Thar" },
-  { image: "valentine.png", label: "Valentine" },
-];
-
 const FavoriteHeartIcon = ({ className = "" }) => (
   <svg
     className={`playlist__favorites-heart ${className}`}
@@ -134,7 +117,8 @@ const Playlist = ({ hasFavorites = false }) => {
 
   // Include My Favorites card only when user has favorites, and when search matches or no search
   const showFavoritesCard =
-    hasFavorites && (!searchQuery || fuzzyMatches(searchQuery, FAVORITES_LABEL));
+    hasFavorites &&
+    (!searchQuery || fuzzyMatches(searchQuery, FAVORITES_LABEL));
 
   // On mobile: if in playlist view, search is active, but no playlists match - switch to track view so user sees track results
   const view = searchParams.get("view") || (isMobile ? "track" : "playlist");
@@ -149,7 +133,14 @@ const Playlist = ({ hasFavorites = false }) => {
       newParams.set("view", "track");
       setSearchParams(newParams);
     }
-  }, [isMobile, searchQuery, view, filteredPlaylists.length, searchParams, setSearchParams]);
+  }, [
+    isMobile,
+    searchQuery,
+    view,
+    filteredPlaylists.length,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const handleFavoritesClick = () => {
     const newSearchParams = new URLSearchParams(searchParams);
@@ -216,28 +207,28 @@ const Playlist = ({ hasFavorites = false }) => {
               </div>
             )}
             {filteredPlaylists.map((playlist, index) => {
-            const isSelected = selectedPlaylist === playlist.label;
-            return (
-              <div
-                key={index}
-                className={`playlist__item ${isSelected ? "playlist__item--selected" : ""}`}
-                onClick={() => handlePlaylistClick(playlist.label)}
-              >
-                <div className="playlist__image-wrapper">
-                  <img
-                    src={`/playlist/${playlist.image}`}
-                    alt={playlist.label}
-                    className="playlist__image"
-                    onError={(e) => {
-                      // Fallback to playlistbg if playlist folder doesn't exist
-                      e.target.src = `/playlistbg/${playlist.image}`;
-                    }}
-                  />
-                  <div className="playlist__label">{playlist.label}</div>
+              const isSelected = selectedPlaylist === playlist.label;
+              return (
+                <div
+                  key={index}
+                  className={`playlist__item ${isSelected ? "playlist__item--selected" : ""}`}
+                  onClick={() => handlePlaylistClick(playlist.label)}
+                >
+                  <div className="playlist__image-wrapper">
+                    <img
+                      src={`/playlist/${playlist.image}`}
+                      alt={playlist.label}
+                      className="playlist__image"
+                      onError={(e) => {
+                        // Fallback to playlistbg if playlist folder doesn't exist
+                        e.target.src = `/playlistbg/${playlist.image}`;
+                      }}
+                    />
+                    <div className="playlist__label">{playlist.label}</div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </>
         )}
       </div>
