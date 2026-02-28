@@ -247,8 +247,14 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
   return (
     <>
       {showEmptyFavModal && (
-        <div className="sidebar__empty-fav-modal-overlay" onClick={() => setShowEmptyFavModal(false)}>
-          <div className="sidebar__empty-fav-modal" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="sidebar__empty-fav-modal-overlay"
+          onClick={() => setShowEmptyFavModal(false)}
+        >
+          <div
+            className="sidebar__empty-fav-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               className="sidebar__empty-fav-modal__close"
@@ -260,8 +266,12 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
             <span className="sidebar__empty-fav-modal__icon">
               <FavoriteIcon filled />
             </span>
-            <p className="sidebar__empty-fav-modal__text">Nothing in My Favorites</p>
-            <p className="sidebar__empty-fav-modal__hint">Add songs by clicking the heart icon on any track</p>
+            <p className="sidebar__empty-fav-modal__text">
+              Nothing in My Favorites
+            </p>
+            <p className="sidebar__empty-fav-modal__hint">
+              Add songs by clicking the heart icon on any track
+            </p>
           </div>
         </div>
       )}
@@ -298,7 +308,11 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
             type="button"
             className={`sidebar__item sidebar__item--button ${showFavorites ? "sidebar__item--active" : ""} ${!hasFavorites ? "sidebar__item--disabled" : ""}`}
             onClick={handleToggleFavorites}
-            aria-label={hasFavorites ? "Show my favorites" : "No favorites yet - click to see message"}
+            aria-label={
+              hasFavorites
+                ? "Show my favorites"
+                : "No favorites yet - click to see message"
+            }
           >
             <span className="sidebar__label">My Favorites</span>
             <span className="sidebar__icon">

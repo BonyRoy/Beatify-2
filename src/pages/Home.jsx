@@ -773,7 +773,13 @@ const Home = () => {
   // Reset visible count when filter changes
   useEffect(() => {
     setVisibleCount(15);
-  }, [searchQuery, showFavorites, selectedArtist, selectedPlaylist, selectedEra]);
+  }, [
+    searchQuery,
+    showFavorites,
+    selectedArtist,
+    selectedPlaylist,
+    selectedEra,
+  ]);
 
   // Extract available eras from music list (eras that have at least one track)
   const availableEras = useMemo(() => {
