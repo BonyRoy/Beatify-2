@@ -335,11 +335,10 @@ const Footer = () => {
     }
 
     const fetchUrl =
-      typeof window !== "undefined" &&
-      window.location.hostname === "localhost" &&
-      url.startsWith("https://firebasestorage.googleapis.com/")
-        ? "/storage-proxy" +
-          url.slice("https://firebasestorage.googleapis.com".length)
+      typeof window !== "undefined" && url?.startsWith("https://firebasestorage.googleapis.com/")
+        ? window.location.hostname === "localhost"
+          ? "/storage-proxy" + url.slice("https://firebasestorage.googleapis.com".length)
+          : "/api/storage-proxy?url=" + encodeURIComponent(url)
         : url;
 
     let cancelled = false;

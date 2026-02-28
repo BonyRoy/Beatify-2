@@ -15,14 +15,16 @@ export const useAlbumArt = () => {
   return ctx;
 };
 
-const extractFromUrl = async (url) => {
-  const fetchUrl =
-    typeof window !== "undefined" &&
-    window.location.hostname === "localhost" &&
-    url.startsWith("https://firebasestorage.googleapis.com/")
-      ? "/storage-proxy" + url.slice("https://firebasestorage.googleapis.com".length)
-      : url;
+const getFetchUrl = (url) => {
+  if (typeof window === "undefined" || !url?.startsWith("https://firebasestorage.googleapis.com/"))
+    return url;
+  if (window.location.hostname === "localhost")
+    return "/storage-proxy" + url.slice("https://firebasestorage.googleapis.com".length);
+  return "/api/storage-proxy?url=" + encodeURIComponent(url);
+};
 
+const extractFromUrl = async (url) => {
+  const fetchUrl = getFetchUrl(url);
   const response = await fetch(fetchUrl);
   if (!response.ok) return null;
   const blob = await response.blob();

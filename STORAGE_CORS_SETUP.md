@@ -1,6 +1,8 @@
 # Firebase Storage CORS Setup
 
-To show embedded album art from MP3 files for **existing tracks** (tracks uploaded before the Admin extraction feature), you need to configure CORS on your Firebase Storage bucket. This allows the player to fetch the audio file and extract embedded artwork.
+**Note:** If you're deployed on Vercel, the `api/storage-proxy.js` serverless function bypasses CORS—no configuration needed. This file is only needed for other hosting or if the proxy isn't working.
+
+To show embedded album art from MP3 files for **existing tracks** (tracks uploaded before the Admin extraction feature), you can either use the Vercel proxy (automatic) or configure CORS on your Firebase Storage bucket.
 
 ## Setup Steps
 
