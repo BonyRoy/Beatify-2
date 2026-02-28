@@ -83,12 +83,58 @@ const MusicIconGradient = () => (
   </svg>
 );
 
+const ClockIconGradient = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    className="home__era-icon-gradient"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <defs>
+      <linearGradient id="era-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#06b6d4" />
+        <stop offset="50%" stopColor="#3b82f6" />
+        <stop offset="100%" stopColor="#8b5cf6" />
+      </linearGradient>
+    </defs>
+    <circle cx="12" cy="12" r="10" stroke="url(#era-gradient)" />
+    <polyline points="12 6 12 12 16 14" stroke="url(#era-gradient)" />
+  </svg>
+);
+
 // Format file size from bytes to MB (matching reference implementation)
 const formatFileSize = (bytes) => {
   if (!bytes) return "Unknown";
   const mb = bytes / (1024 * 1024);
   return `${mb.toFixed(1)} MB`;
 };
+
+// Extract year from releaseDate (handles "2020", "2020-01-15", "2020-01", etc.)
+const getYearFromReleaseDate = (releaseDate) => {
+  if (!releaseDate) return null;
+  const str = String(releaseDate).trim();
+  const year = parseInt(str.slice(0, 4), 10);
+  return !isNaN(year) && year >= 1900 && year <= 2100 ? year : null;
+};
+
+// Map year to era label
+const getEraFromYear = (year) => {
+  if (!year) return null;
+  if (year >= 1970 && year <= 1979) return "70s";
+  if (year >= 1980 && year <= 1989) return "80s";
+  if (year >= 1990 && year <= 1999) return "90s";
+  if (year >= 2000 && year <= 2009) return "2000s";
+  if (year >= 2010 && year <= 2019) return "2010s";
+  if (year >= 2020 && year <= 2029) return "2020s";
+  return null;
+};
+
+// Era display order
+const ERA_ORDER = ["70s", "80s", "90s", "2000s", "2010s", "2020s"];
 
 const MusicTrack = ({
   track,
@@ -132,7 +178,7 @@ const MusicTrack = ({
           fetchAlbumArt(track);
         }
       },
-      { rootMargin: "100px", threshold: 0.1 }
+      { rootMargin: "100px", threshold: 0.1 },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -588,6 +634,7 @@ const Home = () => {
   const showFavorites = searchParams.get("favorites") === "true";
   const selectedArtist = searchParams.get("artist");
   const selectedPlaylist = searchParams.get("playlist");
+  const selectedEra = searchParams.get("era") || "";
   const searchQuery = searchParams.get("search") || "";
   const { selectTrack, currentTrack, setPlaylist, isPlaying } = usePlayer();
 
@@ -726,7 +773,18 @@ const Home = () => {
   // Reset visible count when filter changes
   useEffect(() => {
     setVisibleCount(15);
-  }, [searchQuery, showFavorites, selectedArtist, selectedPlaylist]);
+  }, [searchQuery, showFavorites, selectedArtist, selectedPlaylist, selectedEra]);
+
+  // Extract available eras from music list (eras that have at least one track)
+  const availableEras = useMemo(() => {
+    const eraSet = new Set();
+    musicList.forEach((track) => {
+      const year = getYearFromReleaseDate(track.releaseDate);
+      const era = getEraFromYear(year);
+      if (era) eraSet.add(era);
+    });
+    return ERA_ORDER.filter((e) => eraSet.has(e));
+  }, [musicList]);
 
   // Filter music list based on search, favorites filter, artist selection, or playlist selection
   const filteredMusicList = useMemo(() => {
@@ -766,6 +824,14 @@ const Home = () => {
       });
     }
 
+    // Apply era filter if present
+    if (selectedEra) {
+      filtered = filtered.filter((track) => {
+        const year = getYearFromReleaseDate(track.releaseDate);
+        return getEraFromYear(year) === selectedEra;
+      });
+    }
+
     // Finally apply search filter if present (fuzzy match, ~75% similarity)
     if (searchQuery) {
       filtered = filtered.filter((track) =>
@@ -780,6 +846,7 @@ const Home = () => {
     showFavorites,
     selectedArtist,
     selectedPlaylist,
+    selectedEra,
     favorites,
   ]);
 
@@ -802,7 +869,7 @@ const Home = () => {
   // Tracks to display (first N for lazy load)
   const visibleTracks = useMemo(
     () => filteredMusicList.slice(0, visibleCount),
-    [filteredMusicList, visibleCount]
+    [filteredMusicList, visibleCount],
   );
   const hasMore = visibleCount < filteredMusicList.length;
 
@@ -820,7 +887,7 @@ const Home = () => {
           setVisibleCount((n) => Math.min(n + 15, filteredMusicList.length));
         }
       },
-      { root: root || null, rootMargin: "200px", threshold: 0 }
+      { root: root || null, rootMargin: "200px", threshold: 0 },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -829,6 +896,24 @@ const Home = () => {
   const handleClearPlaylistFilter = () => {
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.delete("playlist");
+    setSearchParams(newSearchParams);
+  };
+
+  const handleEraClick = (era) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (selectedEra === era) {
+      newSearchParams.delete("era");
+    } else {
+      newSearchParams.set("era", era);
+      newSearchParams.delete("playlist");
+      newSearchParams.delete("favorites");
+    }
+    setSearchParams(newSearchParams);
+  };
+
+  const handleClearEraFilter = () => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete("era");
     setSearchParams(newSearchParams);
   };
 
@@ -864,13 +949,20 @@ const Home = () => {
                 <MusicIconGradient />
                 {selectedPlaylist
                   ? `Tracks for "${selectedPlaylist}" playlist`
-                  : "Tracks"}
-                {selectedPlaylist && (
+                  : selectedEra
+                    ? `Tracks from ${selectedEra}`
+                    : "Tracks"}
+                {(selectedPlaylist || selectedEra) && (
                   <button
                     type="button"
                     className="home__clear-filter-btn"
-                    onClick={handleClearPlaylistFilter}
-                    aria-label="Clear playlist filter"
+                    onClick={() => {
+                      const p = new URLSearchParams(searchParams);
+                      p.delete("playlist");
+                      p.delete("era");
+                      setSearchParams(p);
+                    }}
+                    aria-label="Clear filter"
                   >
                     <ClearIcon />
                   </button>
@@ -930,11 +1022,15 @@ const Home = () => {
                       favorites={favorites}
                       downloads={downloads}
                       isSelected={trackIdentifier === currentTrackId}
-                      isPlaying={isPlaying && trackIdentifier === currentTrackId}
+                      isPlaying={
+                        isPlaying && trackIdentifier === currentTrackId
+                      }
                     />
                   );
                 })}
-                {hasMore && <div ref={loadMoreRef} className="home__load-more-sentinel" />}
+                {hasMore && (
+                  <div ref={loadMoreRef} className="home__load-more-sentinel" />
+                )}
               </>
             )}
           </div>
@@ -942,6 +1038,30 @@ const Home = () => {
         <main className="home__main">
           <Playlist hasFavorites={favorites.length > 0} />
         </main>
+        <aside className="home__era">
+          <div className="home__era-header">
+            <h4 className="home__era-title">
+              <ClockIconGradient />
+              ERA
+            </h4>
+          </div>
+          <div className="home__era-content">
+            {availableEras.length === 0 ? (
+              <p className="home__era-empty">No era data from tracks</p>
+            ) : (
+              availableEras.map((era) => (
+                <button
+                  key={era}
+                  type="button"
+                  className={`home__era-badge home__era-badge--${era.replace(/\s/g, "")} ${selectedEra === era ? "home__era-badge--selected" : ""}`}
+                  onClick={() => handleEraClick(era)}
+                >
+                  {era}
+                </button>
+              ))
+            )}
+          </div>
+        </aside>
       </div>
 
       <DownloadModal

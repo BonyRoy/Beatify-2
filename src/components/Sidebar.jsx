@@ -147,6 +147,25 @@ const ChartIcon = () => (
   </svg>
 );
 
+const ClockIcon = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
+const ERA_ORDER = ["70s", "80s", "90s", "2000s", "2010s", "2020s"];
+
 const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -189,6 +208,18 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
   const defaultView = isMobile ? "track" : "playlist";
   const currentView = searchParams.get("view") || defaultView;
   const showFavorites = searchParams.get("favorites") === "true";
+  const selectedEra = searchParams.get("era") || "";
+
+  const handleEraClick = (era) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (selectedEra === era) {
+      newParams.delete("era");
+    } else {
+      newParams.set("era", era);
+    }
+    setSearchParams(newParams);
+    onClose();
+  };
 
   const handleTrackOrPlaylist = () => {
     navigate(currentView === "track" ? "/?view=playlist" : "/?view=track");
@@ -274,6 +305,27 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
               <FavoriteIcon filled={showFavorites} />
             </span>
           </button>
+
+          <div className="sidebar__era-section">
+            <div className="sidebar__era-header">
+              <span className="sidebar__era-label">ERA</span>
+              <span className="sidebar__icon">
+                <ClockIcon />
+              </span>
+            </div>
+            <div className="sidebar__era-badges">
+              {ERA_ORDER.map((era) => (
+                <button
+                  key={era}
+                  type="button"
+                  className={`sidebar__era-badge sidebar__era-badge--${era.replace(/\s/g, "")} ${selectedEra === era ? "sidebar__era-badge--selected" : ""}`}
+                  onClick={() => handleEraClick(era)}
+                >
+                  {era}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {onOpenTopArtists && (
             <button
