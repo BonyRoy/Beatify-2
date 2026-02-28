@@ -174,24 +174,6 @@ body:has(.footer--player) .home__sidebar-content {
   transition: box-shadow 0.3s ease;
 }
 
-.track-row__art-wrapper--playing {
-  animation: track-art-glow 1.5s ease-in-out infinite;
-}
-
-@keyframes track-art-glow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 8px rgba(249, 115, 22, 0.5),
-      0 0 16px rgba(236, 72, 153, 0.25);
-  }
-  50% {
-    box-shadow:
-      0 0 14px rgba(249, 115, 22, 0.7),
-      0 0 28px rgba(236, 72, 153, 0.4);
-  }
-}
-
 .track-row__art {
   flex-shrink: 0;
   width: 48px;
@@ -372,6 +354,13 @@ body:has(.footer--player) .home__sidebar-content {
 .home__empty-hint {
   font-size: 0.85rem;
   opacity: 0.7;
+}
+
+.home__load-more-sentinel {
+  height: 1px;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .home__email-link {

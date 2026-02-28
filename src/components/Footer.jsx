@@ -1,5 +1,10 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { usePlayer } from "../context/PlayerContext";
+import { useAlbumArt } from "../context/AlbumArtContext";
+import {
+  extractDominantColors,
+  toDarkGradientColors,
+} from "../utils/colorExtractor";
 import "./Footer.css";
 
 const PlayIcon = () => (
@@ -115,6 +120,7 @@ const SpinnerIcon = () => (
 );
 
 const Footer = () => {
+  const { getAlbumArt, fetchAlbumArt } = useAlbumArt();
   const {
     currentTrack,
     isPlaying,
@@ -158,6 +164,7 @@ const Footer = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [dynamicBgGradient, setDynamicBgGradient] = useState(null);
   const pausedForCallRef = useRef(false);
   const pausedForMediaRef = useRef(false);
   const timeBeforeCallRef = useRef(0);
@@ -310,6 +317,47 @@ const Footer = () => {
       }
     }
   }, [currentTrack, updateTime, isPlaying, setPlaying]);
+
+  // Fetch embedded album art for current track (uses shared AlbumArtContext cache)
+  useEffect(() => {
+    if (currentTrack && !getAlbumArt(currentTrack)) {
+      fetchAlbumArt(currentTrack);
+    }
+  }, [currentTrack, getAlbumArt, fetchAlbumArt]);
+
+  // Extract dominant colors from album art for dynamic fullscreen background
+  useEffect(() => {
+    const url = currentTrack ? getAlbumArt(currentTrack) : null;
+
+    if (!url) {
+      setDynamicBgGradient(null);
+      return;
+    }
+
+    const fetchUrl =
+      typeof window !== "undefined" &&
+      window.location.hostname === "localhost" &&
+      url.startsWith("https://firebasestorage.googleapis.com/")
+        ? "/storage-proxy" +
+          url.slice("https://firebasestorage.googleapis.com".length)
+        : url;
+
+    let cancelled = false;
+    extractDominantColors(fetchUrl, 2).then((colors) => {
+      if (cancelled || !colors?.length) {
+        if (!cancelled) setDynamicBgGradient(null);
+        return;
+      }
+      const gradientColors = toDarkGradientColors(colors);
+      if (!cancelled && gradientColors?.length) {
+        const gradient = `linear-gradient(135deg, ${gradientColors[0]} 0%, ${gradientColors[1] || gradientColors[0]} 50%, #0a0a0a 100%)`;
+        setDynamicBgGradient(gradient);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentTrack, getAlbumArt]);
 
   // Handle play/pause state changes
   useEffect(() => {
@@ -658,10 +706,7 @@ const Footer = () => {
     // Update media session metadata when playback starts (iOS requirement)
     if ("mediaSession" in navigator && currentTrack) {
       const mediaSession = navigator.mediaSession;
-      const albumArtUrl =
-        currentTrack.coverUrl ||
-        currentTrack.artworkUrl ||
-        currentTrack.albumArtUrl;
+      const albumArtUrl = getAlbumArt(currentTrack);
       const artworkArray = albumArtUrl
         ? [
             { src: albumArtUrl, sizes: "96x96", type: "image/jpeg" },
@@ -687,7 +732,7 @@ const Footer = () => {
         console.error("Error updating media session on play:", error);
       }
     }
-  }, [setPlaying, currentTrack, seekTo]);
+  }, [setPlaying, currentTrack, seekTo, getAlbumArt]);
 
   // Update playback speed
   useEffect(() => {
@@ -1231,10 +1276,7 @@ const Footer = () => {
     // Update metadata when track changes or when playback starts (iOS requirement)
     const updateMetadata = () => {
       if (currentTrack) {
-        const albumArtUrl =
-          currentTrack.coverUrl ||
-          currentTrack.artworkUrl ||
-          currentTrack.albumArtUrl;
+        const albumArtUrl = getAlbumArt(currentTrack);
 
         // iOS requires artwork URLs to be absolute and properly formatted
         // Use image/jpeg for better iOS compatibility
@@ -1539,6 +1581,7 @@ const Footer = () => {
     seekTo,
     setPlaying,
     togglePlayPause,
+    getAlbumArt,
   ]);
 
   // Format time helper
@@ -1841,11 +1884,8 @@ const Footer = () => {
     };
   }, [currentTrack, isFullScreen]);
 
-  // Get album art URL - check multiple possible field names
-  const albumArtUrl =
-    currentTrack?.coverUrl ||
-    currentTrack?.artworkUrl ||
-    currentTrack?.albumArtUrl;
+  // Get album art URL - stored URLs or cached extracted from MP3 (AlbumArtContext)
+  const albumArtUrl = currentTrack ? getAlbumArt(currentTrack) : null;
 
   if (!currentTrack) {
     return (
@@ -1860,6 +1900,11 @@ const Footer = () => {
       <footer
         className={`footer footer--player ${isFullScreen ? "footer--fullscreen" : ""}`}
         onClick={!isFullScreen ? handleFooterClick : handleFooterClick}
+        style={
+          isFullScreen && dynamicBgGradient
+            ? { background: dynamicBgGradient }
+            : undefined
+        }
       >
         {/* Close Button - positioned on footer */}
         {isFullScreen && (

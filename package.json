@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "firebase": "^12.9.0",
+    "jsmediatags": "^3.9.7",
     "lucide-react": "^0.575.0",
     "music-metadata": "^11.12.1",
     "react": "^19.2.0",

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { parseBlob, selectCover } from "music-metadata";
 import { storage, db } from "../firebase/config";
 import {
   ref,
@@ -425,6 +426,22 @@ const Admin = () => {
     }
   };
 
+  // Extract embedded album art from MP3/audio file
+  const extractCoverFromFile = async (file) => {
+    try {
+      const metadata = await parseBlob(file);
+      if (!metadata?.common?.picture?.length) return null;
+      const cover = selectCover(metadata.common.picture);
+      if (!cover || !cover.data) return null;
+      const mime = cover.format || "image/jpeg";
+      const ext = mime === "image/png" ? "png" : "jpg";
+      const blob = new Blob([cover.data], { type: mime });
+      return { blob, ext, mime };
+    } catch {
+      return null;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -454,6 +471,7 @@ const Admin = () => {
       let downloadURL = "";
       let fileName = "";
       let fileSize = 0;
+      let coverUrl = null;
 
       if (editingTrackId) {
         const existingTrack = existingTracks.find(
@@ -477,10 +495,23 @@ const Admin = () => {
           setUploadProgress(50);
           downloadURL = await getDownloadURL(snapshot.ref);
           fileSize = musicFile.size;
+
+          // Extract and upload embedded album art from MP3
+          const coverData = await extractCoverFromFile(musicFile);
+          if (coverData) {
+            const coverFileName = `covers/${timestamp}_${editingTrackId}.${coverData.ext}`;
+            const coverRef = ref(storage, coverFileName);
+            await uploadBytes(coverRef, coverData.blob);
+            coverUrl = await getDownloadURL(coverRef);
+          }
         } else {
           downloadURL = existingTrack.fileUrl;
           fileName = existingTrack.fileName;
           fileSize = existingTrack.fileSize;
+          coverUrl =
+            existingTrack.coverUrl ||
+            existingTrack.artworkUrl ||
+            existingTrack.albumArtUrl;
         }
 
         setUploadProgress(75);
@@ -495,6 +526,7 @@ const Admin = () => {
           fileName: fileName,
           fileSize: fileSize,
           ...(musicFile && { originalFileName: musicFile.name }),
+          ...(coverUrl && { coverUrl }),
         });
 
         setUploadProgress(100);
@@ -512,6 +544,15 @@ const Admin = () => {
         downloadURL = await getDownloadURL(snapshot.ref);
         fileSize = musicFile.size;
 
+        // Extract and upload embedded album art from MP3
+        const coverData = await extractCoverFromFile(musicFile);
+        if (coverData) {
+          const coverFileName = `covers/${timestamp}_${trackUUID}.${coverData.ext}`;
+          const coverRef = ref(storage, coverFileName);
+          await uploadBytes(coverRef, coverData.blob);
+          coverUrl = await getDownloadURL(coverRef);
+        }
+
         setUploadProgress(75);
         await addDoc(collection(db, "music"), {
           uuid: trackUUID,
@@ -524,6 +565,7 @@ const Admin = () => {
           fileName: fileName,
           originalFileName: musicFile.name,
           fileSize: fileSize,
+          ...(coverUrl && { coverUrl }),
           uploadedAt: serverTimestamp(),
           createdBy: "admin",
         });
@@ -1641,8 +1683,7 @@ const Admin = () => {
                         disabled={
                           bulkCurrentPage >=
                           Math.ceil(
-                            bulkFilteredTracks.length /
-                              BULK_RECORDS_PER_PAGE,
+                            bulkFilteredTracks.length / BULK_RECORDS_PER_PAGE,
                           )
                         }
                       >

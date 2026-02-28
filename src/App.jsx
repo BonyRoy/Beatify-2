@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { PlayerProvider } from './context/PlayerContext'
+import { AlbumArtProvider } from './context/AlbumArtContext'
 import { ListeningHistoryProvider } from './context/ListeningHistoryContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -35,10 +36,12 @@ const App = () => {
     <ThemeProvider>
       <ListeningHistoryProvider>
         <PlayerProvider>
-          <ListeningHistoryTracker />
-          <Router>
+          <AlbumArtProvider>
+            <ListeningHistoryTracker />
+            <Router>
             <AppContent />
-          </Router>
+            </Router>
+          </AlbumArtProvider>
         </PlayerProvider>
       </ListeningHistoryProvider>
     </ThemeProvider>

@@ -4,6 +4,7 @@ import DownloadModal from "../components/DownloadModal";
 import Playlist from "../components/Playlist";
 import { fetchMusicList } from "../services/musicService";
 import { usePlayer } from "../context/PlayerContext";
+import { useAlbumArt } from "../context/AlbumArtContext";
 import { fuzzyMatchesAny } from "../utils/searchUtils";
 import "./Home.css";
 
@@ -99,6 +100,9 @@ const MusicTrack = ({
   isSelected,
   isPlaying = false,
 }) => {
+  const { getAlbumArt, fetchAlbumArt } = useAlbumArt();
+  const trackRowRef = useRef(null);
+
   // Use UUID if available, otherwise fall back to track ID (matching reference implementation)
   const trackIdentifier = track.uuid || track.id;
   const isFavorite = favorites.includes(trackIdentifier);
@@ -112,8 +116,27 @@ const MusicTrack = ({
   const [titleDuration, setTitleDuration] = useState(20);
   const [artistDuration, setArtistDuration] = useState(20);
 
-  // Get album art URL - check multiple possible field names
-  const albumArtUrl = track.coverUrl || track.artworkUrl || track.albumArtUrl;
+  // Get album art - stored URL or cached extracted
+  const albumArtUrl = getAlbumArt(track);
+
+  // Lazy load embedded album art when track scrolls into view
+  useEffect(() => {
+    if (albumArtUrl || !track.fileUrl) return;
+
+    const el = trackRowRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          fetchAlbumArt(track);
+        }
+      },
+      { rootMargin: "100px", threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [track, albumArtUrl, fetchAlbumArt]);
 
   // Format file size - handle both bytes (number) and string formats
   const fileSize = track.fileSize
@@ -190,6 +213,7 @@ const MusicTrack = ({
 
   return (
     <div
+      ref={trackRowRef}
       className={`track-row ${isSelected ? "track-row--selected" : ""}`}
       onClick={handleRowClick}
       data-track-id={trackIdentifier}
@@ -574,6 +598,7 @@ const Home = () => {
   const [downloads, setDownloads] = useState([]);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(15);
   const sidebarContentRef = useRef(null);
 
   // Auto-scroll back to playing track after 10s of inactivity
@@ -698,6 +723,11 @@ const Home = () => {
     localStorage.setItem("favorites", JSON.stringify(newFavorites));
   };
 
+  // Reset visible count when filter changes
+  useEffect(() => {
+    setVisibleCount(15);
+  }, [searchQuery, showFavorites, selectedArtist, selectedPlaylist]);
+
   // Filter music list based on search, favorites filter, artist selection, or playlist selection
   const filteredMusicList = useMemo(() => {
     let filtered = musicList;
@@ -768,6 +798,33 @@ const Home = () => {
     setIsDownloadModalOpen(false);
     setSelectedTrack(null);
   };
+
+  // Tracks to display (first N for lazy load)
+  const visibleTracks = useMemo(
+    () => filteredMusicList.slice(0, visibleCount),
+    [filteredMusicList, visibleCount]
+  );
+  const hasMore = visibleCount < filteredMusicList.length;
+
+  // Load more on scroll
+  const loadMoreRef = useRef(null);
+  useEffect(() => {
+    if (!hasMore) return;
+    const sentinel = loadMoreRef.current;
+    const root = sidebarContentRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((n) => Math.min(n + 15, filteredMusicList.length));
+        }
+      },
+      { root: root || null, rootMargin: "200px", threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, filteredMusicList.length]);
 
   const handleClearPlaylistFilter = () => {
     const newSearchParams = new URLSearchParams(searchParams);
@@ -857,25 +914,28 @@ const Home = () => {
                 </p>
               </div>
             ) : (
-              filteredMusicList.map((track) => {
-                const trackIdentifier = track.uuid || track.id;
-                const currentTrackId = currentTrack
-                  ? currentTrack.uuid || currentTrack.id
-                  : null;
-                return (
-                  <MusicTrack
-                    key={track.id}
-                    track={track}
-                    onDownloadClick={handleDownloadClick}
-                    onFavoriteToggle={handleFavoriteToggle}
-                    onTrackClick={handleTrackClick}
-                    favorites={favorites}
-                    downloads={downloads}
-                    isSelected={trackIdentifier === currentTrackId}
-                    isPlaying={isPlaying && trackIdentifier === currentTrackId}
-                  />
-                );
-              })
+              <>
+                {visibleTracks.map((track) => {
+                  const trackIdentifier = track.uuid || track.id;
+                  const currentTrackId = currentTrack
+                    ? currentTrack.uuid || currentTrack.id
+                    : null;
+                  return (
+                    <MusicTrack
+                      key={track.id}
+                      track={track}
+                      onDownloadClick={handleDownloadClick}
+                      onFavoriteToggle={handleFavoriteToggle}
+                      onTrackClick={handleTrackClick}
+                      favorites={favorites}
+                      downloads={downloads}
+                      isSelected={trackIdentifier === currentTrackId}
+                      isPlaying={isPlaying && trackIdentifier === currentTrackId}
+                    />
+                  );
+                })}
+                {hasMore && <div ref={loadMoreRef} className="home__load-more-sentinel" />}
+              </>
             )}
           </div>
         </aside>

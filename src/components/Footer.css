@@ -41,7 +41,7 @@
   }
 }
 
-/* Full-screen mode */
+/* Full-screen mode - background can be overridden by inline style for dynamic gradient */
 .footer--fullscreen {
   position: fixed;
   top: 0 !important;
@@ -50,7 +50,8 @@
   bottom: 0 !important;
   height: 100vh !important;
   width: 100vw !important;
-  background-color: var(--bg, #0a0a0a) !important;
+  background: var(--bg, #0a0a0a);
+  transition: background 0.5s ease;
   border: none !important;
   z-index: 9999 !important;
   padding: 2rem 1.5rem;
@@ -128,10 +129,11 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  flex: 0 0 auto;
+  flex: 1;
   width: 100%;
   max-width: 100%;
-  padding: 2rem 0;
+  padding: 1rem 0;
+  min-height: 0;
 }
 
 .player__fullscreen-art {
@@ -140,7 +142,7 @@
   max-width: 400px;
   height: auto;
   aspect-ratio: 1;
-  border-radius: 50%;
+  border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
@@ -149,7 +151,7 @@
   width: 70%;
   max-width: 400px;
   aspect-ratio: 1;
-  border-radius: 50%;
+  border-radius: 8px;
   background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
   display: flex;
   align-items: center;
@@ -165,23 +167,7 @@
 }
 
 .player__fullscreen-art--playing {
-  animation: fullscreen-art-glow 1.5s ease-in-out infinite;
-}
-
-@keyframes fullscreen-art-glow {
-  0%,
-  100% {
-    box-shadow:
-      0 8px 24px rgba(0, 0, 0, 0.3),
-      0 0 20px rgba(249, 115, 22, 0.5),
-      0 0 40px rgba(236, 72, 153, 0.25);
-  }
-  50% {
-    box-shadow:
-      0 8px 24px rgba(0, 0, 0, 0.3),
-      0 0 32px rgba(249, 115, 22, 0.7),
-      0 0 56px rgba(236, 72, 153, 0.4);
-  }
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .player__fullscreen-info {
@@ -442,43 +428,26 @@ body.footer-fullscreen-active {
   flex-shrink: 0;
   position: relative;
   padding: 3px;
-  border-radius: 50%;
+  border-radius: 8px;
   transition: box-shadow 0.3s ease;
-}
-
-.player__art-wrapper--playing {
-  animation: player-art-glow 1.5s ease-in-out infinite;
-}
-
-@keyframes player-art-glow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 10px rgba(249, 115, 22, 0.5),
-      0 0 20px rgba(236, 72, 153, 0.25);
-  }
-  50% {
-    box-shadow:
-      0 0 18px rgba(249, 115, 22, 0.7),
-      0 0 32px rgba(236, 72, 153, 0.4);
-  }
 }
 
 .player__art {
   width: 56px;
   height: 56px;
-  border-radius: 50%;
+  border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
+  display: block;
 }
 
 .player__art--placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
+  background: var(--nav-bg, #1a1a1a);
   color: white;
-  border-radius: 50%;
+  border-radius: 8px;
   width: 56px;
   height: 56px;
 }
@@ -768,6 +737,23 @@ body.footer-fullscreen-active {
 
   to {
     transform: translateX(-50%);
+  }
+}
+
+/* Fullscreen album art - larger square on phone */
+@media (max-width: 768px) {
+  .footer--fullscreen .player__fullscreen-art-wrapper {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .footer--fullscreen .player__fullscreen-art,
+  .footer--fullscreen .player__fullscreen-art--placeholder {
+    width: min(90vw, calc(100vh - 320px));
+    max-width: none;
+    border-radius: 8px;
   }
 }
 
