@@ -75,7 +75,9 @@
   background-color: var(--track-bg, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--nav-border, #333);
   border-radius: 10px;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
 }
 
 .top-artists-modal__item:hover {

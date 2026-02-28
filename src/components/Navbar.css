@@ -28,7 +28,9 @@
   background-color: var(--track-bg, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--nav-border, #333);
   border-radius: 8px;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 
 .navbar__search:focus-within {
@@ -55,6 +57,30 @@
 
 .navbar__search-input::placeholder {
   color: var(--text-muted);
+}
+
+.navbar__search-clear {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.navbar__search-clear:hover {
+  color: var(--text-primary);
+}
+
+.navbar__search-clear svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* Desktop: show theme toggle, hide hamburger */
@@ -206,10 +232,11 @@
   border: 1px solid var(--nav-border, #333);
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
   box-sizing: border-box;
 }
-
 
 .navbar__drawer-btn:hover,
 .navbar__drawer-link:hover {
@@ -225,7 +252,7 @@
   align-items: center;
 }
 
-.navbar__drawer-btn>span:last-child {
+.navbar__drawer-btn > span:last-child {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -335,7 +362,9 @@
   width: 56px;
   height: 28px;
   border-radius: 9999px;
-  transition: background-color 0.3s ease, box-shadow 0.2s;
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.2s;
 }
 
 /* Dark mode: dark track, white knob on left, moon visible */
@@ -404,7 +433,10 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  transition: transform 0.3s ease, background-color 0.25s, box-shadow 0.2s;
+  transition:
+    transform 0.3s ease,
+    background-color 0.25s,
+    box-shadow 0.2s;
   pointer-events: none;
 }
 

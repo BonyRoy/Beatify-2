@@ -957,7 +957,7 @@ button .admin-icon-inline {
 .admin-search-sort-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: stretch;
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -965,6 +965,13 @@ button .admin-icon-inline {
 .admin-search-container {
   flex: 1;
   min-width: 200px;
+  display: flex;
+}
+
+.admin-search-container .admin-search-input {
+  height: 2.5rem;
+  padding: 0 1rem;
+  box-sizing: border-box;
 }
 
 .admin-sort-dropdown {
@@ -973,7 +980,7 @@ button .admin-icon-inline {
 }
 
 .admin-bulk-header .admin-sort-dropdown {
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 
 .admin-sort-dropdown-toggle {
@@ -981,7 +988,10 @@ button .admin-icon-inline {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0.625rem 1rem;
+  min-height: 2.5rem;
+  height: 2.5rem;
+  padding: 0 1rem;
+  box-sizing: border-box;
   background-color: var(--track-bg);
   border: 1px solid var(--nav-border);
   border-radius: 8px;

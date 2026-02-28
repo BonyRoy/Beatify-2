@@ -7,10 +7,29 @@
 .app__content {
   height: 100vh;
   padding-top: 230px;
-  padding-bottom: 90px;
+  padding-bottom: 56px; /* matches .footer--empty height (1rem padding + line) */
   width: 100%;
   overflow-y: hidden;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* When player is visible, footer overlays - scroll areas get their own padding */
+body:has(.footer--player) .app__content {
+  padding-bottom: 0;
+}
+
+.app__content > * {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app__content--admin > * {
+  display: block;
 }
 
 /* Admin page styling - no padding, allow scrolling */

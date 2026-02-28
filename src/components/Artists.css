@@ -14,7 +14,7 @@
 
 .artists-section::before,
 .artists-section::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   bottom: 0;
@@ -25,12 +25,20 @@
 
 .artists-section::before {
   left: 0;
-  background: linear-gradient(to right, rgba(6, 182, 212, 1), rgba(6, 182, 212, 0));
+  background: linear-gradient(
+    to right,
+    rgba(6, 182, 212, 1),
+    rgba(6, 182, 212, 0)
+  );
 }
 
 .artists-section::after {
   right: 0;
-  background: linear-gradient(to left, rgba(139, 92, 246, 1), rgba(139, 92, 246, 0));
+  background: linear-gradient(
+    to left,
+    rgba(139, 92, 246, 1),
+    rgba(139, 92, 246, 0)
+  );
 }
 
 .artists-container {
@@ -90,7 +98,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s, border-color 0.2s;
+  transition:
+    transform 0.2s,
+    border-color 0.2s;
   position: relative;
 }
 

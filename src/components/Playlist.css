@@ -12,7 +12,7 @@
 }
 
 .playlist__header::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0.75rem;
@@ -49,9 +49,9 @@
   -ms-overflow-style: none;
 }
 
-/* Increase margin when music is playing */
+/* Reserve space for overlay footer when player is visible */
 body:has(.footer--player) .playlist__grid {
-  margin-bottom: 20px;
+  padding-bottom: 98px;
 }
 
 .playlist__grid::-webkit-scrollbar {
@@ -72,7 +72,9 @@ body:has(.footer--player) .playlist__grid {
   border-radius: 8px;
   overflow: hidden;
   border: 2px solid var(--nav-border, #333);
-  transition: border-color 0.2s, transform 0.2s;
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
 }
 
 .playlist__item:hover .playlist__image-wrapper {
@@ -122,7 +124,12 @@ body:has(.footer--player) .playlist__grid {
   left: 0;
   right: 0;
   padding: 0.5rem 0.75rem;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.7) 70%,
+    transparent 100%
+  );
   color: white;
   font-size: 0.875rem;
   font-weight: 600;
@@ -145,7 +152,6 @@ body:has(.footer--player) .playlist__grid {
   color: var(--text-muted);
 }
 
-
 /* Responsive grid adjustments */
 @media (min-width: 768px) {
   .playlist__grid {
@@ -160,12 +166,7 @@ body:has(.footer--player) .playlist__grid {
     gap: 1.5rem;
     padding-left: 10px;
     padding-right: 10px;
-    margin-bottom: 0px;
-  }
-
-  /* Increase margin when music is playing */
-  body:has(.footer--player) .playlist__grid {
-    margin-bottom: 20px;
+    margin-bottom: 0;
   }
 }
 
@@ -173,5 +174,10 @@ body:has(.footer--player) .playlist__grid {
   .playlist__grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 0.75rem;
+  }
+
+  /* Smaller footer on phone - use 80px for overlay padding */
+  body:has(.footer--player) .playlist__grid {
+    padding-bottom: 80px;
   }
 }

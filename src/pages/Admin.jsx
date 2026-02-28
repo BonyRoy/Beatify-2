@@ -146,6 +146,7 @@ const Admin = () => {
   const [sortOrder, setSortOrder] = useState("asc"); // 'asc' | 'desc'
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const sortDropdownRef = useRef(null);
+  const [bulkSearchQuery, setBulkSearchQuery] = useState("");
 
   const excelFileInputRef = useRef(null);
 
@@ -929,6 +930,19 @@ const Admin = () => {
   const sortedFilteredTracks = sortTracks(filteredTracks);
   const sortedExistingTracks = sortTracks(existingTracks);
 
+  const bulkFilteredTracks = existingTracks.filter((track) => {
+    if (!bulkSearchQuery.trim()) return true;
+    const query = bulkSearchQuery.toLowerCase();
+    return (
+      track.name?.toLowerCase().includes(query) ||
+      track.artist?.toLowerCase().includes(query) ||
+      track.genre?.toLowerCase().includes(query) ||
+      track.album?.toLowerCase().includes(query) ||
+      track.uuid?.toLowerCase().includes(query)
+    );
+  });
+  const sortedBulkTracks = sortTracks(bulkFilteredTracks);
+
   const handleSort = (field, order) => {
     setSortBy(field);
     setSortOrder(order);
@@ -1354,7 +1368,22 @@ const Admin = () => {
                   Edit metadata below. Track files cannot be changed here.
                   Download Excel to edit offline, then upload to apply changes.
                 </p>
-                {sortDropdown}
+                <div className="admin-search-sort-row">
+                  <div className="admin-search-container">
+                    <input
+                      type="text"
+                      placeholder="Search tracks by name, artist, genre, album, UUID..."
+                      value={bulkSearchQuery}
+                      onChange={(e) => {
+                        setBulkSearchQuery(e.target.value);
+                        setBulkCurrentPage(1);
+                      }}
+                      className="admin-search-input"
+                      aria-label="Search tracks"
+                    />
+                  </div>
+                  {sortDropdown}
+                </div>
                 <div className="admin-bulk-actions">
                   <button
                     type="button"
@@ -1414,6 +1443,10 @@ const Admin = () => {
                 <div className="admin-loading-tracks">Loading tracks...</div>
               ) : existingTracks.length === 0 ? (
                 <div className="admin-no-tracks">No tracks to edit.</div>
+              ) : bulkFilteredTracks.length === 0 ? (
+                <div className="admin-no-tracks">
+                  No tracks match your search.
+                </div>
               ) : (
                 <>
                   <div className="admin-bulk-table-wrapper">
@@ -1426,7 +1459,7 @@ const Admin = () => {
                               checked={(() => {
                                 const start =
                                   (bulkCurrentPage - 1) * BULK_RECORDS_PER_PAGE;
-                                const paginated = sortedExistingTracks.slice(
+                                const paginated = sortedBulkTracks.slice(
                                   start,
                                   start + BULK_RECORDS_PER_PAGE,
                                 );
@@ -1440,7 +1473,7 @@ const Admin = () => {
                               onChange={() => {
                                 const start =
                                   (bulkCurrentPage - 1) * BULK_RECORDS_PER_PAGE;
-                                const paginated = sortedExistingTracks.slice(
+                                const paginated = sortedBulkTracks.slice(
                                   start,
                                   start + BULK_RECORDS_PER_PAGE,
                                 );
@@ -1465,7 +1498,7 @@ const Admin = () => {
                         {(() => {
                           const start =
                             (bulkCurrentPage - 1) * BULK_RECORDS_PER_PAGE;
-                          const paginatedTracks = sortedExistingTracks.slice(
+                          const paginatedTracks = sortedBulkTracks.slice(
                             start,
                             start + BULK_RECORDS_PER_PAGE,
                           );
@@ -1571,7 +1604,7 @@ const Admin = () => {
                       </tbody>
                     </table>
                   </div>
-                  {existingTracks.length > BULK_RECORDS_PER_PAGE && (
+                  {bulkFilteredTracks.length > BULK_RECORDS_PER_PAGE && (
                     <div className="admin-bulk-pagination">
                       <button
                         type="button"
@@ -1586,9 +1619,10 @@ const Admin = () => {
                       <span className="admin-bulk-page-info">
                         Page {bulkCurrentPage} of{" "}
                         {Math.ceil(
-                          existingTracks.length / BULK_RECORDS_PER_PAGE,
+                          bulkFilteredTracks.length / BULK_RECORDS_PER_PAGE,
                         )}{" "}
-                        ({existingTracks.length} total)
+                        ({bulkFilteredTracks.length} total
+                        {bulkSearchQuery.trim() ? " matching" : ""})
                       </span>
                       <button
                         type="button"
@@ -1597,7 +1631,8 @@ const Admin = () => {
                           setBulkCurrentPage((p) =>
                             Math.min(
                               Math.ceil(
-                                existingTracks.length / BULK_RECORDS_PER_PAGE,
+                                bulkFilteredTracks.length /
+                                  BULK_RECORDS_PER_PAGE,
                               ),
                               p + 1,
                             ),
@@ -1606,7 +1641,8 @@ const Admin = () => {
                         disabled={
                           bulkCurrentPage >=
                           Math.ceil(
-                            existingTracks.length / BULK_RECORDS_PER_PAGE,
+                            bulkFilteredTracks.length /
+                              BULK_RECORDS_PER_PAGE,
                           )
                         }
                       >
