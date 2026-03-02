@@ -1,5 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
 import { ThemeProvider } from './context/ThemeContext'
 import { PlayerProvider } from './context/PlayerContext'
 import { AlbumArtProvider } from './context/AlbumArtContext'
@@ -10,6 +11,7 @@ import PromotionalModal from './components/PromotionalModal'
 import ListeningHistoryTracker from './components/ListeningHistoryTracker'
 import Home from './pages/Home'
 import Admin from './pages/Admin'
+import 'react-toastify/dist/ReactToastify.css'
 import './App.css'
 
 const AppContent = () => {
@@ -18,6 +20,7 @@ const AppContent = () => {
 
   return (
     <>
+      <ToastContainer position="bottom-right" theme="dark" />
       {!isAdminPage && <Navbar />}
       <main className={`app__content ${isAdminPage ? 'app__content--admin' : ''}`}>
         <Routes>

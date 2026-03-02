@@ -3,7 +3,6 @@ import { useSearchParams } from "react-router-dom";
 import DownloadModal from "../components/DownloadModal";
 import RequestSongModal from "../components/RequestSongModal";
 import Playlist from "../components/Playlist";
-import { submitSongRequest } from "../services/songRequestService";
 import { fetchMusicList } from "../services/musicService";
 import { usePlayer } from "../context/PlayerContext";
 import { useAlbumArt } from "../context/AlbumArtContext";
@@ -1092,7 +1091,7 @@ const Home = () => {
       <RequestSongModal
         isOpen={isRequestSongModalOpen}
         onClose={() => setIsRequestSongModalOpen(false)}
-        onSubmit={submitSongRequest}
+        onSubmit={() => {}}
       />
     </div>
   );
