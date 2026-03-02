@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import DownloadModal from "../components/DownloadModal";
+import RequestSongModal from "../components/RequestSongModal";
 import Playlist from "../components/Playlist";
+import { submitSongRequest } from "../services/songRequestService";
 import { fetchMusicList } from "../services/musicService";
 import { usePlayer } from "../context/PlayerContext";
 import { useAlbumArt } from "../context/AlbumArtContext";
@@ -644,6 +646,7 @@ const Home = () => {
   const [favorites, setFavorites] = useState([]);
   const [downloads, setDownloads] = useState([]);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [isRequestSongModalOpen, setIsRequestSongModalOpen] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [visibleCount, setVisibleCount] = useState(15);
   const sidebarContentRef = useRef(null);
@@ -1000,7 +1003,15 @@ const Home = () => {
                     "Add songs to My Favorites by clicking the heart icon!"
                   ) : (
                     <>
-                      For any issues, please reach out to{" "}
+                      Can&apos;t find a song?{" "}
+                      <button
+                        type="button"
+                        className="home__request-song-btn"
+                        onClick={() => setIsRequestSongModalOpen(true)}
+                      >
+                        Request a song
+                      </button>
+                      {" "}or reach out to{" "}
                       <a
                         href="mailto:siddhantroy225@gmail.com"
                         className="home__email-link"
@@ -1077,6 +1088,11 @@ const Home = () => {
         artistName={selectedTrackData.artist}
         fileSize={selectedTrackData.size}
         onDownload={handleDownload}
+      />
+      <RequestSongModal
+        isOpen={isRequestSongModalOpen}
+        onClose={() => setIsRequestSongModalOpen(false)}
+        onSubmit={submitSongRequest}
       />
     </div>
   );

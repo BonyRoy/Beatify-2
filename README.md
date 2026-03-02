@@ -107,6 +107,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+    match /songRequests/{document=**} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
   }
 }
 ```

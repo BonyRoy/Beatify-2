@@ -1198,6 +1198,47 @@ button .admin-icon-inline {
     padding: 1rem;
   }
 
+  .admin-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .admin-header h3 {
+    flex: 1;
+    min-width: 0;
+    font-size: 1.1rem;
+  }
+
+  .admin-tabs-list {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+    padding-bottom: 2px;
+  }
+
+  .admin-tabs-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-tab {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .admin-tab .admin-icon-inline {
+    flex-shrink: 0;
+  }
+
+  .admin-hip-tab {
+    padding: 1rem;
+  }
+
   .admin-header h1,
   .admin-header__title {
     font-size: 2rem;
@@ -1246,6 +1287,17 @@ button .admin-icon-inline {
   }
 }
 
+@media (max-width: 480px) {
+  .admin-tab {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .admin-header h3 {
+    font-size: 1rem;
+  }
+}
+
 /* Scrollbar Styling */
 .admin-tracks-list-container::-webkit-scrollbar,
 .admin-dropdown-menu::-webkit-scrollbar,
@@ -1271,4 +1323,75 @@ button .admin-icon-inline {
 .admin-dropdown-menu::-webkit-scrollbar-thumb:hover,
 .admin-dropdown-list::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* Request tab */
+.admin-request-tab .admin-bulk-table-wrapper {
+  margin-top: 0;
+}
+
+.admin-request-table {
+  background-color: var(--track-bg);
+}
+
+.admin-request-table thead tr {
+  background-color: var(--nav-bg);
+}
+
+.admin-request-table tbody tr:hover {
+  background-color: var(--track-bg-hover);
+}
+
+.admin-loading-requests,
+.admin-empty-requests {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.admin-request-contact-link {
+  color: var(--text-hover, #a78bfa);
+  text-decoration: none;
+}
+
+.admin-request-contact-link:hover {
+  text-decoration: underline;
+}
+
+.admin-bulk-td-date {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.admin-bulk-th-action,
+.admin-bulk-td-action {
+  width: 48px;
+  text-align: center;
+  padding: 0.4rem 0.25rem;
+}
+
+.admin-request-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--nav-border);
+  border-radius: 8px;
+  background-color: var(--track-bg);
+  color: #10b981;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-request-clear-btn:hover:not(:disabled) {
+  background-color: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+}
+
+.admin-request-clear-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

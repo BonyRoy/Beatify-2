@@ -374,6 +374,21 @@ body:has(.footer--player) .home__era-content {
   opacity: 0.8;
 }
 
+.home__request-song-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--text-hover, #a78bfa);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.home__request-song-btn:hover {
+  opacity: 0.8;
+}
+
 .home__retry-btn {
   margin-top: 1rem;
   padding: 0.5rem 1rem;

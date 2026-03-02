@@ -39,9 +39,15 @@ import {
   FileUp,
   ArrowUp,
   ArrowDown,
+  MessageSquare,
+  Check,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import * as XLSX from "xlsx";
+import {
+  fetchSongRequests,
+  deleteSongRequest,
+} from "../services/songRequestService";
 import "./Admin.css";
 
 const SunIcon = () => (
@@ -148,6 +154,12 @@ const Admin = () => {
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const sortDropdownRef = useRef(null);
   const [bulkSearchQuery, setBulkSearchQuery] = useState("");
+  const [songRequests, setSongRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [clearingRequestId, setClearingRequestId] = useState(null);
+  const [requestCurrentPage, setRequestCurrentPage] = useState(1);
+
+  const REQUEST_RECORDS_PER_PAGE = 10;
 
   const excelFileInputRef = useRef(null);
 
@@ -220,6 +232,41 @@ const Admin = () => {
       setBulkCurrentPage(1);
     }
   }, [activeTab, existingTracks]);
+
+  useEffect(() => {
+    if (activeTab === "request" && isAuthenticated) {
+      const loadRequests = async () => {
+        setLoadingRequests(true);
+        try {
+          const requests = await fetchSongRequests();
+          setSongRequests(requests);
+        } catch (err) {
+          console.error("Error loading song requests:", err);
+        } finally {
+          setLoadingRequests(false);
+        }
+      };
+      loadRequests();
+      setRequestCurrentPage(1);
+    }
+  }, [activeTab, isAuthenticated]);
+
+  const handleClearRequest = async (id) => {
+    setClearingRequestId(id);
+    try {
+      await deleteSongRequest(id);
+      setSongRequests((prev) => {
+        const next = prev.filter((r) => r.id !== id);
+        const maxPage = Math.ceil(next.length / REQUEST_RECORDS_PER_PAGE) || 1;
+        setRequestCurrentPage((p) => Math.max(1, Math.min(p, maxPage)));
+        return next;
+      });
+    } catch (err) {
+      console.error("Error clearing request:", err);
+    } finally {
+      setClearingRequestId(null);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -1080,6 +1127,13 @@ const Admin = () => {
           >
             <FileSpreadsheet size={18} className="admin-icon-inline" /> Bulk
           </button>
+          <button
+            type="button"
+            className={`admin-tab ${activeTab === "request" ? "admin-tab--active" : ""}`}
+            onClick={() => setActiveTab("request")}
+          >
+            <MessageSquare size={18} className="admin-icon-inline" /> Request
+          </button>
         </div>
         <div className="admin-tab-content">
           {activeTab === "upload" && (
@@ -1684,6 +1738,145 @@ const Admin = () => {
                           bulkCurrentPage >=
                           Math.ceil(
                             bulkFilteredTracks.length / BULK_RECORDS_PER_PAGE,
+                          )
+                        }
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+          {activeTab === "request" && (
+            <div className="admin-hip-tab admin-request-tab">
+              <div className="admin-bulk-header">
+                <h2>
+                  <MessageSquare size={22} className="admin-icon-inline" />{" "}
+                  Song Requests
+                </h2>
+                <p className="admin-bulk-subtitle">
+                  User-submitted song requests.
+                </p>
+              </div>
+              {loadingRequests ? (
+                <div className="admin-loading-requests">
+                  <p>Loading requests...</p>
+                </div>
+              ) : songRequests.length === 0 ? (
+                <div className="admin-empty-requests">
+                  <p>No song requests yet.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="admin-bulk-table-wrapper">
+                    <table className="admin-bulk-table admin-request-table">
+                      <thead>
+                        <tr>
+                          <th className="admin-bulk-th admin-bulk-th-num">#</th>
+                          <th className="admin-bulk-th">Song Name</th>
+                          <th className="admin-bulk-th">Album</th>
+                          <th className="admin-bulk-th">Requested By</th>
+                          <th className="admin-bulk-th">Contact</th>
+                          <th className="admin-bulk-th">Date</th>
+                          <th className="admin-bulk-th admin-bulk-th-action"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const start =
+                            (requestCurrentPage - 1) * REQUEST_RECORDS_PER_PAGE;
+                          const paginatedRequests = songRequests.slice(
+                            start,
+                            start + REQUEST_RECORDS_PER_PAGE,
+                          );
+                          return paginatedRequests.map((req, idx) => {
+                            const rowNum = start + idx + 1;
+                            const createdAt = req.createdAt;
+                            let dateStr = "—";
+                            if (createdAt) {
+                              if (createdAt.toDate) {
+                                dateStr = createdAt.toDate().toLocaleString();
+                              } else if (typeof createdAt === "string") {
+                                dateStr = new Date(createdAt).toLocaleString();
+                              }
+                            }
+                            return (
+                              <tr key={req.id} className="admin-bulk-tr">
+                                <td className="admin-bulk-td admin-bulk-td-num">
+                                  {rowNum}
+                                </td>
+                                <td className="admin-bulk-td">{req.songName}</td>
+                                <td className="admin-bulk-td">{req.album}</td>
+                                <td className="admin-bulk-td">{req.userName}</td>
+                                <td className="admin-bulk-td">
+                                  <a
+                                    href={`tel:${req.contactNumber}`}
+                                    className="admin-request-contact-link"
+                                  >
+                                    {req.contactNumber}
+                                  </a>
+                                </td>
+                                <td className="admin-bulk-td admin-bulk-td-date">
+                                  {dateStr}
+                                </td>
+                                <td className="admin-bulk-td admin-bulk-td-action">
+                                  <button
+                                    type="button"
+                                    className="admin-request-clear-btn"
+                                    onClick={() => handleClearRequest(req.id)}
+                                    disabled={clearingRequestId === req.id}
+                                    title="Mark as done / Clear"
+                                    aria-label="Clear request"
+                                  >
+                                    <Check size={18} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                  {songRequests.length > REQUEST_RECORDS_PER_PAGE && (
+                    <div className="admin-bulk-pagination">
+                      <button
+                        type="button"
+                        className="admin-bulk-page-btn"
+                        onClick={() =>
+                          setRequestCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={requestCurrentPage <= 1}
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <span className="admin-bulk-page-info">
+                        Page {requestCurrentPage} of{" "}
+                        {Math.ceil(
+                          songRequests.length / REQUEST_RECORDS_PER_PAGE,
+                        )}{" "}
+                        ({songRequests.length} total)
+                      </span>
+                      <button
+                        type="button"
+                        className="admin-bulk-page-btn"
+                        onClick={() =>
+                          setRequestCurrentPage((p) =>
+                            Math.min(
+                              Math.ceil(
+                                songRequests.length /
+                                  REQUEST_RECORDS_PER_PAGE,
+                              ),
+                              p + 1,
+                            ),
+                          )
+                        }
+                        disabled={
+                          requestCurrentPage >=
+                          Math.ceil(
+                            songRequests.length / REQUEST_RECORDS_PER_PAGE,
                           )
                         }
                       >
