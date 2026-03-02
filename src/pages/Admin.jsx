@@ -1778,6 +1778,7 @@ const Admin = () => {
                           <th className="admin-bulk-th">Song Name</th>
                           <th className="admin-bulk-th">Album</th>
                           <th className="admin-bulk-th">Requested By</th>
+                          <th className="admin-bulk-th">Email</th>
                           <th className="admin-bulk-th">Contact</th>
                           <th className="admin-bulk-th">Date</th>
                           <th className="admin-bulk-th admin-bulk-th-action"></th>
@@ -1810,6 +1811,18 @@ const Admin = () => {
                                 <td className="admin-bulk-td">{req.songName}</td>
                                 <td className="admin-bulk-td">{req.album}</td>
                                 <td className="admin-bulk-td">{req.userName}</td>
+                                <td className="admin-bulk-td">
+                                  {req.email ? (
+                                    <a
+                                      href={`mailto:${req.email}`}
+                                      className="admin-request-contact-link"
+                                    >
+                                      {req.email}
+                                    </a>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </td>
                                 <td className="admin-bulk-td">
                                   <a
                                     href={`tel:${req.contactNumber}`}

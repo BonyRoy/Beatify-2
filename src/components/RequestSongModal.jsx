@@ -38,6 +38,8 @@ const validateEmail = (value) => {
   return null;
 };
 
+const OTP_LENGTH = 6;
+
 const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     songName: "",
@@ -46,10 +48,11 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
     contactNumber: "",
     email: "",
   });
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [step, setStep] = useState("form"); // "form" | "otp"
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const otpInputRefs = React.useRef([]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -93,7 +96,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
     try {
       await createAndSendOtp(email.trim(), userName.trim());
       setStep("otp");
-      setOtp("");
+      setOtp(Array(OTP_LENGTH).fill(""));
       setError("");
     } catch (err) {
       setError(err.message || "Failed to send OTP. Please try again.");
@@ -102,11 +105,39 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
     }
   };
 
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) {
+      const digits = value.replace(/\D/g, "").slice(0, OTP_LENGTH).split("");
+      const newOtp = [...otp];
+      digits.forEach((d, i) => {
+        if (index + i < OTP_LENGTH) newOtp[index + i] = d;
+      });
+      setOtp(newOtp);
+      const nextIdx = Math.min(index + digits.length, OTP_LENGTH - 1);
+      otpInputRefs.current[nextIdx]?.focus();
+      return;
+    }
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const newOtp = [...otp];
+    newOtp[index] = digit;
+    setOtp(newOtp);
+    setError("");
+    if (digit && index < OTP_LENGTH - 1) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
   const handleVerifyAndSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    const otpDigits = otp.replace(/\D/g, "");
+    const otpDigits = otp.join("");
     if (otpDigits.length !== 6) {
       setError("Please enter the 6-digit OTP.");
       return;
@@ -140,7 +171,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
         contactNumber: "",
         email: "",
       });
-      setOtp("");
+      setOtp(Array(OTP_LENGTH).fill(""));
       setStep("form");
       onClose();
     } catch (err) {
@@ -152,7 +183,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
 
   const handleBackToForm = () => {
     setStep("form");
-    setOtp("");
+    setOtp(Array(OTP_LENGTH).fill(""));
     setError("");
   };
 
@@ -165,7 +196,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
         contactNumber: "",
         email: "",
       });
-      setOtp("");
+      setOtp(Array(OTP_LENGTH).fill(""));
       setStep("form");
       setError("");
       onClose();
@@ -258,7 +289,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
               <div className="request-song-form-group">
                 <label htmlFor="contactNumber">Contact Number *</label>
                 <input
-                  type="tel"
+                  type="number"
                   id="contactNumber"
                   name="contactNumber"
                   value={formData.contactNumber}
@@ -266,6 +297,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
                   placeholder="Enter your contact number"
                   disabled={submitting}
                   required
+                  inputMode="numeric"
                 />
               </div>
               {error && <p className="request-song-form-error">{error}</p>}
@@ -283,21 +315,27 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
             <form onSubmit={handleVerifyAndSubmit} className="request-song-form">
               <div className="request-song-form-group">
                 <label htmlFor="otp">Enter OTP *</label>
-                <input
-                  type="text"
-                  id="otp"
-                  name="otp"
-                  value={otp}
-                  onChange={(e) => {
-                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6));
-                    setError("");
-                  }}
-                  placeholder="Enter 6-digit OTP"
-                  disabled={submitting}
-                  maxLength={6}
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                />
+                <div className="otp-input-wrapper">
+                  {otp.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(el) => (otpInputRefs.current[index] = el)}
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={9}
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(index, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                      disabled={submitting}
+                      placeholder="_"
+                      className="otp-input-box"
+                      aria-label={`OTP digit ${index + 1}`}
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
+                    />
+                  ))}
+                </div>
               </div>
               {error && <p className="request-song-form-error">{error}</p>}
               <div className="modal__actions request-song-modal__actions">
@@ -312,7 +350,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
                 <button
                   type="submit"
                   className="modal__btn modal__btn--submit"
-                  disabled={submitting || otp.length !== 6}
+                  disabled={submitting || otp.join("").length !== 6}
                 >
                   {submitting ? "Verifying..." : "Verify & Submit"}
                 </button>

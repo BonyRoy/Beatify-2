@@ -93,3 +93,35 @@
 .request-song-modal__actions .modal__btn {
   width: 100%;
 }
+
+/* OTP input - _ _ _ _ _ _ style */
+.otp-input-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.otp-input-box {
+  width: 2.5rem;
+  height: 2.75rem;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.otp-input-box::-webkit-outer-spin-button,
+.otp-input-box::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.otp-input-box[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.otp-input-box::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
