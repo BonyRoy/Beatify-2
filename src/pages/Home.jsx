@@ -709,22 +709,41 @@ const Home = () => {
   useEffect(() => {
     loadMusicList();
 
-    // Load favorites and downloads from localStorage
-    const loadFromStorage = () => {
+    // Load downloads from localStorage
+    const loadDownloads = () => {
       try {
-        const savedFavorites = localStorage.getItem("favorites");
-        const savedDownloads = localStorage.getItem("downloads");
-        if (savedFavorites) setFavorites(JSON.parse(savedFavorites));
-        if (savedDownloads) setDownloads(JSON.parse(savedDownloads));
+        const saved = localStorage.getItem("downloads");
+        if (saved) setDownloads(JSON.parse(saved));
       } catch {}
     };
-    loadFromStorage();
+    loadDownloads();
 
-    // Reload favorites when synced from cloud (login on another device)
-    const handler = () => loadFromStorage();
+    // Favorites: when logged in, use Firebase only (via FAVORITES_LOADED). When not logged in, use localStorage.
+    const loadFavoritesFromStorage = () => {
+      try {
+        const saved = localStorage.getItem("favorites");
+        setFavorites(saved ? JSON.parse(saved) : []);
+      } catch {
+        setFavorites([]);
+      }
+    };
+
+    if (!isLoggedIn) {
+      loadFavoritesFromStorage();
+    }
+
+    const handler = (e) => {
+      const favs = e?.detail;
+      setFavorites(Array.isArray(favs) ? favs : (() => {
+        try {
+          const saved = localStorage.getItem("favorites");
+          return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+      })());
+    };
     window.addEventListener(FAVORITES_LOADED, handler);
     return () => window.removeEventListener(FAVORITES_LOADED, handler);
-  }, []);
+  }, [isLoggedIn]);
 
   // When in favorites view and user removes all favorites, exit favorites view
   useEffect(() => {

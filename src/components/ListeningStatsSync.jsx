@@ -52,7 +52,7 @@ const ListeningStatsSync = () => {
     if (!isLoggedIn) fetchedForAccountRef.current = null;
   }, [isLoggedIn]);
 
-  // Fetch favorites from cloud when accountId is available (login on new device)
+  // Fetch favorites from Firebase when logged in (source of truth for cross-device uniformity)
   useEffect(() => {
     const id = resolvedAccountId || accountId;
     if (!isLoggedIn || !id || fetchedForAccountRef.current === id) return;
@@ -60,13 +60,16 @@ const ListeningStatsSync = () => {
     let cancelled = false;
     getUserListeningStats(id)
       .then((stats) => {
-        if (cancelled || !stats?.favorites?.length) return;
+        if (cancelled) return;
+        const favs = Array.isArray(stats?.favorites) ? stats.favorites : [];
         try {
-          localStorage.setItem("favorites", JSON.stringify(stats.favorites));
-          window.dispatchEvent(new CustomEvent(FAVORITES_LOADED));
+          localStorage.setItem("favorites", JSON.stringify(favs));
+          window.dispatchEvent(new CustomEvent(FAVORITES_LOADED, { detail: favs }));
         } catch {}
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) window.dispatchEvent(new CustomEvent(FAVORITES_LOADED, { detail: [] }));
+      });
     return () => { cancelled = true; };
   }, [isLoggedIn, resolvedAccountId, accountId]);
 
