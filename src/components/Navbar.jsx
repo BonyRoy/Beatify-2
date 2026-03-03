@@ -8,7 +8,11 @@ import { useRequestSong } from "../context/RequestSongContext";
 import Sidebar from "./Sidebar";
 import Artists from "./Artists";
 import TopArtistsModal from "./TopArtistsModal";
+import ProfileModal from "./ProfileModal";
 import LogoutModal from "./LogoutModal";
+import EmptyFavoritesModal from "./EmptyFavoritesModal";
+import { getStoredAvatar, setStoredAvatar } from "./ProfileModal";
+import { getAccountById } from "../services/accountService";
 import { playlistImages } from "../constants/playlistImages";
 import { fuzzyMatches } from "../utils/searchUtils";
 import "./Navbar.css";
@@ -92,8 +96,8 @@ const ThemeToggle = ({ isDark, toggleTheme }) => (
 
 const FavoriteIcon = ({ filled }) => (
   <svg
-    width="20"
-    height="20"
+    width="24"
+    height="24"
     viewBox="0 0 24 24"
     fill={filled ? "currentColor" : "none"}
     stroke="currentColor"
@@ -107,8 +111,8 @@ const FavoriteIcon = ({ filled }) => (
 
 const ChartIcon = () => (
   <svg
-    width="20"
-    height="20"
+    width="24"
+    height="24"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -242,13 +246,16 @@ const allArtists = [
 
 const Navbar = () => {
   const { isDark, toggleTheme } = useTheme();
-  const { openCreateAccount, isLoggedIn, userName, logout } =
+  const { openCreateAccount, isLoggedIn, userName, userEmail, accountId, logout } =
     useCreateAccount();
   const { openRequestSong } = useRequestSong();
   const { getTopArtists } = useListeningHistory();
   const [menuOpen, setMenuOpen] = useState(false);
   const [topArtistsModalOpen, setTopArtistsModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [emptyFavModalOpen, setEmptyFavModalOpen] = useState(false);
+  const [userAvatar, setUserAvatar] = useState(() => getStoredAvatar());
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== "undefined" && window.innerWidth <= 768,
   );
@@ -265,6 +272,21 @@ const Navbar = () => {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  // Sync avatar from Firebase when logged in (for cross-device persistence)
+  useEffect(() => {
+    if (isLoggedIn && accountId) {
+      getAccountById(accountId)
+        .then((account) => {
+          const fbAvatar = account?.avatarId?.trim() || null;
+          if (fbAvatar) {
+            setStoredAvatar(fbAvatar);
+            setUserAvatar(fbAvatar);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isLoggedIn, accountId]);
 
   const showPlaylistHeader = isMobile && selectedPlaylist && view === "track";
   useEffect(() => {
@@ -321,7 +343,21 @@ const Navbar = () => {
     }
   };
 
+  const checkHasFavorites = () => {
+    try {
+      const saved = localStorage.getItem("favorites");
+      const list = saved ? JSON.parse(saved) : [];
+      return Array.isArray(list) && list.length > 0;
+    } catch {
+      return false;
+    }
+  };
+
   const toggleFavorites = () => {
+    if (!showFavorites && !checkHasFavorites()) {
+      setEmptyFavModalOpen(true);
+      return;
+    }
     const newSearchParams = new URLSearchParams(searchParams);
     if (showFavorites) {
       newSearchParams.delete("favorites");
@@ -388,7 +424,7 @@ const Navbar = () => {
           ) : null}
         </div>
 
-        {/* Desktop: top artists, favorites, theme toggle */}
+        {/* Desktop: top artists, favorites, theme toggle, avatar (rightmost) */}
         <div className="navbar__desktop">
           <button
             type="button"
@@ -408,15 +444,24 @@ const Navbar = () => {
           >
             <FavoriteIcon filled={showFavorites} />
           </button>
+          <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
           {isLoggedIn ? (
             <button
               type="button"
               className="navbar__create-account-btn navbar__profile-btn"
-              onClick={() => setLogoutModalOpen(true)}
+              onClick={() => setProfileModalOpen(true)}
               aria-label="Profile"
               title="Profile"
             >
-              <User size={20} />
+              {userAvatar ? (
+                <img
+                  src={`/Avatars/${userAvatar}.png`}
+                  alt="Profile"
+                  className="navbar__profile-avatar"
+                />
+              ) : (
+                <User size={24} />
+              )}
             </button>
           ) : (
             <button
@@ -426,10 +471,9 @@ const Navbar = () => {
               aria-label="Create account"
               title="Create account"
             >
-              <UserPlus size={20} />
+              <UserPlus size={24} />
             </button>
           )}
-          <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
         </div>
 
         {/* Mobile: hamburger button */}
@@ -462,15 +506,16 @@ const Navbar = () => {
                   openCreateAccount();
                 }
           }
-          onOpenLogoutModal={
+          onOpenProfileModal={
             isLoggedIn
               ? () => {
                   setMenuOpen(false);
-                  setLogoutModalOpen(true);
+                  setProfileModalOpen(true);
                 }
               : undefined
           }
           userName={userName}
+          userAvatar={userAvatar}
         />
         <TopArtistsModal
           isOpen={topArtistsModalOpen}
@@ -478,10 +523,29 @@ const Navbar = () => {
           topArtists={getTopArtists(3)}
           allArtists={allArtists}
         />
+        <ProfileModal
+          isOpen={profileModalOpen}
+          onClose={() => {
+            setProfileModalOpen(false);
+            setUserAvatar(getStoredAvatar());
+          }}
+          onOpenLogout={() => {
+            setProfileModalOpen(false);
+            setLogoutModalOpen(true);
+          }}
+          onAvatarChange={setUserAvatar}
+          userName={userName}
+          userEmail={userEmail}
+          accountId={accountId}
+        />
         <LogoutModal
           isOpen={logoutModalOpen}
           onClose={() => setLogoutModalOpen(false)}
           onLogout={logout}
+        />
+        <EmptyFavoritesModal
+          isOpen={emptyFavModalOpen}
+          onClose={() => setEmptyFavModalOpen(false)}
         />
       </nav>
       {isMobile && selectedPlaylist && view === "track" ? (

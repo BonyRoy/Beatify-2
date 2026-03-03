@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { UserPlus, User, MessageSquarePlus } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import EmptyFavoritesModal from "./EmptyFavoritesModal";
 import "./Sidebar.css";
 
 const FavoriteIcon = ({ filled }) => (
@@ -172,9 +173,10 @@ const Sidebar = ({
   onClose,
   onOpenTopArtists,
   onOpenCreateAccount,
-  onOpenLogoutModal,
+  onOpenProfileModal,
   onOpenRequestSong,
   userName,
+  userAvatar,
 }) => {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -205,13 +207,6 @@ const Sidebar = ({
       }
     }
   }, [isOpen]);
-
-  // Auto-close empty favorites modal after 4 seconds
-  useEffect(() => {
-    if (!showEmptyFavModal) return;
-    const timer = setTimeout(() => setShowEmptyFavModal(false), 4000);
-    return () => clearTimeout(timer);
-  }, [showEmptyFavModal]);
 
   // Default to 'track' on mobile, 'playlist' on desktop if no view param is set
   const defaultView = isMobile ? "track" : "playlist";
@@ -255,35 +250,10 @@ const Sidebar = ({
 
   return (
     <>
-      {showEmptyFavModal && (
-        <div
-          className="sidebar__empty-fav-modal-overlay"
-          onClick={() => setShowEmptyFavModal(false)}
-        >
-          <div
-            className="sidebar__empty-fav-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="sidebar__empty-fav-modal__close"
-              onClick={() => setShowEmptyFavModal(false)}
-              aria-label="Close"
-            >
-              <CloseIcon />
-            </button>
-            <span className="sidebar__empty-fav-modal__icon">
-              <FavoriteIcon filled />
-            </span>
-            <p className="sidebar__empty-fav-modal__text">
-              Nothing in My Favorites
-            </p>
-            <p className="sidebar__empty-fav-modal__hint">
-              Add songs by clicking the heart icon on any track
-            </p>
-          </div>
-        </div>
-      )}
+      <EmptyFavoritesModal
+        isOpen={showEmptyFavModal}
+        onClose={() => setShowEmptyFavModal(false)}
+      />
       <div
         className={`sidebar__overlay ${isOpen ? "sidebar__overlay--open" : ""}`}
         onClick={onClose}
@@ -300,14 +270,22 @@ const Sidebar = ({
         </button>
 
         <div className="sidebar__content">
-          {onOpenLogoutModal ? (
+          {onOpenProfileModal ? (
             <button
               type="button"
               className="sidebar__profile sidebar__profile--clickable"
-              onClick={onOpenLogoutModal}
+              onClick={onOpenProfileModal}
             >
               <div className="sidebar__profile-icon">
-                <User size={24} />
+                {userAvatar ? (
+                  <img
+                    src={`/Avatars/${userAvatar}.png`}
+                    alt="Profile"
+                    className="sidebar__profile-avatar"
+                  />
+                ) : (
+                  <User size={24} />
+                )}
               </div>
               <span className="sidebar__profile-label">
                 {userName || "Signed in"}

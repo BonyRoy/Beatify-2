@@ -2,7 +2,9 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDoc,
   doc,
+  updateDoc,
   deleteDoc,
   query,
   where,
@@ -92,6 +94,32 @@ export async function createAccount({ name, email, uuid }) {
     createdAt: serverTimestamp(),
   });
   return docRef.id;
+}
+
+/**
+ * Get account by document ID
+ * @param {string} id - Account document ID
+ * @returns {Promise<Object|null>} Account object or null
+ */
+export async function getAccountById(id) {
+  if (!id || !id.trim()) return null;
+  const ref = doc(db, ACCOUNTS_COLLECTION, id.trim());
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() };
+}
+
+/**
+ * Update account avatar
+ * @param {string} accountId - Account document ID
+ * @param {string|null} avatarId - Avatar ID (one, two, etc.) or null for default
+ */
+export async function updateAccountAvatar(accountId, avatarId) {
+  if (!accountId || !accountId.trim()) {
+    throw new Error("Account ID is required.");
+  }
+  const ref = doc(db, ACCOUNTS_COLLECTION, accountId.trim());
+  await updateDoc(ref, { avatarId: avatarId || null, updatedAt: serverTimestamp() });
 }
 
 /**

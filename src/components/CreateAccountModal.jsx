@@ -176,6 +176,7 @@ const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
           onAccountCreated({
             accountId: account?.id,
             name: account?.name || formData.email,
+            email: account?.email || formData.email.trim(),
           });
         setFormData({ name: "", email: "" });
         setOtp(Array(OTP_LENGTH).fill(""));
@@ -190,7 +191,11 @@ const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
         });
         toast.success("Account created successfully!");
         if (onAccountCreated)
-          onAccountCreated({ accountId: docId, name: formData.name.trim() });
+          onAccountCreated({
+            accountId: docId,
+            name: formData.name.trim(),
+            email: formData.email.trim(),
+          });
         setFormData({ name: "", email: "" });
         setOtp(Array(OTP_LENGTH).fill(""));
         setStep("form");
