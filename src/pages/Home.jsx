@@ -535,6 +535,13 @@ const playlistTrackIds = {
     "e6433071-6e85-4b8e-8e0d-e263dbbb5b0a",
     "d49884af-2528-47c0-aa94-358fd7c89c34",
     "586e10f4-df9b-455e-a902-a7537c99f6b4",
+    "89306dec-d8cf-48ff-93ee-df04db9f0b05",
+    "2efc5e49-6d6c-4bdb-ae5a-b40c0d1fddcb",
+    "6ca66219-c7ec-4f68-a2ba-39f6cb499788",
+    "93065162-8873-4953-9163-3aa650673a27",
+    "707e2be6-f57b-445d-95f5-e7beb61f2c8b",
+    "50cee08e-7a7b-480d-beb0-074781448725",
+    "4bbce881-b5dc-480e-a324-6169837daada",
   ],
   Thar: [
     "937cf202-b571-4433-97cf-9883d82c87d1",
@@ -647,7 +654,8 @@ const Home = () => {
   const { selectTrack, currentTrack, setPlaylist, isPlaying } = usePlayer();
   const { openRequestSong } = useRequestSong();
   const { isLoggedIn } = useCreateAccount();
-  const { getTopArtists, getLastSongs, lastSongs, artistCounts } = useListeningHistory();
+  const { getTopArtists, getLastSongs, lastSongs, artistCounts } =
+    useListeningHistory();
 
   const [musicList, setMusicList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -734,12 +742,18 @@ const Home = () => {
 
     const handler = (e) => {
       const favs = e?.detail;
-      setFavorites(Array.isArray(favs) ? favs : (() => {
-        try {
-          const saved = localStorage.getItem("favorites");
-          return saved ? JSON.parse(saved) : [];
-        } catch { return []; }
-      })());
+      setFavorites(
+        Array.isArray(favs)
+          ? favs
+          : (() => {
+              try {
+                const saved = localStorage.getItem("favorites");
+                return saved ? JSON.parse(saved) : [];
+              } catch {
+                return [];
+              }
+            })(),
+      );
     };
     window.addEventListener(FAVORITES_LOADED, handler);
     return () => window.removeEventListener(FAVORITES_LOADED, handler);
@@ -904,13 +918,7 @@ const Home = () => {
       recentSongs,
       musicList,
     );
-  }, [
-    isLoggedIn,
-    filteredMusicList,
-    musicList,
-    lastSongs,
-    artistCounts,
-  ]);
+  }, [isLoggedIn, filteredMusicList, musicList, lastSongs, artistCounts]);
 
   const handleTrackClick = (track) => {
     selectTrack(track, sortedMusicList);
@@ -1063,8 +1071,8 @@ const Home = () => {
                         onClick={() => openRequestSong()}
                       >
                         Request a song
-                      </button>
-                      {" "}or reach out to{" "}
+                      </button>{" "}
+                      or reach out to{" "}
                       <a
                         href="mailto:siddhantroy225@gmail.com"
                         className="home__email-link"
