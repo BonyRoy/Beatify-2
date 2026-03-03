@@ -5,10 +5,13 @@ import { ThemeProvider } from './context/ThemeContext'
 import { PlayerProvider } from './context/PlayerContext'
 import { AlbumArtProvider } from './context/AlbumArtContext'
 import { ListeningHistoryProvider } from './context/ListeningHistoryContext'
+import { CreateAccountProvider } from './context/CreateAccountContext'
+import { RequestSongProvider } from './context/RequestSongContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import PromotionalModal from './components/PromotionalModal'
 import ListeningHistoryTracker from './components/ListeningHistoryTracker'
+import ListeningStatsSync from './components/ListeningStatsSync'
 import Home from './pages/Home'
 import Admin from './pages/Admin'
 import 'react-toastify/dist/ReactToastify.css'
@@ -22,14 +25,14 @@ const AppContent = () => {
     <>
       <ToastContainer position="bottom-right" theme="dark" />
       {!isAdminPage && <Navbar />}
-      <main className={`app__content ${isAdminPage ? 'app__content--admin' : ''}`}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/admin" element={<Admin />} />
-        </Routes>
-      </main>
-      {!isAdminPage && <Footer />}
-      {!isAdminPage && <PromotionalModal />}
+        <main className={`app__content ${isAdminPage ? 'app__content--admin' : ''}`}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/admin" element={<Admin />} />
+          </Routes>
+        </main>
+        {!isAdminPage && <Footer />}
+        {!isAdminPage && <PromotionalModal />}
     </>
   )
 }
@@ -37,16 +40,21 @@ const AppContent = () => {
 const App = () => {
   return (
     <ThemeProvider>
-      <ListeningHistoryProvider>
-        <PlayerProvider>
-          <AlbumArtProvider>
-            <ListeningHistoryTracker />
-            <Router>
-            <AppContent />
-            </Router>
-          </AlbumArtProvider>
-        </PlayerProvider>
-      </ListeningHistoryProvider>
+      <CreateAccountProvider>
+        <RequestSongProvider>
+        <ListeningHistoryProvider>
+          <PlayerProvider>
+            <AlbumArtProvider>
+              <ListeningHistoryTracker />
+              <ListeningStatsSync />
+              <Router>
+                <AppContent />
+              </Router>
+            </AlbumArtProvider>
+          </PlayerProvider>
+        </ListeningHistoryProvider>
+        </RequestSongProvider>
+      </CreateAccountProvider>
     </ThemeProvider>
   )
 }

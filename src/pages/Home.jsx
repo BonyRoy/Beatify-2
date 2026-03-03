@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import DownloadModal from "../components/DownloadModal";
-import RequestSongModal from "../components/RequestSongModal";
+import { useRequestSong } from "../context/RequestSongContext";
 import Playlist from "../components/Playlist";
 import { fetchMusicList } from "../services/musicService";
 import { usePlayer } from "../context/PlayerContext";
 import { useAlbumArt } from "../context/AlbumArtContext";
+import { useCreateAccount } from "../context/CreateAccountContext";
+import { useListeningHistory } from "../context/ListeningHistoryContext";
 import { fuzzyMatchesAny } from "../utils/searchUtils";
+import { sortTracksByRelevance } from "../utils/trackRelevanceUtils";
 import "./Home.css";
 
 const DownloadIcon = ({ filled }) => (
@@ -638,6 +641,9 @@ const Home = () => {
   const selectedEra = searchParams.get("era") || "";
   const searchQuery = searchParams.get("search") || "";
   const { selectTrack, currentTrack, setPlaylist, isPlaying } = usePlayer();
+  const { openRequestSong } = useRequestSong();
+  const { isLoggedIn } = useCreateAccount();
+  const { getTopArtists, getLastSongs, lastSongs, artistCounts } = useListeningHistory();
 
   const [musicList, setMusicList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -645,7 +651,6 @@ const Home = () => {
   const [favorites, setFavorites] = useState([]);
   const [downloads, setDownloads] = useState([]);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
-  const [isRequestSongModalOpen, setIsRequestSongModalOpen] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [visibleCount, setVisibleCount] = useState(15);
   const sidebarContentRef = useRef(null);
@@ -858,16 +863,35 @@ const Home = () => {
     favorites,
   ]);
 
+  // For logged-in users: sort by relevance (top artists, last listened). Otherwise keep order.
+  const sortedMusicList = useMemo(() => {
+    if (!isLoggedIn) return filteredMusicList;
+    const topArtists = getTopArtists(3);
+    const recentSongs = getLastSongs();
+    return sortTracksByRelevance(
+      filteredMusicList,
+      topArtists,
+      recentSongs,
+      musicList,
+    );
+  }, [
+    isLoggedIn,
+    filteredMusicList,
+    musicList,
+    lastSongs,
+    artistCounts,
+  ]);
+
   const handleTrackClick = (track) => {
-    selectTrack(track, filteredMusicList);
+    selectTrack(track, sortedMusicList);
   };
 
-  // Update playlist when filtered list changes
+  // Update playlist when filtered list changes (use sorted for logged-in)
   useEffect(() => {
-    if (filteredMusicList.length > 0) {
-      setPlaylist(filteredMusicList);
+    if (sortedMusicList.length > 0) {
+      setPlaylist(sortedMusicList);
     }
-  }, [filteredMusicList, setPlaylist]);
+  }, [sortedMusicList, setPlaylist]);
 
   const handleCloseModal = () => {
     setIsDownloadModalOpen(false);
@@ -876,10 +900,10 @@ const Home = () => {
 
   // Tracks to display (first N for lazy load)
   const visibleTracks = useMemo(
-    () => filteredMusicList.slice(0, visibleCount),
-    [filteredMusicList, visibleCount],
+    () => sortedMusicList.slice(0, visibleCount),
+    [sortedMusicList, visibleCount],
   );
-  const hasMore = visibleCount < filteredMusicList.length;
+  const hasMore = visibleCount < sortedMusicList.length;
 
   // Load more on scroll
   const loadMoreRef = useRef(null);
@@ -892,14 +916,14 @@ const Home = () => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          setVisibleCount((n) => Math.min(n + 15, filteredMusicList.length));
+          setVisibleCount((n) => Math.min(n + 15, sortedMusicList.length));
         }
       },
       { root: root || null, rootMargin: "200px", threshold: 0 },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, filteredMusicList.length]);
+  }, [hasMore, sortedMusicList.length]);
 
   const handleClearPlaylistFilter = () => {
     const newSearchParams = new URLSearchParams(searchParams);
@@ -1006,7 +1030,7 @@ const Home = () => {
                       <button
                         type="button"
                         className="home__request-song-btn"
-                        onClick={() => setIsRequestSongModalOpen(true)}
+                        onClick={() => openRequestSong()}
                       >
                         Request a song
                       </button>
@@ -1087,11 +1111,6 @@ const Home = () => {
         artistName={selectedTrackData.artist}
         fileSize={selectedTrackData.size}
         onDownload={handleDownload}
-      />
-      <RequestSongModal
-        isOpen={isRequestSongModalOpen}
-        onClose={() => setIsRequestSongModalOpen(false)}
-        onSubmit={() => {}}
       />
     </div>
   );

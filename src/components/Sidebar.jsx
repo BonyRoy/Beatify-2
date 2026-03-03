@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { UserPlus, User, MessageSquarePlus } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import "./Sidebar.css";
 
@@ -166,7 +167,15 @@ const ClockIcon = () => (
 
 const ERA_ORDER = ["70s", "80s", "90s", "2000s", "2010s", "2020s"];
 
-const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
+const Sidebar = ({
+  isOpen,
+  onClose,
+  onOpenTopArtists,
+  onOpenCreateAccount,
+  onOpenLogoutModal,
+  onOpenRequestSong,
+  userName,
+}) => {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -291,6 +300,32 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
         </button>
 
         <div className="sidebar__content">
+          {onOpenLogoutModal ? (
+            <button
+              type="button"
+              className="sidebar__profile sidebar__profile--clickable"
+              onClick={onOpenLogoutModal}
+            >
+              <div className="sidebar__profile-icon">
+                <User size={24} />
+              </div>
+              <span className="sidebar__profile-label">
+                {userName || "Signed in"}
+              </span>
+            </button>
+          ) : onOpenCreateAccount ? (
+            <button
+              type="button"
+              className="sidebar__item sidebar__item--button"
+              onClick={onOpenCreateAccount}
+            >
+              <span className="sidebar__label">Create Account</span>
+              <span className="sidebar__icon">
+                <UserPlus size={20} />
+              </span>
+            </button>
+          ) : null}
+
           <div
             className="sidebar__item"
             onClick={toggleTheme}
@@ -368,10 +403,26 @@ const Sidebar = ({ isOpen, onClose, onOpenTopArtists }) => {
               {currentView === "track" ? <PlaylistIcon /> : <TrackIcon />}
             </span>
           </button>
+
+          {onOpenRequestSong && (
+            <button
+              type="button"
+              className="sidebar__item sidebar__item--button"
+              onClick={() => {
+                onOpenRequestSong();
+                onClose();
+              }}
+            >
+              <span className="sidebar__label">Song Request</span>
+              <span className="sidebar__icon">
+                <MessageSquarePlus size={20} />
+              </span>
+            </button>
+          )}
         </div>
 
         <div className="sidebar__footer">
-          <p className="sidebar__version">v1.0.0</p>
+          <p className="sidebar__version">v2.0.0</p>
         </div>
       </aside>
     </>

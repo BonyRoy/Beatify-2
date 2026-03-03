@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Music collection
+    match /music/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Song Requests collection
+    match /songRequests/{document=**} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
+
+    // OTPs for song request validation
+    match /songRequestOtps/{document} {
+      allow read, write: if true;
+    }
+
+    // Accounts collection (for Create Account flow)
+    match /accounts/{document} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
+
+    // User listening stats (last 10 songs + top 3 artists per logged-in user)
+    match /userListeningStats/{accountId} {
+      allow read, create, update: if true;
+    }
+
+  }
+}

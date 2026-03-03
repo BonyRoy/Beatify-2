@@ -41,6 +41,8 @@ import {
   ArrowDown,
   MessageSquare,
   Check,
+  Users,
+  Headphones,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import * as XLSX from "xlsx";
@@ -48,6 +50,8 @@ import {
   fetchSongRequests,
   deleteSongRequest,
 } from "../services/songRequestService";
+import { fetchAccounts, deleteAccount } from "../services/accountService";
+import { fetchAllUserListeningStats } from "../services/userListeningStatsService";
 import "./Admin.css";
 
 const SunIcon = () => (
@@ -158,8 +162,19 @@ const Admin = () => {
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [clearingRequestId, setClearingRequestId] = useState(null);
   const [requestCurrentPage, setRequestCurrentPage] = useState(1);
+  const [accounts, setAccounts] = useState([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [accountsCurrentPage, setAccountsCurrentPage] = useState(1);
+  const [deletingAccountId, setDeletingAccountId] = useState(null);
+  const [listeningStats, setListeningStats] = useState([]);
+  const [loadingListeningStats, setLoadingListeningStats] = useState(false);
+  const [listeningStatsCurrentPage, setListeningStatsCurrentPage] = useState(1);
+  const [listeningStatsSearchQuery, setListeningStatsSearchQuery] = useState("");
+  const [expandedListeningIds, setExpandedListeningIds] = useState(new Set());
 
   const REQUEST_RECORDS_PER_PAGE = 10;
+  const ACCOUNTS_RECORDS_PER_PAGE = 10;
+  const LISTENING_STATS_RECORDS_PER_PAGE = 10;
 
   const excelFileInputRef = useRef(null);
 
@@ -251,6 +266,42 @@ const Admin = () => {
     }
   }, [activeTab, isAuthenticated]);
 
+  useEffect(() => {
+    if (activeTab === "accounts" && isAuthenticated) {
+      const loadAccounts = async () => {
+        setLoadingAccounts(true);
+        try {
+          const data = await fetchAccounts();
+          setAccounts(data);
+        } catch (err) {
+          console.error("Error loading accounts:", err);
+        } finally {
+          setLoadingAccounts(false);
+        }
+      };
+      loadAccounts();
+      setAccountsCurrentPage(1);
+    }
+  }, [activeTab, isAuthenticated]);
+
+  useEffect(() => {
+    if (activeTab === "listening" && isAuthenticated) {
+      const loadStats = async () => {
+        setLoadingListeningStats(true);
+        try {
+          const data = await fetchAllUserListeningStats();
+          setListeningStats(data);
+        } catch (err) {
+          console.error("Error loading listening stats:", err);
+        } finally {
+          setLoadingListeningStats(false);
+        }
+      };
+      loadStats();
+      setListeningStatsCurrentPage(1);
+    }
+  }, [activeTab, isAuthenticated]);
+
   const handleClearRequest = async (id) => {
     setClearingRequestId(id);
     try {
@@ -265,6 +316,26 @@ const Admin = () => {
       console.error("Error clearing request:", err);
     } finally {
       setClearingRequestId(null);
+    }
+  };
+
+  const handleDeleteAccount = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this account?")) {
+      return;
+    }
+    setDeletingAccountId(id);
+    try {
+      await deleteAccount(id);
+      setAccounts((prev) => {
+        const next = prev.filter((a) => a.id !== id);
+        const maxPage = Math.ceil(next.length / ACCOUNTS_RECORDS_PER_PAGE) || 1;
+        setAccountsCurrentPage((p) => Math.max(1, Math.min(p, maxPage)));
+        return next;
+      });
+    } catch (err) {
+      console.error("Error deleting account:", err);
+    } finally {
+      setDeletingAccountId(null);
     }
   };
 
@@ -1134,6 +1205,20 @@ const Admin = () => {
           >
             <MessageSquare size={18} className="admin-icon-inline" /> Request
           </button>
+          <button
+            type="button"
+            className={`admin-tab ${activeTab === "accounts" ? "admin-tab--active" : ""}`}
+            onClick={() => setActiveTab("accounts")}
+          >
+            <Users size={18} className="admin-icon-inline" /> Accounts
+          </button>
+          <button
+            type="button"
+            className={`admin-tab ${activeTab === "listening" ? "admin-tab--active" : ""}`}
+            onClick={() => setActiveTab("listening")}
+          >
+            <Headphones size={18} className="admin-icon-inline" /> Listening
+          </button>
         </div>
         <div className="admin-tab-content">
           {activeTab === "upload" && (
@@ -1753,8 +1838,8 @@ const Admin = () => {
             <div className="admin-hip-tab admin-request-tab">
               <div className="admin-bulk-header">
                 <h2>
-                  <MessageSquare size={22} className="admin-icon-inline" />{" "}
-                  Song Requests
+                  <MessageSquare size={22} className="admin-icon-inline" /> Song
+                  Requests
                 </h2>
                 <p className="admin-bulk-subtitle">
                   User-submitted song requests.
@@ -1808,9 +1893,13 @@ const Admin = () => {
                                 <td className="admin-bulk-td admin-bulk-td-num">
                                   {rowNum}
                                 </td>
-                                <td className="admin-bulk-td">{req.songName}</td>
+                                <td className="admin-bulk-td">
+                                  {req.songName}
+                                </td>
                                 <td className="admin-bulk-td">{req.album}</td>
-                                <td className="admin-bulk-td">{req.userName}</td>
+                                <td className="admin-bulk-td">
+                                  {req.userName}
+                                </td>
                                 <td className="admin-bulk-td">
                                   {req.email ? (
                                     <a
@@ -1879,8 +1968,7 @@ const Admin = () => {
                           setRequestCurrentPage((p) =>
                             Math.min(
                               Math.ceil(
-                                songRequests.length /
-                                  REQUEST_RECORDS_PER_PAGE,
+                                songRequests.length / REQUEST_RECORDS_PER_PAGE,
                               ),
                               p + 1,
                             ),
@@ -1899,6 +1987,361 @@ const Admin = () => {
                   )}
                 </>
               )}
+            </div>
+          )}
+          {activeTab === "accounts" && (
+            <div className="admin-hip-tab admin-accounts-tab">
+              <div className="admin-bulk-header">
+                <h2>
+                  <Users size={22} className="admin-icon-inline" /> Accounts
+                </h2>
+                <p className="admin-bulk-subtitle">
+                  All created user accounts.
+                </p>
+              </div>
+              {loadingAccounts ? (
+                <div className="admin-loading-requests">
+                  <p>Loading accounts...</p>
+                </div>
+              ) : accounts.length === 0 ? (
+                <div className="admin-empty-requests">
+                  <p>No accounts yet.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="admin-bulk-table-wrapper">
+                    <table className="admin-bulk-table admin-request-table">
+                      <thead>
+                        <tr>
+                          <th className="admin-bulk-th admin-bulk-th-num">#</th>
+                          <th className="admin-bulk-th">Name</th>
+                          <th className="admin-bulk-th">Email</th>
+                          <th className="admin-bulk-th admin-bulk-th-uuid">
+                            UUID
+                          </th>
+                          <th className="admin-bulk-th">Created</th>
+                          <th className="admin-bulk-th admin-bulk-th-action"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const start =
+                            (accountsCurrentPage - 1) *
+                            ACCOUNTS_RECORDS_PER_PAGE;
+                          const paginatedAccounts = accounts.slice(
+                            start,
+                            start + ACCOUNTS_RECORDS_PER_PAGE,
+                          );
+                          return paginatedAccounts.map((acc, idx) => {
+                            const rowNum = start + idx + 1;
+                            const createdAt = acc.createdAt;
+                            let dateStr = "—";
+                            if (createdAt) {
+                              if (createdAt.toDate) {
+                                dateStr = createdAt.toDate().toLocaleString();
+                              } else if (typeof createdAt === "string") {
+                                dateStr = new Date(createdAt).toLocaleString();
+                              }
+                            }
+                            return (
+                              <tr key={acc.id} className="admin-bulk-tr">
+                                <td className="admin-bulk-td admin-bulk-td-num">
+                                  {rowNum}
+                                </td>
+                                <td className="admin-bulk-td">{acc.name}</td>
+                                <td className="admin-bulk-td">
+                                  {acc.email ? (
+                                    <a
+                                      href={`mailto:${acc.email}`}
+                                      className="admin-request-contact-link"
+                                    >
+                                      {acc.email}
+                                    </a>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </td>
+                                <td className="admin-bulk-td admin-bulk-td-uuid">
+                                  {acc.uuid || "—"}
+                                </td>
+                                <td className="admin-bulk-td admin-bulk-td-date">
+                                  {dateStr}
+                                </td>
+                                <td className="admin-bulk-td admin-bulk-td-action">
+                                  <button
+                                    type="button"
+                                    className="admin-request-clear-btn admin-account-delete-btn"
+                                    onClick={() => handleDeleteAccount(acc.id)}
+                                    disabled={deletingAccountId === acc.id}
+                                    title="Delete account"
+                                    aria-label="Delete account"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                  {accounts.length > ACCOUNTS_RECORDS_PER_PAGE && (
+                    <div className="admin-bulk-pagination">
+                      <button
+                        type="button"
+                        className="admin-bulk-page-btn"
+                        onClick={() =>
+                          setAccountsCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={accountsCurrentPage <= 1}
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <span className="admin-bulk-page-info">
+                        Page {accountsCurrentPage} of{" "}
+                        {Math.ceil(accounts.length / ACCOUNTS_RECORDS_PER_PAGE)}{" "}
+                        ({accounts.length} total)
+                      </span>
+                      <button
+                        type="button"
+                        className="admin-bulk-page-btn"
+                        onClick={() =>
+                          setAccountsCurrentPage((p) =>
+                            Math.min(
+                              Math.ceil(
+                                accounts.length / ACCOUNTS_RECORDS_PER_PAGE,
+                              ),
+                              p + 1,
+                            ),
+                          )
+                        }
+                        disabled={
+                          accountsCurrentPage >=
+                          Math.ceil(accounts.length / ACCOUNTS_RECORDS_PER_PAGE)
+                        }
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+          {activeTab === "listening" && (
+            <div className="admin-hip-tab admin-listening-tab">
+              <div className="admin-bulk-header">
+                <h2>
+                  <Headphones size={22} className="admin-icon-inline" /> User
+                  Listening Activity
+                </h2>
+                <p className="admin-bulk-subtitle">
+                  Last 10 listened songs and top 3 artists per user (logged-in
+                  only).
+                </p>
+                <div className="admin-search-sort-row admin-listening-search-row">
+                  <div className="admin-search-container">
+                    <Search size={18} className="admin-search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search by user name..."
+                      value={listeningStatsSearchQuery}
+                      onChange={(e) => {
+                        setListeningStatsSearchQuery(e.target.value);
+                        setListeningStatsCurrentPage(1);
+                      }}
+                      className="admin-search-input"
+                      aria-label="Search users"
+                    />
+                  </div>
+                </div>
+              </div>
+              {loadingListeningStats ? (
+                <div className="admin-loading-requests">
+                  <p>Loading listening stats...</p>
+                </div>
+              ) : listeningStats.length === 0 ? (
+                <div className="admin-empty-requests">
+                  <p>No listening data yet. Users must be logged in and play
+                    songs for stats to appear.</p>
+                </div>
+              ) : (() => {
+                const q = listeningStatsSearchQuery.trim().toLowerCase();
+                const filtered = q
+                  ? listeningStats.filter((s) =>
+                      (s.userName || "").toLowerCase().includes(q),
+                    )
+                  : listeningStats;
+                return filtered.length === 0 ? (
+                  <div className="admin-empty-requests">
+                    <p>No users match your search.</p>
+                  </div>
+                ) : (
+                <>
+                  <div className="admin-listening-stats-list">
+                    {(() => {
+                      const q = listeningStatsSearchQuery.trim().toLowerCase();
+                      const filtered = q
+                        ? listeningStats.filter((s) =>
+                            (s.userName || "").toLowerCase().includes(q),
+                          )
+                        : listeningStats;
+                      const start =
+                        (listeningStatsCurrentPage - 1) *
+                        LISTENING_STATS_RECORDS_PER_PAGE;
+                      const paginated = filtered.slice(
+                        start,
+                        start + LISTENING_STATS_RECORDS_PER_PAGE,
+                      );
+                      return paginated.map((stat) => {
+                        const isExpanded = expandedListeningIds.has(stat.id);
+                        return (
+                          <div
+                            key={stat.id}
+                            className={`admin-listening-stat-card ${isExpanded ? "admin-listening-stat-card--expanded" : ""}`}
+                          >
+                            <button
+                              type="button"
+                              className="admin-listening-stat-header"
+                              onClick={() => {
+                                setExpandedListeningIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(stat.id)) next.delete(stat.id);
+                                  else next.add(stat.id);
+                                  return next;
+                                });
+                              }}
+                              aria-expanded={isExpanded}
+                            >
+                              <h3>{stat.userName || "Unknown"}</h3>
+                              <span className="admin-listening-stat-header-right">
+                                <span className="admin-listening-stat-meta">
+                                  {stat.updatedAt
+                                    ? new Date(stat.updatedAt).toLocaleString()
+                                    : "—"}
+                                </span>
+                                <span className="admin-listening-stat-chevron">
+                                  {isExpanded ? (
+                                    <ChevronUp size={20} />
+                                  ) : (
+                                    <ChevronDown size={20} />
+                                  )}
+                                </span>
+                              </span>
+                            </button>
+                            {isExpanded && (
+                              <div className="admin-listening-stat-body">
+                                <div className="admin-listening-stat-section">
+                                  <h4>Last 10 listened</h4>
+                                  <ul className="admin-listening-song-list">
+                                    {(stat.last10Songs || []).length === 0 ? (
+                                      <li className="admin-listening-empty">—</li>
+                                    ) : (
+                                      (stat.last10Songs || []).map((s, i) => (
+                                        <li key={i}>
+                                          <span className="admin-listening-song-name">
+                                            {s.name}
+                                          </span>
+                                          <span className="admin-listening-song-uuid">
+                                            {s.uuid}
+                                          </span>
+                                          {s.artist && (
+                                            <span className="admin-listening-song-artist">
+                                              {s.artist}
+                                            </span>
+                                          )}
+                                        </li>
+                                      ))
+                                    )}
+                                  </ul>
+                                </div>
+                                <div className="admin-listening-stat-section">
+                                  <h4>Top 3 artists</h4>
+                                  <ul className="admin-listening-artist-list">
+                                    {(stat.top3Artists || []).length === 0 ? (
+                                      <li className="admin-listening-empty">—</li>
+                                    ) : (
+                                      (stat.top3Artists || []).map((a, i) => (
+                                        <li key={i}>
+                                          {a.name}
+                                          {a.count != null && (
+                                            <span className="admin-listening-artist-count">
+                                              {" "}({a.count})
+                                            </span>
+                                          )}
+                                        </li>
+                                      ))
+                                    )}
+                                  </ul>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                  {(() => {
+                    const q = listeningStatsSearchQuery.trim().toLowerCase();
+                    const filtered = q
+                      ? listeningStats.filter((s) =>
+                          (s.userName || "").toLowerCase().includes(q),
+                        )
+                      : listeningStats;
+                    return filtered.length > LISTENING_STATS_RECORDS_PER_PAGE ? (
+                      <div className="admin-bulk-pagination">
+                        <button
+                          type="button"
+                          className="admin-bulk-page-btn"
+                          onClick={() =>
+                            setListeningStatsCurrentPage((p) =>
+                              Math.max(1, p - 1),
+                            )
+                          }
+                          disabled={listeningStatsCurrentPage <= 1}
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                        <span className="admin-bulk-page-info">
+                          Page {listeningStatsCurrentPage} of{" "}
+                          {Math.ceil(
+                            filtered.length /
+                              LISTENING_STATS_RECORDS_PER_PAGE,
+                          )}{" "}
+                          ({filtered.length} total
+                          {q ? " matching" : ""})
+                        </span>
+                        <button
+                          type="button"
+                          className="admin-bulk-page-btn"
+                          onClick={() =>
+                            setListeningStatsCurrentPage((p) =>
+                              Math.min(
+                                Math.ceil(
+                                  filtered.length /
+                                    LISTENING_STATS_RECORDS_PER_PAGE,
+                                ),
+                                p + 1,
+                              ),
+                            )
+                          }
+                          disabled={
+                            listeningStatsCurrentPage >=
+                            Math.ceil(
+                              filtered.length /
+                                LISTENING_STATS_RECORDS_PER_PAGE,
+                            )
+                          }
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+                      </div>
+                    ) : null;
+                  })()}
+                </>
+                );
+              })()}
             </div>
           )}
         </div>

@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 const STORAGE_KEY = "artistPlayCounts";
+const STORAGE_LAST_SONGS = "beatify_last10_songs";
+const MAX_LAST_SONGS = 10;
 
 const ListeningHistoryContext = createContext();
 
@@ -41,6 +43,15 @@ const loadFromStorage = () => {
   }
 };
 
+const loadLastSongsFromStorage = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_LAST_SONGS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
 const saveToStorage = (counts) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(counts));
@@ -49,12 +60,25 @@ const saveToStorage = (counts) => {
   }
 };
 
+const saveLastSongsToStorage = (songs) => {
+  try {
+    localStorage.setItem(STORAGE_LAST_SONGS, JSON.stringify(songs));
+  } catch (e) {
+    console.warn("Failed to save last songs:", e);
+  }
+};
+
 export const ListeningHistoryProvider = ({ children }) => {
   const [artistCounts, setArtistCounts] = useState(loadFromStorage);
+  const [lastSongs, setLastSongs] = useState(loadLastSongsFromStorage);
 
   useEffect(() => {
     saveToStorage(artistCounts);
   }, [artistCounts]);
+
+  useEffect(() => {
+    saveLastSongsToStorage(lastSongs);
+  }, [lastSongs]);
 
   const recordArtistPlay = (artistName) => {
     const names = splitArtistString(artistName);
@@ -68,6 +92,22 @@ export const ListeningHistoryProvider = ({ children }) => {
     });
   };
 
+  const recordTrackPlay = (track) => {
+    if (!track?.uuid && !track?.id) return;
+    const uuid = track.uuid || track.id;
+    const entry = {
+      uuid,
+      name: track.name || "Unknown",
+      artist: track.artist || "Unknown",
+      album: track.album || "",
+    };
+    setLastSongs((prev) => {
+      const filtered = prev.filter((s) => s.uuid !== uuid);
+      const next = [entry, ...filtered].slice(0, MAX_LAST_SONGS);
+      return next;
+    });
+  };
+
   const getTopArtists = (limit = 3) => {
     return Object.entries(artistCounts)
       .sort(([, a], [, b]) => b - a)
@@ -75,8 +115,19 @@ export const ListeningHistoryProvider = ({ children }) => {
       .map(([name, count]) => ({ name, count }));
   };
 
+  const getLastSongs = () => [...lastSongs];
+
   return (
-    <ListeningHistoryContext.Provider value={{ recordArtistPlay, getTopArtists, artistCounts }}>
+    <ListeningHistoryContext.Provider
+      value={{
+        recordArtistPlay,
+        recordTrackPlay,
+        getTopArtists,
+        getLastSongs,
+        artistCounts,
+        lastSongs,
+      }}
+    >
       {children}
     </ListeningHistoryContext.Provider>
   );

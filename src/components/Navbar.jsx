@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { UserPlus, User } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useListeningHistory } from "../context/ListeningHistoryContext";
+import { useCreateAccount } from "../context/CreateAccountContext";
+import { useRequestSong } from "../context/RequestSongContext";
 import Sidebar from "./Sidebar";
 import Artists from "./Artists";
 import TopArtistsModal from "./TopArtistsModal";
+import LogoutModal from "./LogoutModal";
 import { playlistImages } from "../constants/playlistImages";
 import { fuzzyMatches } from "../utils/searchUtils";
 import "./Navbar.css";
@@ -238,9 +242,13 @@ const allArtists = [
 
 const Navbar = () => {
   const { isDark, toggleTheme } = useTheme();
+  const { openCreateAccount, isLoggedIn, userName, logout } =
+    useCreateAccount();
+  const { openRequestSong } = useRequestSong();
   const { getTopArtists } = useListeningHistory();
   const [menuOpen, setMenuOpen] = useState(false);
   const [topArtistsModalOpen, setTopArtistsModalOpen] = useState(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== "undefined" && window.innerWidth <= 768,
   );
@@ -400,6 +408,27 @@ const Navbar = () => {
           >
             <FavoriteIcon filled={showFavorites} />
           </button>
+          {isLoggedIn ? (
+            <button
+              type="button"
+              className="navbar__create-account-btn navbar__profile-btn"
+              onClick={() => setLogoutModalOpen(true)}
+              aria-label="Profile"
+              title="Profile"
+            >
+              <User size={20} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="navbar__create-account-btn"
+              onClick={openCreateAccount}
+              aria-label="Create account"
+              title="Create account"
+            >
+              <UserPlus size={20} />
+            </button>
+          )}
           <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
         </div>
 
@@ -421,12 +450,38 @@ const Navbar = () => {
             setMenuOpen(false);
             setTopArtistsModalOpen(true);
           }}
+          onOpenRequestSong={() => {
+            setMenuOpen(false);
+            openRequestSong();
+          }}
+          onOpenCreateAccount={
+            isLoggedIn
+              ? undefined
+              : () => {
+                  setMenuOpen(false);
+                  openCreateAccount();
+                }
+          }
+          onOpenLogoutModal={
+            isLoggedIn
+              ? () => {
+                  setMenuOpen(false);
+                  setLogoutModalOpen(true);
+                }
+              : undefined
+          }
+          userName={userName}
         />
         <TopArtistsModal
           isOpen={topArtistsModalOpen}
           onClose={() => setTopArtistsModalOpen(false)}
           topArtists={getTopArtists(3)}
           allArtists={allArtists}
+        />
+        <LogoutModal
+          isOpen={logoutModalOpen}
+          onClose={() => setLogoutModalOpen(false)}
+          onLogout={logout}
         />
       </nav>
       {isMobile && selectedPlaylist && view === "track" ? (
