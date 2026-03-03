@@ -25,20 +25,6 @@ export async function saveUserListeningStats(accountId, userName, last10Songs, t
 }
 
 /**
- * Update only favorites for a user (for immediate save on toggle)
- * @param {string} accountId - Firestore account document ID
- * @param {Array<string>} favorites - Track UUIDs
- */
-export async function updateUserFavorites(accountId, favorites) {
-  if (!accountId || !accountId.trim()) return;
-  const ref = doc(db, COLLECTION, accountId.trim());
-  await setDoc(ref, {
-    favorites: Array.isArray(favorites) ? favorites : [],
-    updatedAt: new Date().toISOString(),
-  }, { merge: true });
-}
-
-/**
  * Fetch a single user's listening stats (for loading on login)
  * @param {string} accountId - Firestore account document ID
  * @returns {Promise<Object|null>} User stats or null

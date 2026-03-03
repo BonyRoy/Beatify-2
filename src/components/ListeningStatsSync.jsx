@@ -1,20 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import { useCreateAccount } from "../context/CreateAccountContext";
 import { useListeningHistory } from "../context/ListeningHistoryContext";
-import { useFavorites } from "../context/FavoritesContext";
-import { saveUserListeningStats } from "../services/userListeningStatsService";
+import {
+  saveUserListeningStats,
+  getUserListeningStats,
+} from "../services/userListeningStatsService";
 import { getAccountByName } from "../services/accountService";
 
+const FAVORITES_CHANGED = "beatify-favorites-changed";
+export const FAVORITES_LOADED = "beatify-favorites-loaded";
+
+export const dispatchFavoritesChanged = () => {
+  window.dispatchEvent(new CustomEvent(FAVORITES_CHANGED));
+};
+
 /**
- * When user is logged in, sync last 10 songs and top 3 artists to Firestore.
- * Favorites are handled by FavoritesContext (saved directly to Firebase on toggle).
+ * When user is logged in, sync last 10 songs, top 3 artists, and favorites to Firestore.
+ * Fetches favorites from cloud on login for cross-device sync.
  */
 const ListeningStatsSync = () => {
   const { isLoggedIn, accountId, userName } = useCreateAccount();
   const { lastSongs, artistCounts, getTopArtists } = useListeningHistory();
-  const { favorites: favList } = useFavorites();
   const debounceRef = useRef(null);
   const [resolvedAccountId, setResolvedAccountId] = useState(accountId || "");
+  const [favoritesVersion, setFavoritesVersion] = useState(0);
+  const fetchedForAccountRef = useRef(null);
 
   // Resolve accountId from userName when missing
   useEffect(() => {
@@ -37,14 +47,52 @@ const ListeningStatsSync = () => {
     return () => { cancelled = true; };
   }, [accountId, isLoggedIn, userName]);
 
-  // Sync to Firestore (last 10 songs, top 3 artists, favorites from FavoritesContext)
+  // Reset fetch ref when logged out
+  useEffect(() => {
+    if (!isLoggedIn) fetchedForAccountRef.current = null;
+  }, [isLoggedIn]);
+
+  // Fetch favorites from Firebase when logged in (source of truth for cross-device uniformity)
+  useEffect(() => {
+    const id = resolvedAccountId || accountId;
+    if (!isLoggedIn || !id || fetchedForAccountRef.current === id) return;
+    fetchedForAccountRef.current = id;
+    let cancelled = false;
+    getUserListeningStats(id)
+      .then((stats) => {
+        if (cancelled) return;
+        const favs = Array.isArray(stats?.favorites) ? stats.favorites : [];
+        try {
+          localStorage.setItem("favorites", JSON.stringify(favs));
+          window.dispatchEvent(new CustomEvent(FAVORITES_LOADED, { detail: favs }));
+        } catch {}
+      })
+      .catch(() => {
+        if (!cancelled) window.dispatchEvent(new CustomEvent(FAVORITES_LOADED, { detail: [] }));
+      });
+    return () => { cancelled = true; };
+  }, [isLoggedIn, resolvedAccountId, accountId]);
+
+  // Listen for favorites changes to trigger sync
+  useEffect(() => {
+    const handler = () => setFavoritesVersion((v) => v + 1);
+    window.addEventListener(FAVORITES_CHANGED, handler);
+    return () => window.removeEventListener(FAVORITES_CHANGED, handler);
+  }, []);
+
+  // Sync to Firestore (last 10 songs, top 3 artists, favorites)
   useEffect(() => {
     const id = resolvedAccountId || accountId;
     if (!isLoggedIn || !id) return;
 
     const sync = () => {
       const top3 = getTopArtists(3);
-      saveUserListeningStats(id, userName, lastSongs, top3, favList).catch(
+      let favorites = [];
+      try {
+        const raw = localStorage.getItem("favorites");
+        favorites = raw ? JSON.parse(raw) : [];
+      } catch {}
+      saveUserListeningStats(id, userName, lastSongs, top3, favorites).catch(
         (e) => console.warn("Failed to sync listening stats:", e),
       );
     };
@@ -62,7 +110,7 @@ const ListeningStatsSync = () => {
     userName,
     lastSongs,
     artistCounts,
-    favList,
+    favoritesVersion,
   ]);
 
   return null;
