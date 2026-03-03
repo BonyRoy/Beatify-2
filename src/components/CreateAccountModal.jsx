@@ -40,7 +40,8 @@ const generateUUID = () => {
 const validateEmail = (value) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!value.trim()) return "Please enter your email.";
-  if (!emailRegex.test(value.trim())) return "Please enter a valid email address.";
+  if (!emailRegex.test(value.trim()))
+    return "Please enter a valid email address.";
   return null;
 };
 
@@ -171,7 +172,11 @@ const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
       if (mode === "signin") {
         const account = await getAccountByEmail(formData.email.trim());
         toast.success("Signed in successfully!");
-        if (onAccountCreated) onAccountCreated({ accountId: account?.id, name: account?.name || formData.email });
+        if (onAccountCreated)
+          onAccountCreated({
+            accountId: account?.id,
+            name: account?.name || formData.email,
+          });
         setFormData({ name: "", email: "" });
         setOtp(Array(OTP_LENGTH).fill(""));
         setStep("form");
@@ -184,7 +189,8 @@ const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
           uuid: generateUUID(),
         });
         toast.success("Account created successfully!");
-        if (onAccountCreated) onAccountCreated({ accountId: docId, name: formData.name.trim() });
+        if (onAccountCreated)
+          onAccountCreated({ accountId: docId, name: formData.name.trim() });
         setFormData({ name: "", email: "" });
         setOtp(Array(OTP_LENGTH).fill(""));
         setStep("form");
@@ -231,11 +237,7 @@ const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
 
   return (
     <>
-      <div
-        className="modal-overlay"
-        onClick={handleClose}
-        aria-hidden="true"
-      />
+      <div className="modal-overlay" onClick={handleClose} aria-hidden="true" />
       <div className="modal create-account-modal">
         <button
           type="button"
@@ -266,7 +268,7 @@ const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
             <form onSubmit={handleSendOtp} className="create-account-form">
               {mode === "create" && (
                 <div className="create-account-form-group">
-                  <label htmlFor="accountName">Name *</label>
+                  <label htmlFor="accountName">User Name *</label>
                   <input
                     type="text"
                     id="accountName"
@@ -274,7 +276,7 @@ const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
                     value={formData.name}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Enter your name (must be unique)"
+                    placeholder="Create a unique username"
                     disabled={submitting}
                     required
                   />
@@ -333,7 +335,10 @@ const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
               </p>
             </form>
           ) : (
-            <form onSubmit={handleVerifyAndSubmit} className="create-account-form">
+            <form
+              onSubmit={handleVerifyAndSubmit}
+              className="create-account-form"
+            >
               <div className="create-account-form-group">
                 <label htmlFor="otp">Enter OTP *</label>
                 <div className="otp-input-wrapper">
@@ -374,10 +379,10 @@ const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
                   disabled={submitting || otp.join("").length !== 6}
                 >
                   {submitting
-                  ? "Verifying..."
-                  : mode === "signin"
-                    ? "Verify & Sign In"
-                    : "Verify & Create Account"}
+                    ? "Verifying..."
+                    : mode === "signin"
+                      ? "Verify & Sign In"
+                      : "Verify & Create Account"}
                 </button>
               </div>
             </form>
