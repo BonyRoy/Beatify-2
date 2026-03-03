@@ -1513,6 +1513,10 @@ button .admin-icon-inline {
   border-top: 1px solid var(--nav-border);
 }
 
+.admin-listening-stat-section--full {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 768px) {
   .admin-listening-stat-body {
     grid-template-columns: 1fr;

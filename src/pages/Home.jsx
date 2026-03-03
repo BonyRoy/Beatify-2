@@ -2,6 +2,10 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import DownloadModal from "../components/DownloadModal";
 import { useRequestSong } from "../context/RequestSongContext";
+import {
+  dispatchFavoritesChanged,
+  FAVORITES_LOADED,
+} from "../components/ListeningStatsSync";
 import Playlist from "../components/Playlist";
 import { fetchMusicList } from "../services/musicService";
 import { usePlayer } from "../context/PlayerContext";
@@ -706,14 +710,20 @@ const Home = () => {
     loadMusicList();
 
     // Load favorites and downloads from localStorage
-    const savedFavorites = localStorage.getItem("favorites");
-    const savedDownloads = localStorage.getItem("downloads");
-    if (savedFavorites) {
-      setFavorites(JSON.parse(savedFavorites));
-    }
-    if (savedDownloads) {
-      setDownloads(JSON.parse(savedDownloads));
-    }
+    const loadFromStorage = () => {
+      try {
+        const savedFavorites = localStorage.getItem("favorites");
+        const savedDownloads = localStorage.getItem("downloads");
+        if (savedFavorites) setFavorites(JSON.parse(savedFavorites));
+        if (savedDownloads) setDownloads(JSON.parse(savedDownloads));
+      } catch {}
+    };
+    loadFromStorage();
+
+    // Reload favorites when synced from cloud (login on another device)
+    const handler = () => loadFromStorage();
+    window.addEventListener(FAVORITES_LOADED, handler);
+    return () => window.removeEventListener(FAVORITES_LOADED, handler);
   }, []);
 
   // When in favorites view and user removes all favorites, exit favorites view
@@ -775,6 +785,7 @@ const Home = () => {
       : [...favorites, trackIdentifier];
     setFavorites(newFavorites);
     localStorage.setItem("favorites", JSON.stringify(newFavorites));
+    dispatchFavoritesChanged();
   };
 
   // Reset visible count when filter changes

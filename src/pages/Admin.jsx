@@ -2275,6 +2275,40 @@ const Admin = () => {
                                     )}
                                   </ul>
                                 </div>
+                                <div className="admin-listening-stat-section admin-listening-stat-section--full">
+                                  <h4>Favourite songs ({((stat.favorites || []).length)})</h4>
+                                  <ul className="admin-listening-song-list">
+                                    {(stat.favorites || []).length === 0 ? (
+                                      <li className="admin-listening-empty">—</li>
+                                    ) : (
+                                      (() => {
+                                        const uuidToTrack = {};
+                                        existingTracks.forEach((t) => {
+                                          const id = t.uuid || t.id;
+                                          if (id) uuidToTrack[id] = t;
+                                        });
+                                        return (stat.favorites || []).map((uuid, i) => {
+                                          const track = uuidToTrack[uuid];
+                                          return (
+                                            <li key={i}>
+                                              <span className="admin-listening-song-name">
+                                                {track?.name || "Unknown"}
+                                              </span>
+                                              <span className="admin-listening-song-uuid">
+                                                {uuid}
+                                              </span>
+                                              {track?.artist && (
+                                                <span className="admin-listening-song-artist">
+                                                  {track.artist}
+                                                </span>
+                                              )}
+                                            </li>
+                                          );
+                                        });
+                                      })()
+                                    )}
+                                  </ul>
+                                </div>
                               </div>
                             )}
                           </div>
