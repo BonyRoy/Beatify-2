@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { UserPlus, User, MessageSquarePlus } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { useFavorites } from "../context/FavoritesContext";
 import "./Sidebar.css";
 
 const FavoriteIcon = ({ filled }) => (
@@ -177,11 +178,12 @@ const Sidebar = ({
   userName,
 }) => {
   const { isDark, toggleTheme } = useTheme();
+  const { favorites } = useFavorites();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
-  const [hasFavorites, setHasFavorites] = useState(false);
   const [showEmptyFavModal, setShowEmptyFavModal] = useState(false);
+  const hasFavorites = favorites.length > 0;
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -192,19 +194,6 @@ const Sidebar = ({
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-
-  // Read favorites from localStorage when sidebar opens
-  useEffect(() => {
-    if (isOpen) {
-      try {
-        const saved = localStorage.getItem("favorites");
-        const list = saved ? JSON.parse(saved) : [];
-        setHasFavorites(Array.isArray(list) && list.length > 0);
-      } catch {
-        setHasFavorites(false);
-      }
-    }
-  }, [isOpen]);
 
   // Auto-close empty favorites modal after 4 seconds
   useEffect(() => {

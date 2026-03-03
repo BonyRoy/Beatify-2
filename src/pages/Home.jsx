@@ -2,10 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import DownloadModal from "../components/DownloadModal";
 import { useRequestSong } from "../context/RequestSongContext";
-import {
-  dispatchFavoritesChanged,
-  FAVORITES_LOADED,
-} from "../components/ListeningStatsSync";
+import { useFavorites } from "../context/FavoritesContext";
 import Playlist from "../components/Playlist";
 import { fetchMusicList } from "../services/musicService";
 import { usePlayer } from "../context/PlayerContext";
@@ -646,13 +643,13 @@ const Home = () => {
   const searchQuery = searchParams.get("search") || "";
   const { selectTrack, currentTrack, setPlaylist, isPlaying } = usePlayer();
   const { openRequestSong } = useRequestSong();
+  const { favorites, toggleFavorite } = useFavorites();
   const { isLoggedIn } = useCreateAccount();
   const { getTopArtists, getLastSongs, lastSongs, artistCounts } = useListeningHistory();
 
   const [musicList, setMusicList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [favorites, setFavorites] = useState([]);
   const [downloads, setDownloads] = useState([]);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState(null);
@@ -710,40 +707,11 @@ const Home = () => {
     loadMusicList();
 
     // Load downloads from localStorage
-    const loadDownloads = () => {
-      try {
-        const saved = localStorage.getItem("downloads");
-        if (saved) setDownloads(JSON.parse(saved));
-      } catch {}
-    };
-    loadDownloads();
-
-    // Favorites: when logged in, use Firebase only (via FAVORITES_LOADED). When not logged in, use localStorage.
-    const loadFavoritesFromStorage = () => {
-      try {
-        const saved = localStorage.getItem("favorites");
-        setFavorites(saved ? JSON.parse(saved) : []);
-      } catch {
-        setFavorites([]);
-      }
-    };
-
-    if (!isLoggedIn) {
-      loadFavoritesFromStorage();
-    }
-
-    const handler = (e) => {
-      const favs = e?.detail;
-      setFavorites(Array.isArray(favs) ? favs : (() => {
-        try {
-          const saved = localStorage.getItem("favorites");
-          return saved ? JSON.parse(saved) : [];
-        } catch { return []; }
-      })());
-    };
-    window.addEventListener(FAVORITES_LOADED, handler);
-    return () => window.removeEventListener(FAVORITES_LOADED, handler);
-  }, [isLoggedIn]);
+    try {
+      const saved = localStorage.getItem("downloads");
+      if (saved) setDownloads(JSON.parse(saved));
+    } catch {}
+  }, []);
 
   // When in favorites view and user removes all favorites, exit favorites view
   useEffect(() => {
@@ -798,13 +766,13 @@ const Home = () => {
     setIsDownloadModalOpen(false);
   };
 
-  const handleFavoriteToggle = (trackIdentifier) => {
-    const newFavorites = favorites.includes(trackIdentifier)
-      ? favorites.filter((id) => id !== trackIdentifier)
-      : [...favorites, trackIdentifier];
-    setFavorites(newFavorites);
-    localStorage.setItem("favorites", JSON.stringify(newFavorites));
-    dispatchFavoritesChanged();
+  const handleFavoriteToggle = async (trackIdentifier) => {
+    if (!isLoggedIn) {
+      const { toast } = await import("react-toastify");
+      toast.info("Log in to save favorites across devices");
+      return;
+    }
+    await toggleFavorite(trackIdentifier);
   };
 
   // Reset visible count when filter changes
