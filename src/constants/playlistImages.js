@@ -1,9 +1,11 @@
 // Playlist images with labels - update this list with actual image filenames from /public/playlist
 export const playlistImages = [
   { image: "dhurandhar.png", label: "Dhurandhar" },
+  { image: "god.png", label: "Spiritual" },
   { image: "Sallu.png", label: "Sallu-Bhai" },
   { image: "Disney.png", label: "Disney & Pixar" },
   { image: "oldmelodies.png", label: "Old Melodies" },
+  { image: "bengali.png", label: "বাংলা Bangla" },
   { image: "bharat.png", label: "Bharat" },
   { image: 'chillvibes.png', label: 'Chill Vibes' },
   { image: "edm.png", label: "EDM" },

@@ -609,6 +609,24 @@ const playlistTrackIds = {
     "16b935a3-404a-4f63-8393-cb093cf9cf72",
     "d18748a5-6ae9-4dc7-9e09-81bb9ab48c51",
   ],
+  Spiritual: [
+    "a0bd6139-0fcb-4847-85f8-f8e8d582b60e",
+    "542dff74-f739-419d-98f1-941c926c3d4b",
+    "f45f994f-024d-47a6-88c3-12dc795e4980",
+    "afcb16ac-8978-4566-9bab-c8e14b21c8a9",
+    "94d60152-a60c-408f-99b0-f44bfb9a361b",
+    "e1cd145c-b9c5-42f3-9c65-f32952916889",
+    "72c0d70c-b354-4a22-b231-abf7bbcfa8e5",
+    "56645bf7-e909-4b9f-bb92-80571d82159b",
+    "b51a92ed-94cc-4301-bdee-89c9cdf11b6b",
+  ],
+  "বাংলা Bangla": [
+    "91c140ce-1c12-4735-a696-aaaabfed5cbe",
+    "0fa6b5d1-4081-458e-9854-b67ea31e13ba",
+    "48ac46b8-82dc-4204-ba39-81a23739357d",
+    "44b5a1f0-c5c1-437a-964e-7302c22d562c",
+    "07cb0915-c21a-4fad-bfd6-545c63d6597a",
+  ],
 };
 
 const ClearIcon = () => (
