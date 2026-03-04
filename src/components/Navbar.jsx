@@ -242,6 +242,7 @@ const allArtists = [
   { id: 35, name: "Kumar Sanu", image: "KumarSanu" },
   { id: 36, name: "Kailash Kher", image: "KailashKher" },
   { id: 37, name: "Kishore Kumar", image: "KishoreKumar" },
+  { id: 38, name: "Lata Mangeshkar", image: "lata" },
 ];
 
 const Navbar = () => {

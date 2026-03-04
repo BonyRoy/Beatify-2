@@ -138,6 +138,31 @@
   z-index: 1;
 }
 
+.artist-play-btn {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 2;
+  background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fb7185 100%);
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.artist-play-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
 @media (max-width: 480px) {
   .artist-image-wrapper--selected {
     border-width: 2px;
@@ -169,6 +194,23 @@
   border-radius: 50%;
 }
 
+.artist-name-wrapper {
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+  width: 100%;
+  max-width: 120px;
+  display: flex;
+  justify-content: center;
+}
+
+.artist-name-inner {
+  display: inline-flex;
+  white-space: nowrap;
+  width: auto;
+  max-width: 100%;
+}
+
 .artist-name {
   color: white;
   font-size: 0.9rem;
@@ -177,9 +219,37 @@
   margin: 0;
   white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  max-width: 120px;
+  flex-shrink: 0;
+}
+
+.artist-name--truncate {
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.artist-name--duplicate {
+  margin-left: 1.5rem;
+}
+
+/* Auto-scrolling animation for long artist names */
+@keyframes artist-scroll-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.artist-name-inner.artist-name--scroll {
+  max-width: none;
+  animation: artist-scroll-marquee var(--scroll-duration, 20s) linear infinite;
+  will-change: transform;
+}
+
+.artist-name-wrapper:hover .artist-name-inner.artist-name--scroll {
+  animation-play-state: paused;
 }
 
 /* Responsive adjustments */
@@ -210,9 +280,24 @@
     height: 80px;
   }
 
+  .artist-play-btn {
+    width: 28px;
+    height: 28px;
+    bottom: -5px;
+    right: -5px;
+  }
+
+  .artist-play-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .artist-name-wrapper {
+    max-width: 100px;
+  }
+
   .artist-name {
     font-size: 0.8rem;
-    max-width: 100px;
   }
 }
 
@@ -244,9 +329,24 @@
     border-width: 2px;
   }
 
+  .artist-play-btn {
+    width: 24px;
+    height: 24px;
+    bottom: -4px;
+    right: -4px;
+  }
+
+  .artist-play-btn svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .artist-name-wrapper {
+    max-width: 75px;
+  }
+
   .artist-name {
     font-size: 0.7rem;
-    max-width: 75px;
     line-height: 1.2;
     padding: 0 2px;
   }

@@ -942,6 +942,17 @@ const Home = () => {
     selectTrack(track, sortedMusicList);
   };
 
+  // Listen for playArtist event from artist card play button
+  useEffect(() => {
+    const handlePlayArtist = () => {
+      if (sortedMusicList.length > 0) {
+        selectTrack(sortedMusicList[0], sortedMusicList);
+      }
+    };
+    window.addEventListener("playArtist", handlePlayArtist);
+    return () => window.removeEventListener("playArtist", handlePlayArtist);
+  }, [sortedMusicList, selectTrack]);
+
   // Update playlist when filtered list changes (use sorted for logged-in)
   useEffect(() => {
     if (sortedMusicList.length > 0) {

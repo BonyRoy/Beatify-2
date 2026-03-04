@@ -3,6 +3,109 @@ import { fetchMusicList } from "../services/musicService";
 import { fuzzyMatches, fuzzyMatchesAny } from "../utils/searchUtils";
 import "./Artists.css";
 
+const SCROLL_SPEED = 15;
+
+const PlayIcon = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polygon points="5 3 19 12 5 21 5 3" />
+  </svg>
+);
+
+const ArtistCard = ({ artist, isSelected, shouldGrayOut, onArtistClick, selectedCardRef }) => {
+  const nameRef = useRef(null);
+  const [shouldScrollName, setShouldScrollName] = useState(false);
+  const [nameDuration, setNameDuration] = useState(20);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (nameRef.current) {
+            const nameEl = nameRef.current;
+            const wrapperEl = nameEl.closest(".artist-name-wrapper");
+            const innerEl = nameEl.closest(".artist-name-inner");
+            if (wrapperEl && innerEl) {
+              const isOverflowing = nameEl.scrollWidth > wrapperEl.offsetWidth + 5;
+              setShouldScrollName(isOverflowing);
+              if (isOverflowing) {
+                const totalWidth = innerEl.scrollWidth;
+                const distance = totalWidth / 2;
+                const duration = distance / SCROLL_SPEED;
+                setNameDuration(Math.max(duration, 10));
+              }
+            }
+          }
+        }, 100);
+      });
+    };
+    checkOverflow();
+    const resizeHandler = () => checkOverflow();
+    window.addEventListener("resize", resizeHandler);
+    return () => window.removeEventListener("resize", resizeHandler);
+  }, [artist.name]);
+
+  return (
+    <div
+      ref={isSelected ? selectedCardRef : null}
+      className={`artist-card ${shouldGrayOut ? "artist-card--grayed" : ""}`}
+      onClick={() => onArtistClick && onArtistClick(artist.name)}
+    >
+      <div
+        className={`artist-image-wrapper ${isSelected ? "artist-image-wrapper--selected" : ""}`}
+      >
+        <img
+          src={getImagePath(artist.image)}
+          alt={artist.name}
+          className={`artist-image ${shouldGrayOut ? "artist-image--grayed" : ""}`}
+          onError={(e) => {
+            e.target.style.display = "none";
+            e.target.parentElement.innerHTML =
+              '<div class="artist-placeholder">' + artist.name.charAt(0) + "</div>";
+          }}
+        />
+        {isSelected && (
+          <button
+            type="button"
+            className="artist-play-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(new CustomEvent("playArtist", { detail: { artistName: artist.name } }));
+            }}
+            aria-label={`Play ${artist.name}`}
+          >
+            <PlayIcon />
+          </button>
+        )}
+      </div>
+      <div className="artist-name-wrapper">
+        <div
+          className={`artist-name-inner ${isSelected && shouldScrollName ? "artist-name--scroll" : ""}`}
+          style={isSelected && shouldScrollName ? { "--scroll-duration": `${nameDuration}s` } : {}}
+        >
+          <p
+            ref={nameRef}
+            className={`artist-name ${!(isSelected && shouldScrollName) ? "artist-name--truncate" : ""}`}
+          >
+            {artist.name}
+          </p>
+          {isSelected && shouldScrollName && (
+            <p className="artist-name artist-name--duplicate">{artist.name}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Map image names from JSON to actual filenames in public/Artists folder (exported for reuse)
 export const getImagePath = (imageName) => {
   const imageMap = {
@@ -43,6 +146,7 @@ export const getImagePath = (imageName) => {
     KumarSanu: "Kumar Sanu.jpeg",
     KailashKher: "Kailash Kher.jpg",
     KishoreKumar: "Kishore Kumar.webp",
+    lata: "lata.png",
   };
 
   const filename = imageMap[imageName] || `${imageName}.jpg`;
@@ -225,31 +329,14 @@ const Artists = ({ artists, selectedArtist, searchQuery, onArtistClick }) => {
           const isSelected = selectedArtist === artist.name;
           const shouldGrayOut = selectedArtist && !isSelected;
           return (
-            <div
+            <ArtistCard
               key={artist.id}
-              ref={isSelected ? selectedCardRef : null}
-              className={`artist-card ${shouldGrayOut ? "artist-card--grayed" : ""}`}
-              onClick={() => onArtistClick && onArtistClick(artist.name)}
-            >
-              <div
-                className={`artist-image-wrapper ${isSelected ? "artist-image-wrapper--selected" : ""}`}
-              >
-                <img
-                  src={getImagePath(artist.image)}
-                  alt={artist.name}
-                  className={`artist-image ${shouldGrayOut ? "artist-image--grayed" : ""}`}
-                  onError={(e) => {
-                    // Fallback to a placeholder if image fails to load
-                    e.target.style.display = "none";
-                    e.target.parentElement.innerHTML =
-                      '<div class="artist-placeholder">' +
-                      artist.name.charAt(0) +
-                      "</div>";
-                  }}
-                />
-              </div>
-              <p className="artist-name">{artist.name}</p>
-            </div>
+              artist={artist}
+              isSelected={isSelected}
+              shouldGrayOut={shouldGrayOut}
+              onArtistClick={onArtistClick}
+              selectedCardRef={selectedCardRef}
+            />
           );
         })}
       </div>
