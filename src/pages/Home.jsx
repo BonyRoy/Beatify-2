@@ -435,6 +435,8 @@ const playlistTrackIds = {
     "8a903474-07e5-4862-b717-52f48a549aac",
   ],
   Party: [
+    "50bc8fa3-fae7-4ca3-b82c-f6b9d492c105",
+    "d09d6a24-4eb2-41fe-b307-6c23f7e9fb10",
     "8a88f01f-5edf-4b52-a4c9-99117b36cc20",
     "61c6b14b-0657-4768-b181-5587a2100381",
     "20bee300-09dc-4c58-8f1e-332431172a3d",
@@ -626,6 +628,20 @@ const playlistTrackIds = {
     "48ac46b8-82dc-4204-ba39-81a23739357d",
     "44b5a1f0-c5c1-437a-964e-7302c22d562c",
     "07cb0915-c21a-4fad-bfd6-545c63d6597a",
+  ],
+  Cartoon: [
+    "af75bcc9-3cc8-4948-8a30-9bdbae1f1ed6",
+    "86609577-ed0a-4450-a77d-05e66f6fa927",
+    "a2daf4e3-c0c4-4b15-9d8c-d2160cf81362",
+    "a3062f79-cc1a-4e92-9888-d81339adfc4f",
+    "29ab8f47-db87-4225-97fe-18001cde3884",
+    "ab080cf8-34d7-4d97-b29e-a29691c9fb5a",
+    "89589be9-f28d-4c13-b7c2-c9b6afeb9982",
+    "04c522a9-f26b-4378-abdc-80dffb619dae",
+    "4c6fcd43-ac21-4ea6-bace-a4f9f4d63e6c",
+    "660acb34-f365-426a-b29e-bf90df630f30",
+    "1da3616f-90b6-4004-819f-7026b1ae2b6e",
+    "56645bf7-e909-4b9f-bb92-80571d82159b",
   ],
 };
 

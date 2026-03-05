@@ -2,9 +2,9 @@
 export const playlistImages = [
   { image: "dhurandhar.png", label: "Dhurandhar" },
   { image: "god.png", label: "Spiritual" },
-  { image: "Sallu.png", label: "Sallu-Bhai" },
   { image: "Disney.png", label: "Disney & Pixar" },
   { image: "oldmelodies.png", label: "Old Melodies" },
+  { image: "cartoon.png", label: "Cartoon" },
   { image: "bengali.png", label: "বাংলা Bangla" },
   { image: "bharat.png", label: "Bharat" },
   { image: 'chillvibes.png', label: 'Chill Vibes' },
@@ -16,4 +16,5 @@ export const playlistImages = [
   { image: "romantic.png", label: "Romantic" },
   { image: "thar.png", label: "Thar" },
   { image: "valentine.png", label: "Valentine" },
+  { image: "Sallu.png", label: "Sallu-Bhai" },
 ];
