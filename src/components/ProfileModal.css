@@ -164,6 +164,44 @@
   border-width: 3px;
 }
 
+.profile-modal__notifications-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--track-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--nav-border, #333);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.75rem;
+}
+
+.profile-modal__notifications-btn:hover {
+  background: var(--track-bg-hover, rgba(255, 255, 255, 0.08));
+  border-color: var(--text-muted);
+}
+
+.profile-modal__notification-badge {
+  margin-left: 0.35rem;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+  border-radius: 10px;
+}
+
 .profile-modal__logout-btn {
   width: 100%;
   display: inline-flex;

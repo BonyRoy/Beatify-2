@@ -48,7 +48,7 @@ import { useTheme } from "../context/ThemeContext";
 import * as XLSX from "xlsx";
 import {
   fetchSongRequests,
-  deleteSongRequest,
+  markRequestFulfilledAndNotify,
 } from "../services/songRequestService";
 import { fetchAccounts, deleteAccount } from "../services/accountService";
 import { fetchAllUserListeningStats } from "../services/userListeningStatsService";
@@ -302,18 +302,18 @@ const Admin = () => {
     }
   }, [activeTab, isAuthenticated]);
 
-  const handleClearRequest = async (id) => {
-    setClearingRequestId(id);
+  const handleClearRequest = async (req) => {
+    setClearingRequestId(req.id);
     try {
-      await deleteSongRequest(id);
+      await markRequestFulfilledAndNotify(req);
       setSongRequests((prev) => {
-        const next = prev.filter((r) => r.id !== id);
+        const next = prev.filter((r) => r.id !== req.id);
         const maxPage = Math.ceil(next.length / REQUEST_RECORDS_PER_PAGE) || 1;
         setRequestCurrentPage((p) => Math.max(1, Math.min(p, maxPage)));
         return next;
       });
     } catch (err) {
-      console.error("Error clearing request:", err);
+      console.error("Error marking request fulfilled:", err);
     } finally {
       setClearingRequestId(null);
     }
@@ -1913,12 +1913,16 @@ const Admin = () => {
                                   )}
                                 </td>
                                 <td className="admin-bulk-td">
-                                  <a
-                                    href={`tel:${req.contactNumber}`}
-                                    className="admin-request-contact-link"
-                                  >
-                                    {req.contactNumber}
-                                  </a>
+                                  {req.contactNumber ? (
+                                    <a
+                                      href={`tel:${req.contactNumber}`}
+                                      className="admin-request-contact-link"
+                                    >
+                                      {req.contactNumber}
+                                    </a>
+                                  ) : (
+                                    "—"
+                                  )}
                                 </td>
                                 <td className="admin-bulk-td admin-bulk-td-date">
                                   {dateStr}
@@ -1927,9 +1931,9 @@ const Admin = () => {
                                   <button
                                     type="button"
                                     className="admin-request-clear-btn"
-                                    onClick={() => handleClearRequest(req.id)}
+                                    onClick={() => handleClearRequest(req)}
                                     disabled={clearingRequestId === req.id}
-                                    title="Mark as done / Clear"
+                                    title="Mark as done & notify user"
                                     aria-label="Clear request"
                                   >
                                     <Check size={18} />

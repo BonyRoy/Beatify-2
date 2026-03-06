@@ -7,6 +7,7 @@ import { AlbumArtProvider } from './context/AlbumArtContext'
 import { ListeningHistoryProvider } from './context/ListeningHistoryContext'
 import { CreateAccountProvider } from './context/CreateAccountContext'
 import { RequestSongProvider } from './context/RequestSongContext'
+import { NotificationsProvider } from './context/NotificationsContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import PromotionalModal from './components/PromotionalModal'
@@ -41,6 +42,7 @@ const App = () => {
   return (
     <ThemeProvider>
       <CreateAccountProvider>
+        <NotificationsProvider>
         <RequestSongProvider>
         <ListeningHistoryProvider>
           <PlayerProvider>
@@ -54,6 +56,7 @@ const App = () => {
           </PlayerProvider>
         </ListeningHistoryProvider>
         </RequestSongProvider>
+        </NotificationsProvider>
       </CreateAccountProvider>
     </ThemeProvider>
   )

@@ -32,5 +32,10 @@ service cloud.firestore {
       allow read, create, update: if true;
     }
 
+    // Notifications (song added alerts when admin marks request fulfilled)
+    match /notifications/{document} {
+      allow read, create, update, delete: if true;
+    }
+
   }
 }

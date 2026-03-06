@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import "./RequestSongModal.css";
 import { createAndSendOtp, verifyOtp, submitSongRequest } from "../services/songRequestService";
+import { useCreateAccount } from "../context/CreateAccountContext";
 
 const CloseIcon = () => (
   <svg
@@ -20,7 +21,24 @@ const CloseIcon = () => (
   </svg>
 );
 
+const PlusIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
+  </svg>
+);
+
 const validatePhoneNumber = (value) => {
+  if (!value || !value.trim()) return null;
   const digitsOnly = value.replace(/\D/g, "");
   if (digitsOnly.length < 10) {
     return "Please enter a valid phone number (at least 10 digits).";
@@ -41,9 +59,10 @@ const validateEmail = (value) => {
 const OTP_LENGTH = 6;
 
 const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
+  const { isLoggedIn, userName: authUserName, userEmail: authUserEmail } = useCreateAccount();
+
+  const [songRows, setSongRows] = useState([{ songName: "", album: "" }]);
   const [formData, setFormData] = useState({
-    songName: "",
-    album: "",
     userName: "",
     contactNumber: "",
     email: "",
@@ -54,55 +73,136 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
   const [error, setError] = useState("");
   const otpInputRefs = React.useRef([]);
 
+  // Auto-populate when signed in and modal opens
+  useEffect(() => {
+    if (isOpen && isLoggedIn) {
+      setFormData((prev) => ({
+        ...prev,
+        userName: authUserName || prev.userName,
+        email: authUserEmail || prev.email,
+      }));
+    }
+  }, [isOpen, isLoggedIn, authUserName, authUserEmail]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError("");
   };
 
-  const handleSendOtp = async (e) => {
+  const handleSongRowChange = (index, field, value) => {
+    setSongRows((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+    setError("");
+  };
+
+  const addSongRow = () => {
+    setSongRows((prev) => [...prev, { songName: "", album: "" }]);
+  };
+
+  const removeSongRow = (index) => {
+    if (songRows.length <= 1) return;
+    setSongRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const getValidSongRows = () => {
+    return songRows.filter((row) => row.songName.trim() || row.album.trim());
+  };
+
+  const handleSubmitForm = async (e) => {
     e.preventDefault();
     setError("");
 
-    const { songName, album, userName, contactNumber, email } = formData;
-    if (!songName.trim()) {
-      setError("Please enter the song name.");
+    const validRows = getValidSongRows();
+    if (validRows.length === 0) {
+      setError("Please add at least one song with a song name.");
       return;
     }
-    if (!album.trim()) {
-      setError("Please enter the album name.");
+    const hasValidSongName = validRows.some((r) => r.songName.trim());
+    if (!hasValidSongName) {
+      setError("Please enter at least one song name.");
       return;
     }
-    if (!userName.trim()) {
+
+    if (!formData.userName.trim()) {
       setError("Please enter your name.");
       return;
     }
-    if (!contactNumber.trim()) {
-      setError("Please enter your contact number.");
-      return;
-    }
-    const phoneError = validatePhoneNumber(contactNumber);
-    if (phoneError) {
-      setError(phoneError);
-      return;
-    }
-    const emailError = validateEmail(email);
+    const emailError = validateEmail(formData.email);
     if (emailError) {
       setError(emailError);
       return;
     }
+    const phoneError = validatePhoneNumber(formData.contactNumber);
+    if (phoneError) {
+      setError(phoneError);
+      return;
+    }
 
+    if (isLoggedIn) {
+      // Signed in: submit directly without OTP
+      await submitAllRequests(validRows);
+    } else {
+      // Not signed in: send OTP first
+      setSubmitting(true);
+      try {
+        await createAndSendOtp(formData.email.trim(), formData.userName.trim());
+        setStep("otp");
+        setOtp(Array(OTP_LENGTH).fill(""));
+        setError("");
+      } catch (err) {
+        setError(err.message || "Failed to send OTP. Please try again.");
+      } finally {
+        setSubmitting(false);
+      }
+    }
+  };
+
+  const submitAllRequests = async (rows) => {
     setSubmitting(true);
     try {
-      await createAndSendOtp(email.trim(), userName.trim());
-      setStep("otp");
-      setOtp(Array(OTP_LENGTH).fill(""));
-      setError("");
+      const basePayload = {
+        userName: formData.userName.trim(),
+        contactNumber: (formData.contactNumber || "").trim() || null,
+        email: formData.email.trim(),
+      };
+      for (const row of rows) {
+        if (row.songName.trim()) {
+          await submitSongRequest({
+            ...basePayload,
+            songName: row.songName.trim(),
+            album: (row.album || "").trim() || "",
+          });
+        }
+      }
+      toast.success(
+        rows.length === 1
+          ? "Song request submitted successfully!"
+          : `${rows.length} song requests submitted successfully!`
+      );
+      if (onSubmit) await onSubmit();
+      resetForm();
+      onClose();
     } catch (err) {
-      setError(err.message || "Failed to send OTP. Please try again.");
+      setError(err.message || "Failed to submit request. Please try again.");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const resetForm = () => {
+    setSongRows([{ songName: "", album: "" }]);
+    setFormData({
+      userName: isLoggedIn ? authUserName || "" : "",
+      contactNumber: "",
+      email: isLoggedIn ? authUserEmail || "" : "",
+    });
+    setOtp(Array(OTP_LENGTH).fill(""));
+    setStep("form");
+    setError("");
   };
 
   const handleOtpChange = (index, value) => {
@@ -152,28 +252,8 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
         return;
       }
 
-      await submitSongRequest({
-        songName: formData.songName.trim(),
-        album: formData.album.trim(),
-        userName: formData.userName.trim(),
-        contactNumber: formData.contactNumber.trim(),
-        email: formData.email.trim(),
-      });
-
-      toast.success("Song request submitted successfully!");
-
-      if (onSubmit) await onSubmit();
-
-      setFormData({
-        songName: "",
-        album: "",
-        userName: "",
-        contactNumber: "",
-        email: "",
-      });
-      setOtp(Array(OTP_LENGTH).fill(""));
-      setStep("form");
-      onClose();
+      const validRows = getValidSongRows();
+      await submitAllRequests(validRows);
     } catch (err) {
       setError(err.message || "Failed to submit request. Please try again.");
     } finally {
@@ -189,16 +269,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
 
   const handleClose = () => {
     if (!submitting) {
-      setFormData({
-        songName: "",
-        album: "",
-        userName: "",
-        contactNumber: "",
-        email: "",
-      });
-      setOtp(Array(OTP_LENGTH).fill(""));
-      setStep("form");
-      setError("");
+      resetForm();
       onClose();
     }
   };
@@ -233,33 +304,66 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
           </p>
 
           {step === "form" ? (
-            <form onSubmit={handleSendOtp} className="request-song-form">
-              <div className="request-song-form-group">
-                <label htmlFor="songName">Song Name *</label>
-                <input
-                  type="text"
-                  id="songName"
-                  name="songName"
-                  value={formData.songName}
-                  onChange={handleChange}
-                  placeholder="Enter song name"
+            <form onSubmit={handleSubmitForm} className="request-song-form">
+              <div className="request-song-form__table-wrapper">
+                <table className="request-song-table">
+                  <thead>
+                    <tr>
+                      <th>Song Name *</th>
+                      <th>Album</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {songRows.map((row, index) => (
+                      <tr key={index}>
+                        <td>
+                          <input
+                            type="text"
+                            value={row.songName}
+                            onChange={(e) =>
+                              handleSongRowChange(index, "songName", e.target.value)
+                            }
+                            placeholder="Enter song name"
+                            disabled={submitting}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={row.album}
+                            onChange={(e) =>
+                              handleSongRowChange(index, "album", e.target.value)
+                            }
+                            placeholder="Enter album"
+                            disabled={submitting}
+                          />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="request-song-table__remove-btn"
+                            onClick={() => removeSongRow(index)}
+                            disabled={submitting || songRows.length <= 1}
+                            aria-label="Remove row"
+                          >
+                            <TrashIcon />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button
+                  type="button"
+                  className="request-song-form__add-row"
+                  onClick={addSongRow}
                   disabled={submitting}
-                  required
-                />
+                >
+                  <PlusIcon /> Add another song
+                </button>
               </div>
-              <div className="request-song-form-group">
-                <label htmlFor="album">Album *</label>
-                <input
-                  type="text"
-                  id="album"
-                  name="album"
-                  value={formData.album}
-                  onChange={handleChange}
-                  placeholder="Enter album name"
-                  disabled={submitting}
-                  required
-                />
-              </div>
+
               <div className="request-song-form-group">
                 <label htmlFor="userName">Your Name *</label>
                 <input
@@ -281,22 +385,25 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="Enter your email (OTP will be sent here)"
+                  placeholder={
+                    isLoggedIn
+                      ? "Your email"
+                      : "Enter your email (OTP will be sent here)"
+                  }
                   disabled={submitting}
                   required
                 />
               </div>
               <div className="request-song-form-group">
-                <label htmlFor="contactNumber">Contact Number *</label>
+                <label htmlFor="contactNumber">Contact Number (optional)</label>
                 <input
-                  type="number"
+                  type="tel"
                   id="contactNumber"
                   name="contactNumber"
                   value={formData.contactNumber}
                   onChange={handleChange}
                   placeholder="Enter your contact number"
                   disabled={submitting}
-                  required
                   inputMode="numeric"
                 />
               </div>
@@ -307,7 +414,13 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
                   className="modal__btn modal__btn--submit"
                   disabled={submitting}
                 >
-                  {submitting ? "Sending OTP..." : "Send OTP"}
+                  {submitting
+                    ? isLoggedIn
+                      ? "Submitting..."
+                      : "Sending OTP..."
+                    : isLoggedIn
+                      ? "Submit Request"
+                      : "Send OTP"}
                 </button>
               </div>
             </form>

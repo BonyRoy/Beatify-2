@@ -177,6 +177,7 @@ const Sidebar = ({
   onOpenRequestSong,
   userName,
   userAvatar,
+  notificationCount = 0,
 }) => {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -285,6 +286,11 @@ const Sidebar = ({
                   />
                 ) : (
                   <User size={24} />
+                )}
+                {notificationCount > 0 && (
+                  <span className="sidebar__notification-badge">
+                    {notificationCount > 99 ? "99+" : notificationCount}
+                  </span>
                 )}
               </div>
               <span className="sidebar__profile-label">

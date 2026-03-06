@@ -111,3 +111,20 @@ export async function fetchSongRequests() {
 export async function deleteSongRequest(id) {
   await deleteDoc(doc(db, SONG_REQUESTS_COLLECTION, id));
 }
+
+/**
+ * Mark request as fulfilled: create notification for user, then delete request
+ * @param {Object} request - Full request object { id, songName, album, userName, email, ... }
+ */
+export async function markRequestFulfilledAndNotify(request) {
+  const { createSongAddedNotification } = await import("./notificationService");
+  if (request.email && request.email.trim()) {
+    await createSongAddedNotification({
+      email: request.email,
+      userName: request.userName,
+      songName: request.songName,
+      album: request.album,
+    });
+  }
+  await deleteSongRequest(request.id);
+}

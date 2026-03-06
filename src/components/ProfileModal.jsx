@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { LogOut, User, ChevronDown, Mail } from "lucide-react";
+import { LogOut, User, ChevronDown, Mail, Bell } from "lucide-react";
 import { getAccountById, updateAccountAvatar } from "../services/accountService";
 import "./ProfileModal.css";
 
@@ -55,10 +55,12 @@ const ProfileModal = ({
   isOpen,
   onClose,
   onOpenLogout,
+  onOpenNotifications,
   onAvatarChange,
   userName,
   userEmail,
   accountId,
+  notificationCount = 0,
 }) => {
   const [selectedAvatar, setSelectedAvatar] = useState(() => getStoredAvatar());
   const [avatarAccordionOpen, setAvatarAccordionOpen] = useState(false);
@@ -182,6 +184,25 @@ const ProfileModal = ({
               </div>
             </div>
           </div>
+
+          {onOpenNotifications && (
+            <button
+              type="button"
+              className="profile-modal__notifications-btn"
+              onClick={() => {
+                onClose();
+                onOpenNotifications();
+              }}
+            >
+              <Bell size={18} />
+              Notifications
+              {notificationCount > 0 && (
+                <span className="profile-modal__notification-badge">
+                  {notificationCount > 99 ? "99+" : notificationCount}
+                </span>
+              )}
+            </button>
+          )}
 
           <button
             type="button"

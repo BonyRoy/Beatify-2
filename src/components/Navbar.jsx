@@ -5,12 +5,14 @@ import { useTheme } from "../context/ThemeContext";
 import { useListeningHistory } from "../context/ListeningHistoryContext";
 import { useCreateAccount } from "../context/CreateAccountContext";
 import { useRequestSong } from "../context/RequestSongContext";
+import { useNotifications } from "../context/NotificationsContext";
 import Sidebar from "./Sidebar";
 import Artists from "./Artists";
 import TopArtistsModal from "./TopArtistsModal";
 import ProfileModal from "./ProfileModal";
 import LogoutModal from "./LogoutModal";
 import EmptyFavoritesModal from "./EmptyFavoritesModal";
+import NotificationsModal from "./NotificationsModal";
 import { getStoredAvatar, setStoredAvatar } from "./ProfileModal";
 import { getAccountById } from "../services/accountService";
 import { playlistImages } from "../constants/playlistImages";
@@ -250,12 +252,15 @@ const Navbar = () => {
   const { openCreateAccount, isLoggedIn, userName, userEmail, accountId, logout } =
     useCreateAccount();
   const { openRequestSong } = useRequestSong();
+  const { unreadCount, notifications, markAsRead, removeNotification, clearAll } =
+    useNotifications();
   const { getTopArtists } = useListeningHistory();
   const [menuOpen, setMenuOpen] = useState(false);
   const [topArtistsModalOpen, setTopArtistsModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [emptyFavModalOpen, setEmptyFavModalOpen] = useState(false);
+  const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [userAvatar, setUserAvatar] = useState(() => getStoredAvatar());
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== "undefined" && window.innerWidth <= 768,
@@ -449,7 +454,7 @@ const Navbar = () => {
           {isLoggedIn ? (
             <button
               type="button"
-              className="navbar__create-account-btn navbar__profile-btn"
+              className="navbar__create-account-btn navbar__profile-btn navbar__profile-btn--with-badge"
               onClick={() => setProfileModalOpen(true)}
               aria-label="Profile"
               title="Profile"
@@ -462,6 +467,11 @@ const Navbar = () => {
                 />
               ) : (
                 <User size={24} />
+              )}
+              {unreadCount > 0 && (
+                <span className="navbar__notification-badge">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
               )}
             </button>
           ) : (
@@ -517,6 +527,7 @@ const Navbar = () => {
           }
           userName={userName}
           userAvatar={userAvatar}
+          notificationCount={unreadCount}
         />
         <TopArtistsModal
           isOpen={topArtistsModalOpen}
@@ -534,10 +545,23 @@ const Navbar = () => {
             setProfileModalOpen(false);
             setLogoutModalOpen(true);
           }}
+          onOpenNotifications={() => {
+            setProfileModalOpen(false);
+            setNotificationsModalOpen(true);
+          }}
           onAvatarChange={setUserAvatar}
           userName={userName}
           userEmail={userEmail}
           accountId={accountId}
+          notificationCount={unreadCount}
+        />
+        <NotificationsModal
+          isOpen={notificationsModalOpen}
+          onClose={() => setNotificationsModalOpen(false)}
+          notifications={notifications}
+          onMarkRead={markAsRead}
+          onRemove={removeNotification}
+          onClearAll={clearAll}
         />
         <LogoutModal
           isOpen={logoutModalOpen}
