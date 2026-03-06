@@ -280,12 +280,13 @@ const Footer = () => {
           }
         };
 
-        // Set up event listeners BEFORE load() to catch ready events
+        // Play as load: use earliest events (loadeddata, canplay) - NOT canplaythrough
+        // so we start playback as soon as enough data is buffered, not when full file loads
         audio.addEventListener("canplay", tryStartPlayback, { once: true });
         audio.addEventListener("loadeddata", tryStartPlayback, { once: true });
-        audio.addEventListener("canplaythrough", tryStartPlayback, {
-          once: true,
-        });
+
+        // Try play immediately - browser will buffer and start when ready
+        audio.play().catch(() => {});
 
         // Also try immediately if already ready
         if (audio.readyState >= 2) {
@@ -467,11 +468,11 @@ const Footer = () => {
       const currentTime = audioRef.current.currentTime;
       updateTime(currentTime);
 
-      // Preload next track when in last 5 seconds
+      // Preload next track when 10 seconds remaining
       const audioDuration = audioRef.current.duration;
       if (
-        audioDuration > 5 &&
-        currentTime >= audioDuration - 5 &&
+        audioDuration > 10 &&
+        currentTime >= audioDuration - 10 &&
         !preloadStartedRef.current &&
         currentTrack &&
         playlist.length > 0
