@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { UserPlus, User, MessageSquarePlus } from "lucide-react";
+import { UserPlus, User, MessageSquarePlus, MessageSquare } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import EmptyFavoritesModal from "./EmptyFavoritesModal";
 import "./Sidebar.css";
@@ -175,6 +175,7 @@ const Sidebar = ({
   onOpenCreateAccount,
   onOpenProfileModal,
   onOpenRequestSong,
+  onOpenFeedback,
   userName,
   userAvatar,
   notificationCount = 0,
@@ -400,6 +401,22 @@ const Sidebar = ({
               <span className="sidebar__label">Song Request</span>
               <span className="sidebar__icon">
                 <MessageSquarePlus size={20} />
+              </span>
+            </button>
+          )}
+
+          {onOpenFeedback && (
+            <button
+              type="button"
+              className="sidebar__item sidebar__item--button"
+              onClick={() => {
+                onOpenFeedback();
+                onClose();
+              }}
+            >
+              <span className="sidebar__label">Feedback</span>
+              <span className="sidebar__icon">
+                <MessageSquare size={20} />
               </span>
             </button>
           )}

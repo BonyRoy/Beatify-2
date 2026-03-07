@@ -139,6 +139,27 @@
   background-color: rgba(236, 72, 153, 0.12);
 }
 
+.navbar__feedback-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--nav-border, #333);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+.navbar__feedback-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+  background-color: var(--track-bg-hover, rgba(255, 255, 255, 0.06));
+}
+
 .navbar__create-account-btn {
   display: flex;
   align-items: center;

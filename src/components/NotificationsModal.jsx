@@ -1,5 +1,5 @@
 import React from "react";
-import { Music2, Trash2, Check } from "lucide-react";
+import { Music2, Trash2, Check, MessageSquare } from "lucide-react";
 import "./NotificationsModal.css";
 
 const CloseIcon = () => (
@@ -52,7 +52,7 @@ const NotificationsModal = ({ isOpen, onClose, notifications, onMarkRead, onRemo
         <div className="modal__content">
           <h3 className="modal__title">Notifications</h3>
           <p className="notifications-modal__subtitle">
-            Your song request updates
+            Admin messages and song request updates
           </p>
 
           {notifications.length === 0 ? (
@@ -60,7 +60,7 @@ const NotificationsModal = ({ isOpen, onClose, notifications, onMarkRead, onRemo
               <Music2 size={40} strokeWidth={1.5} />
               <p>No notifications yet</p>
               <p className="notifications-modal__empty-hint">
-                When we add a song you requested, you&apos;ll see it here.
+                Admin messages and song request updates will appear here.
               </p>
             </div>
           ) : (
@@ -81,13 +81,30 @@ const NotificationsModal = ({ isOpen, onClose, notifications, onMarkRead, onRemo
                     className={`notifications-modal__item ${n.read ? "notifications-modal__item--read" : ""}`}
                   >
                     <div className="notifications-modal__item-content">
-                      <div className="notifications-modal__item-icon">
-                        <Music2 size={20} />
+                      <div
+                        className={`notifications-modal__item-icon ${n.type === "admin_message" ? "notifications-modal__item-icon--message" : ""}`}
+                      >
+                        {n.type === "admin_message" ? (
+                          <MessageSquare size={20} />
+                        ) : (
+                          <Music2 size={20} />
+                        )}
                       </div>
                       <div className="notifications-modal__item-body">
                         <p className="notifications-modal__item-title">
-                          Song added: <strong>{n.songName || "Untitled"}</strong>
-                          {n.album ? ` (${n.album})` : ""}
+                          {n.type === "admin_message" ? (
+                            <>
+                              {n.subject && <strong>{n.subject}</strong>}
+                              {n.subject && n.body ? " — " : ""}
+                              {n.body || (n.subject ? "" : "Message from admin")}
+                            </>
+                          ) : (
+                            <>
+                              Song added:{" "}
+                              <strong>{n.songName || "Untitled"}</strong>
+                              {n.album ? ` (${n.album})` : ""}
+                            </>
+                          )}
                         </p>
                         <p className="notifications-modal__item-meta">
                           {formatDate(n.createdAt)}

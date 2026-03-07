@@ -219,6 +219,43 @@
   margin-bottom: 1rem;
 }
 
+.admin-feedback-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-feedback-header .admin-bulk-subtitle {
+  margin-bottom: 0;
+}
+
+.admin-feedback-clear-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--nav-border);
+  border-radius: 8px;
+  background-color: var(--track-bg);
+  color: #ef4444;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-feedback-clear-all-btn:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+}
+
+.admin-feedback-clear-all-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .admin-bulk-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1364,6 +1401,11 @@ button .admin-icon-inline {
   white-space: nowrap;
 }
 
+.admin-bulk-td-message {
+  max-width: 280px;
+  word-wrap: break-word;
+}
+
 .admin-bulk-th-action,
 .admin-bulk-td-action {
   width: 48px;
@@ -1404,6 +1446,224 @@ button .admin-icon-inline {
   background-color: rgba(239, 68, 68, 0.15);
   border-color: #ef4444;
   color: #ef4444;
+}
+
+.admin-accounts-toolbar {
+  display: grid;
+  grid-template-columns: 5fr 2fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.admin-accounts-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.6rem;
+  background-color: var(--track-bg);
+  border: 1px solid var(--nav-border);
+  border-radius: 8px;
+  min-height: 2.5rem;
+}
+
+.admin-accounts-search:focus-within {
+  border-color: var(--text-muted);
+}
+
+.admin-accounts-search .admin-search-input {
+  border: none;
+  background: transparent;
+  padding: 0.5rem 0;
+  min-height: 2.25rem;
+  font-size: 0.9rem;
+  flex: 1;
+}
+
+.admin-accounts-send-all-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  width: 100%;
+}
+
+.admin-accounts-send-all-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.admin-accounts-send-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-account-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-account-message-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  background: transparent;
+  border: 1px solid var(--nav-border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+.admin-account-message-btn:hover {
+  color: #60a5fa;
+  border-color: #60a5fa;
+  background-color: rgba(96, 165, 250, 0.1);
+}
+
+/* Admin message modal */
+.admin-message-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.admin-message-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  width: 90%;
+  max-width: 420px;
+  background-color: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.admin-message-modal .modal__content {
+  padding: 1.5rem;
+}
+
+.admin-message-modal__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--nav-border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.admin-message-modal__close:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.admin-message-modal .modal__title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  padding-right: 2rem;
+}
+
+.admin-message-modal__hint {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: -0.5rem 0 1rem 0;
+}
+
+.admin-message-modal__field {
+  margin-bottom: 1rem;
+}
+
+.admin-message-modal__field label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+  color: var(--text-muted);
+}
+
+.admin-message-modal__input,
+.admin-message-modal__textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background-color: var(--track-bg);
+  border: 1px solid var(--nav-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.admin-message-modal__textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.admin-message-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.admin-message-modal__btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-message-modal__btn--cancel {
+  background: transparent;
+  border: 1px solid var(--nav-border);
+  color: var(--text-muted);
+}
+
+.admin-message-modal__btn--cancel:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+.admin-message-modal__btn--send {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  border: none;
+  color: #fff;
+}
+
+.admin-message-modal__btn--send:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.admin-message-modal__btn--send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Listening stats tab */

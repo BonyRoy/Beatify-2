@@ -37,5 +37,11 @@ service cloud.firestore {
       allow read, create, update, delete: if true;
     }
 
+    // User feedback
+    match /feedback/{document} {
+      allow read, create: if true;
+      allow update, delete: if true;
+    }
+
   }
 }

@@ -43,6 +43,7 @@ import {
   Check,
   Users,
   Headphones,
+  X,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import * as XLSX from "xlsx";
@@ -52,6 +53,12 @@ import {
 } from "../services/songRequestService";
 import { fetchAccounts, deleteAccount } from "../services/accountService";
 import { fetchAllUserListeningStats } from "../services/userListeningStatsService";
+import { createAdminMessageNotification } from "../services/notificationService";
+import {
+  fetchFeedback,
+  deleteFeedback,
+  clearAllFeedback,
+} from "../services/feedbackService";
 import "./Admin.css";
 
 const SunIcon = () => (
@@ -162,6 +169,11 @@ const Admin = () => {
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [clearingRequestId, setClearingRequestId] = useState(null);
   const [requestCurrentPage, setRequestCurrentPage] = useState(1);
+  const [feedbackList, setFeedbackList] = useState([]);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [feedbackCurrentPage, setFeedbackCurrentPage] = useState(1);
+  const [deletingFeedbackId, setDeletingFeedbackId] = useState(null);
+  const [clearingAllFeedback, setClearingAllFeedback] = useState(false);
   const [accounts, setAccounts] = useState([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [accountsCurrentPage, setAccountsCurrentPage] = useState(1);
@@ -173,8 +185,15 @@ const Admin = () => {
     useState("");
   const [expandedListeningIds, setExpandedListeningIds] = useState(new Set());
   const [listeningChartTab, setListeningChartTab] = useState("bar");
+  const [messageModalAccount, setMessageModalAccount] = useState(null);
+  const [messageModalSendToAll, setMessageModalSendToAll] = useState(false);
+  const [messageSubject, setMessageSubject] = useState("");
+  const [messageBody, setMessageBody] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [accountsSearchQuery, setAccountsSearchQuery] = useState("");
 
   const REQUEST_RECORDS_PER_PAGE = 10;
+  const FEEDBACK_RECORDS_PER_PAGE = 10;
   const ACCOUNTS_RECORDS_PER_PAGE = 10;
   const LISTENING_STATS_RECORDS_PER_PAGE = 10;
 
@@ -269,6 +288,24 @@ const Admin = () => {
   }, [activeTab, isAuthenticated]);
 
   useEffect(() => {
+    if (activeTab === "feedback" && isAuthenticated) {
+      const loadFeedback = async () => {
+        setLoadingFeedback(true);
+        try {
+          const data = await fetchFeedback();
+          setFeedbackList(data);
+        } catch (err) {
+          console.error("Error loading feedback:", err);
+        } finally {
+          setLoadingFeedback(false);
+        }
+      };
+      loadFeedback();
+      setFeedbackCurrentPage(1);
+    }
+  }, [activeTab, isAuthenticated]);
+
+  useEffect(() => {
     if (activeTab === "accounts" && isAuthenticated) {
       const loadAccounts = async () => {
         setLoadingAccounts(true);
@@ -325,6 +362,37 @@ const Admin = () => {
     }
   };
 
+  const handleDeleteFeedback = async (id) => {
+    setDeletingFeedbackId(id);
+    try {
+      await deleteFeedback(id);
+      setFeedbackList((prev) => {
+        const next = prev.filter((f) => f.id !== id);
+        const maxPage = Math.ceil(next.length / FEEDBACK_RECORDS_PER_PAGE) || 1;
+        setFeedbackCurrentPage((p) => Math.max(1, Math.min(p, maxPage)));
+        return next;
+      });
+    } catch (err) {
+      console.error("Error deleting feedback:", err);
+    } finally {
+      setDeletingFeedbackId(null);
+    }
+  };
+
+  const handleClearAllFeedback = async () => {
+    if (!window.confirm("Delete all feedback? This cannot be undone.")) return;
+    setClearingAllFeedback(true);
+    try {
+      await clearAllFeedback();
+      setFeedbackList([]);
+      setFeedbackCurrentPage(1);
+    } catch (err) {
+      console.error("Error clearing feedback:", err);
+    } finally {
+      setClearingAllFeedback(false);
+    }
+  };
+
   const handleDeleteAccount = async (id) => {
     if (!window.confirm("Are you sure you want to delete this account?")) {
       return;
@@ -342,6 +410,59 @@ const Admin = () => {
       console.error("Error deleting account:", err);
     } finally {
       setDeletingAccountId(null);
+    }
+  };
+
+  const handleOpenMessageModal = (acc) => {
+    setMessageModalAccount(acc);
+    setMessageModalSendToAll(false);
+    setMessageSubject("");
+    setMessageBody("");
+  };
+
+  const handleOpenMessageModalAll = (filteredAccounts) => {
+    setMessageModalAccount({ filteredAccounts });
+    setMessageModalSendToAll(true);
+    setMessageSubject("");
+    setMessageBody("");
+  };
+
+  const handleCloseMessageModal = () => {
+    setMessageModalAccount(null);
+    setMessageModalSendToAll(false);
+    setMessageSubject("");
+    setMessageBody("");
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageBody.trim()) return;
+    setSendingMessage(true);
+    try {
+      if (messageModalSendToAll && messageModalAccount?.filteredAccounts) {
+        const targets = messageModalAccount.filteredAccounts.filter(
+          (a) => a.email?.trim(),
+        );
+        for (const acc of targets) {
+          await createAdminMessageNotification({
+            email: acc.email,
+            userName: acc.name || "",
+            subject: messageSubject.trim(),
+            body: messageBody.trim(),
+          });
+        }
+      } else if (messageModalAccount?.email?.trim()) {
+        await createAdminMessageNotification({
+          email: messageModalAccount.email,
+          userName: messageModalAccount.name || "",
+          subject: messageSubject.trim(),
+          body: messageBody.trim(),
+        });
+      }
+      handleCloseMessageModal();
+    } catch (err) {
+      console.error("Error sending message:", err);
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -1213,6 +1334,13 @@ const Admin = () => {
           </button>
           <button
             type="button"
+            className={`admin-tab ${activeTab === "feedback" ? "admin-tab--active" : ""}`}
+            onClick={() => setActiveTab("feedback")}
+          >
+            <MessageSquare size={18} className="admin-icon-inline" /> Feedback
+          </button>
+          <button
+            type="button"
             className={`admin-tab ${activeTab === "accounts" ? "admin-tab--active" : ""}`}
             onClick={() => setActiveTab("accounts")}
           >
@@ -1999,6 +2127,179 @@ const Admin = () => {
               )}
             </div>
           )}
+          {activeTab === "feedback" && (
+            <div className="admin-hip-tab admin-feedback-tab">
+              <div className="admin-bulk-header admin-feedback-header">
+                <div>
+                  <h2>
+                    <MessageSquare size={22} className="admin-icon-inline" />{" "}
+                    Feedback
+                  </h2>
+                  <p className="admin-bulk-subtitle">
+                    User-submitted feedback.
+                  </p>
+                </div>
+                {feedbackList.length > 0 && (
+                  <button
+                    type="button"
+                    className="admin-feedback-clear-all-btn"
+                    onClick={handleClearAllFeedback}
+                    disabled={clearingAllFeedback}
+                    title="Delete all feedback"
+                  >
+                    <Trash2 size={16} className="admin-icon-inline" />
+                    {clearingAllFeedback ? "Clearing…" : "Clear all"}
+                  </button>
+                )}
+              </div>
+              {loadingFeedback ? (
+                <div className="admin-loading-requests">
+                  <p>Loading feedback...</p>
+                </div>
+              ) : feedbackList.length === 0 ? (
+                <div className="admin-empty-requests">
+                  <p>No feedback yet.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="admin-bulk-table-wrapper">
+                    <table className="admin-bulk-table admin-request-table">
+                      <thead>
+                        <tr>
+                          <th className="admin-bulk-th admin-bulk-th-num">#</th>
+                          <th className="admin-bulk-th">Name</th>
+                          <th className="admin-bulk-th">Email</th>
+                          <th className="admin-bulk-th">Contact</th>
+                          <th className="admin-bulk-th">Message</th>
+                          <th className="admin-bulk-th">Date</th>
+                          <th className="admin-bulk-th admin-bulk-th-action"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const start =
+                            (feedbackCurrentPage - 1) *
+                            FEEDBACK_RECORDS_PER_PAGE;
+                          const paginated = feedbackList.slice(
+                            start,
+                            start + FEEDBACK_RECORDS_PER_PAGE,
+                          );
+                          return paginated.map((fb, idx) => {
+                            const rowNum = start + idx + 1;
+                            const createdAt = fb.createdAt;
+                            let dateStr = "—";
+                            if (createdAt) {
+                              if (createdAt.toDate) {
+                                dateStr = createdAt.toDate().toLocaleString();
+                              } else if (typeof createdAt === "string") {
+                                dateStr = new Date(createdAt).toLocaleString();
+                              }
+                            }
+                            return (
+                              <tr key={fb.id} className="admin-bulk-tr">
+                                <td className="admin-bulk-td admin-bulk-td-num">
+                                  {rowNum}
+                                </td>
+                                <td className="admin-bulk-td">
+                                  {fb.userName || "—"}
+                                </td>
+                                <td className="admin-bulk-td">
+                                  {fb.email ? (
+                                    <a
+                                      href={`mailto:${fb.email}`}
+                                      className="admin-request-contact-link"
+                                    >
+                                      {fb.email}
+                                    </a>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </td>
+                                <td className="admin-bulk-td">
+                                  {fb.contactNumber ? (
+                                    <a
+                                      href={`tel:${fb.contactNumber}`}
+                                      className="admin-request-contact-link"
+                                    >
+                                      {fb.contactNumber}
+                                    </a>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </td>
+                                <td className="admin-bulk-td admin-bulk-td-message">
+                                  {fb.message || "—"}
+                                </td>
+                                <td className="admin-bulk-td admin-bulk-td-date">
+                                  {dateStr}
+                                </td>
+                                <td className="admin-bulk-td admin-bulk-td-action">
+                                  <button
+                                    type="button"
+                                    className="admin-request-clear-btn admin-account-delete-btn"
+                                    onClick={() => handleDeleteFeedback(fb.id)}
+                                    disabled={deletingFeedbackId === fb.id}
+                                    title="Delete feedback"
+                                    aria-label="Delete feedback"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                  {feedbackList.length > FEEDBACK_RECORDS_PER_PAGE && (
+                    <div className="admin-bulk-pagination">
+                      <button
+                        type="button"
+                        className="admin-bulk-page-btn"
+                        onClick={() =>
+                          setFeedbackCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={feedbackCurrentPage <= 1}
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <span className="admin-bulk-page-info">
+                        Page {feedbackCurrentPage} of{" "}
+                        {Math.ceil(
+                          feedbackList.length / FEEDBACK_RECORDS_PER_PAGE,
+                        )}{" "}
+                        ({feedbackList.length} total)
+                      </span>
+                      <button
+                        type="button"
+                        className="admin-bulk-page-btn"
+                        onClick={() =>
+                          setFeedbackCurrentPage((p) =>
+                            Math.min(
+                              Math.ceil(
+                                feedbackList.length /
+                                  FEEDBACK_RECORDS_PER_PAGE,
+                              ),
+                              p + 1,
+                            ),
+                          )
+                        }
+                        disabled={
+                          feedbackCurrentPage >=
+                          Math.ceil(
+                            feedbackList.length / FEEDBACK_RECORDS_PER_PAGE,
+                          )
+                        }
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           {activeTab === "accounts" && (
             <div className="admin-hip-tab admin-accounts-tab">
               <div className="admin-bulk-header">
@@ -2008,6 +2309,50 @@ const Admin = () => {
                 <p className="admin-bulk-subtitle">
                   All created user accounts.
                 </p>
+                <div className="admin-accounts-toolbar">
+                  <div className="admin-search-container admin-accounts-search">
+                    <Search size={18} className="admin-search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search by name, email..."
+                      value={accountsSearchQuery}
+                      onChange={(e) => {
+                        setAccountsSearchQuery(e.target.value);
+                        setAccountsCurrentPage(1);
+                      }}
+                      className="admin-search-input"
+                      aria-label="Search accounts"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="admin-accounts-send-all-btn"
+                    onClick={() => {
+                      const q = accountsSearchQuery.trim().toLowerCase();
+                      const filtered = q
+                        ? accounts.filter(
+                            (a) =>
+                              (a.name || "")
+                                .toLowerCase()
+                                .includes(q) ||
+                              (a.email || "")
+                                .toLowerCase()
+                                .includes(q) ||
+                              (a.uuid || "")
+                                .toLowerCase()
+                                .includes(q),
+                          )
+                        : accounts;
+                      if (filtered.length === 0) return;
+                      handleOpenMessageModalAll(filtered);
+                    }}
+                    disabled={accounts.length === 0}
+                    title="Send message to all (filtered) users"
+                  >
+                    <MessageSquare size={18} />
+                    Send to all
+                  </button>
+                </div>
               </div>
               {loadingAccounts ? (
                 <div className="admin-loading-requests">
@@ -2017,7 +2362,21 @@ const Admin = () => {
                 <div className="admin-empty-requests">
                   <p>No accounts yet.</p>
                 </div>
-              ) : (
+              ) : (() => {
+                const q = accountsSearchQuery.trim().toLowerCase();
+                const filteredAccounts = q
+                  ? accounts.filter(
+                      (a) =>
+                        (a.name || "").toLowerCase().includes(q) ||
+                        (a.email || "").toLowerCase().includes(q) ||
+                        (a.uuid || "").toLowerCase().includes(q),
+                    )
+                  : accounts;
+                return filteredAccounts.length === 0 ? (
+                  <div className="admin-empty-requests">
+                    <p>No accounts match your search.</p>
+                  </div>
+                ) : (
                 <>
                   <div className="admin-bulk-table-wrapper">
                     <table className="admin-bulk-table admin-request-table">
@@ -2035,10 +2394,25 @@ const Admin = () => {
                       </thead>
                       <tbody>
                         {(() => {
+                          const q = accountsSearchQuery.trim().toLowerCase();
+                          const filteredAccounts = q
+                            ? accounts.filter(
+                                (a) =>
+                                  (a.name || "")
+                                    .toLowerCase()
+                                    .includes(q) ||
+                                  (a.email || "")
+                                    .toLowerCase()
+                                    .includes(q) ||
+                                  (a.uuid || "")
+                                    .toLowerCase()
+                                    .includes(q),
+                              )
+                            : accounts;
                           const start =
                             (accountsCurrentPage - 1) *
                             ACCOUNTS_RECORDS_PER_PAGE;
-                          const paginatedAccounts = accounts.slice(
+                          const paginatedAccounts = filteredAccounts.slice(
                             start,
                             start + ACCOUNTS_RECORDS_PER_PAGE,
                           );
@@ -2058,7 +2432,20 @@ const Admin = () => {
                                 <td className="admin-bulk-td admin-bulk-td-num">
                                   {rowNum}
                                 </td>
-                                <td className="admin-bulk-td">{acc.name}</td>
+                                <td className="admin-bulk-td admin-bulk-td-name">
+                                  <span className="admin-account-name-cell">
+                                    {acc.name}
+                                    <button
+                                      type="button"
+                                      className="admin-account-message-btn"
+                                      onClick={() => handleOpenMessageModal(acc)}
+                                      title="Send message"
+                                      aria-label="Send message"
+                                    >
+                                      <MessageSquare size={16} />
+                                    </button>
+                                  </span>
+                                </td>
                                 <td className="admin-bulk-td">
                                   {acc.email ? (
                                     <a
@@ -2096,22 +2483,37 @@ const Admin = () => {
                       </tbody>
                     </table>
                   </div>
-                  {accounts.length > ACCOUNTS_RECORDS_PER_PAGE && (
-                    <div className="admin-bulk-pagination">
-                      <button
-                        type="button"
-                        className="admin-bulk-page-btn"
-                        onClick={() =>
-                          setAccountsCurrentPage((p) => Math.max(1, p - 1))
-                        }
-                        disabled={accountsCurrentPage <= 1}
-                      >
-                        <ChevronLeft size={18} />
-                      </button>
-                      <span className="admin-bulk-page-info">
-                        Page {accountsCurrentPage} of{" "}
-                        {Math.ceil(accounts.length / ACCOUNTS_RECORDS_PER_PAGE)}{" "}
-                        ({accounts.length} total)
+                  {(() => {
+                    const q = accountsSearchQuery.trim().toLowerCase();
+                    const filteredAccounts = q
+                      ? accounts.filter(
+                          (a) =>
+                            (a.name || "").toLowerCase().includes(q) ||
+                            (a.email || "").toLowerCase().includes(q) ||
+                            (a.uuid || "").toLowerCase().includes(q),
+                        )
+                      : accounts;
+                    return filteredAccounts.length >
+                      ACCOUNTS_RECORDS_PER_PAGE ? (
+                      <div className="admin-bulk-pagination">
+                        <button
+                          type="button"
+                          className="admin-bulk-page-btn"
+                          onClick={() =>
+                            setAccountsCurrentPage((p) => Math.max(1, p - 1))
+                          }
+                          disabled={accountsCurrentPage <= 1}
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                        <span className="admin-bulk-page-info">
+                          Page {accountsCurrentPage} of{" "}
+                          {Math.ceil(
+                            filteredAccounts.length /
+                              ACCOUNTS_RECORDS_PER_PAGE,
+                          )}{" "}
+                          ({filteredAccounts.length} total
+                          {q ? " matching" : ""})
                       </span>
                       <button
                         type="button"
@@ -2120,7 +2522,8 @@ const Admin = () => {
                           setAccountsCurrentPage((p) =>
                             Math.min(
                               Math.ceil(
-                                accounts.length / ACCOUNTS_RECORDS_PER_PAGE,
+                                filteredAccounts.length /
+                                  ACCOUNTS_RECORDS_PER_PAGE,
                               ),
                               p + 1,
                             ),
@@ -2128,15 +2531,20 @@ const Admin = () => {
                         }
                         disabled={
                           accountsCurrentPage >=
-                          Math.ceil(accounts.length / ACCOUNTS_RECORDS_PER_PAGE)
+                          Math.ceil(
+                            filteredAccounts.length /
+                              ACCOUNTS_RECORDS_PER_PAGE,
+                          )
                         }
                       >
                         <ChevronRight size={18} />
                       </button>
                     </div>
-                  )}
+                    ) : null;
+                  })()}
                 </>
-              )}
+                );
+              })()}
             </div>
           )}
           {activeTab === "listening" && (
@@ -2748,6 +3156,77 @@ const Admin = () => {
           )}
         </div>
       </div>
+
+      {messageModalAccount && (
+        <>
+          <div
+            className="modal-overlay admin-message-modal-overlay"
+            onClick={handleCloseMessageModal}
+            aria-hidden="true"
+          />
+          <div className="modal admin-message-modal">
+            <button
+              type="button"
+              className="admin-message-modal__close"
+              onClick={handleCloseMessageModal}
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+            <div className="modal__content">
+              <h3 className="modal__title">
+                {messageModalSendToAll
+                  ? `Send message to all (${messageModalAccount?.filteredAccounts?.length || 0} users)`
+                  : `Send message to ${messageModalAccount?.name || "user"}`}
+              </h3>
+              <p className="admin-message-modal__hint">
+                {messageModalSendToAll
+                  ? "This will be sent to each user&apos;s notification center."
+                  : "This will appear in the user&apos;s notification center."}
+              </p>
+              <div className="admin-message-modal__field">
+                <label htmlFor="admin-message-subject">Subject (optional)</label>
+                <input
+                  id="admin-message-subject"
+                  type="text"
+                  placeholder="e.g. Welcome to Beatify"
+                  value={messageSubject}
+                  onChange={(e) => setMessageSubject(e.target.value)}
+                  className="admin-message-modal__input"
+                />
+              </div>
+              <div className="admin-message-modal__field">
+                <label htmlFor="admin-message-body">Message</label>
+                <textarea
+                  id="admin-message-body"
+                  placeholder="Your message..."
+                  value={messageBody}
+                  onChange={(e) => setMessageBody(e.target.value)}
+                  className="admin-message-modal__textarea"
+                  rows={4}
+                />
+              </div>
+              <div className="admin-message-modal__actions">
+                <button
+                  type="button"
+                  className="admin-message-modal__btn admin-message-modal__btn--cancel"
+                  onClick={handleCloseMessageModal}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="admin-message-modal__btn admin-message-modal__btn--send"
+                  onClick={handleSendMessage}
+                  disabled={!messageBody.trim() || sendingMessage}
+                >
+                  {sendingMessage ? "Sending..." : "Send"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

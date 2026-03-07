@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import DownloadModal from "../components/DownloadModal";
 import { useRequestSong } from "../context/RequestSongContext";
+import { useFeedback } from "../context/FeedbackContext";
 import {
   dispatchFavoritesChanged,
   FAVORITES_LOADED,
@@ -687,6 +688,7 @@ const Home = () => {
   const searchQuery = searchParams.get("search") || "";
   const { selectTrack, currentTrack, setPlaylist, isPlaying } = usePlayer();
   const { openRequestSong } = useRequestSong();
+  const { openFeedback } = useFeedback();
   const { isLoggedIn } = useCreateAccount();
   const { getTopArtists, getLastSongs, lastSongs, artistCounts } =
     useListeningHistory();
@@ -1116,8 +1118,16 @@ const Home = () => {
                         onClick={() => openRequestSong()}
                       >
                         Request a song
-                      </button>{" "}
-                      or reach out to{" "}
+                      </button>
+                      {" · "}
+                      <button
+                        type="button"
+                        className="home__request-song-btn"
+                        onClick={() => openFeedback()}
+                      >
+                        Send feedback
+                      </button>
+                      {" · or reach out to "}
                       <a
                         href="mailto:siddhantroy225@gmail.com"
                         className="home__email-link"

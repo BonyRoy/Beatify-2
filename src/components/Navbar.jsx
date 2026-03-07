@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { UserPlus, User } from "lucide-react";
+import { UserPlus, User, MessageSquare } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useListeningHistory } from "../context/ListeningHistoryContext";
 import { useCreateAccount } from "../context/CreateAccountContext";
 import { useRequestSong } from "../context/RequestSongContext";
+import { useFeedback } from "../context/FeedbackContext";
 import { useNotifications } from "../context/NotificationsContext";
 import Sidebar from "./Sidebar";
 import Artists from "./Artists";
@@ -252,6 +253,7 @@ const Navbar = () => {
   const { openCreateAccount, isLoggedIn, userName, userEmail, accountId, logout } =
     useCreateAccount();
   const { openRequestSong } = useRequestSong();
+  const { openFeedback } = useFeedback();
   const { unreadCount, notifications, markAsRead, removeNotification, clearAll } =
     useNotifications();
   const { getTopArtists } = useListeningHistory();
@@ -435,7 +437,7 @@ const Navbar = () => {
           ) : null}
         </div>
 
-        {/* Desktop: top artists, favorites, theme toggle, avatar (rightmost) */}
+        {/* Desktop: top artists, favorites, feedback, theme toggle, avatar (rightmost) */}
         <div className="navbar__desktop">
           <button
             type="button"
@@ -454,6 +456,15 @@ const Navbar = () => {
             }
           >
             <FavoriteIcon filled={showFavorites} />
+          </button>
+          <button
+            type="button"
+            className="navbar__feedback-btn"
+            onClick={openFeedback}
+            aria-label="Send feedback"
+            title="Send feedback"
+          >
+            <MessageSquare size={24} />
           </button>
           <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
           {isLoggedIn ? (
@@ -532,6 +543,10 @@ const Navbar = () => {
           onOpenRequestSong={() => {
             setMenuOpen(false);
             openRequestSong();
+          }}
+          onOpenFeedback={() => {
+            setMenuOpen(false);
+            openFeedback();
           }}
           onOpenCreateAccount={
             isLoggedIn

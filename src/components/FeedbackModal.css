@@ -1,0 +1,83 @@
+.feedback-modal {
+  max-width: 440px;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.feedback-modal .modal__content {
+  overflow-y: auto;
+  max-height: 85vh;
+}
+
+.feedback-modal__subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: -0.5rem 0 1rem 0;
+  text-align: center;
+}
+
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.feedback-form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+  color: var(--text-muted);
+}
+
+.feedback-form-group input,
+.feedback-form-group textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  border: 1px solid var(--nav-border);
+  border-radius: 8px;
+  background-color: var(--track-bg);
+  color: var(--text-primary);
+  transition: border-color 0.2s;
+}
+
+.feedback-form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.feedback-form-group input:focus,
+.feedback-form-group textarea:focus {
+  outline: none;
+  border-color: var(--text-hover, #a78bfa);
+}
+
+.feedback-form-error {
+  color: #ef4444;
+  font-size: 0.9rem;
+  margin: -0.25rem 0 0;
+}
+
+.feedback-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.feedback-modal .otp-input-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.feedback-modal .otp-input-box {
+  width: 2.5rem;
+  height: 2.5rem;
+  text-align: center;
+  font-size: 1.1rem;
+  padding: 0;
+}

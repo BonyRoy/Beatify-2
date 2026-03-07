@@ -33,6 +33,25 @@ export async function createSongAddedNotification({ email, userName, songName, a
 }
 
 /**
+ * Create an admin message notification (sent to user from Admin panel)
+ * @param {Object} params - { email, userName, subject, body }
+ * @returns {Promise<string>} Document ID
+ */
+export async function createAdminMessageNotification({ email, userName, subject, body }) {
+  if (!email || !email.trim()) return null;
+  const docRef = await addDoc(collection(db, NOTIFICATIONS_COLLECTION), {
+    type: "admin_message",
+    email: email.toLowerCase().trim(),
+    userName: userName || "",
+    subject: subject || "",
+    body: body || "",
+    read: false,
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+/**
  * Fetch notifications for a user by email
  * @param {string} email - User's email
  * @returns {Promise<Array>} Array of notifications with id, sorted by createdAt desc
