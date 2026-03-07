@@ -374,6 +374,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
                   onChange={handleChange}
                   placeholder="Enter your name"
                   disabled={submitting}
+                  readOnly={isLoggedIn}
                   required
                 />
               </div>
@@ -391,6 +392,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
                       : "Enter your email (OTP will be sent here)"
                   }
                   disabled={submitting}
+                  readOnly={isLoggedIn}
                   required
                 />
               </div>
