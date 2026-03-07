@@ -77,6 +77,36 @@ body:has(.footer--player) .playlist__grid {
     transform 0.2s;
 }
 
+/* Placeholder shown until playlist image loads */
+.playlist__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+}
+
+.playlist__placeholder-icon {
+  width: 40%;
+  height: auto;
+}
+
+.playlist__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.playlist__image--loaded {
+  opacity: 1;
+}
+
 .playlist__item:hover .playlist__image-wrapper {
   border-color: var(--text-hover, #a78bfa);
   transform: scale(1.02);
@@ -87,13 +117,6 @@ body:has(.footer--player) .playlist__grid {
   border-width: 3px;
   box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.3);
   background-color: rgba(167, 139, 250, 0.1);
-}
-
-.playlist__image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
 }
 
 /* Favorites card - heart icon with gradient */

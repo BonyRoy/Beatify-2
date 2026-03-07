@@ -87,6 +87,56 @@ const FavoriteHeartIcon = ({ className = "" }) => (
   </svg>
 );
 
+const PlaylistMusicPlaceholder = () => (
+  <div className="playlist__placeholder" aria-hidden="true">
+    <svg
+      className="playlist__placeholder-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="rgba(255, 255, 255, 0.9)"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9 18V5l12-2v13" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="16" r="3" />
+    </svg>
+  </div>
+);
+
+const PlaylistImageItem = ({ playlist, isSelected, onClick }) => {
+  const [loaded, setLoaded] = useState(false);
+  const [triedFallback, setTriedFallback] = useState(false);
+
+  const handleLoad = () => setLoaded(true);
+  const handleError = (e) => {
+    if (!triedFallback) {
+      setTriedFallback(true);
+      e.target.src = `/playlistbg/${playlist.image}`;
+    }
+  };
+
+  return (
+    <div
+      className={`playlist__item ${isSelected ? "playlist__item--selected" : ""}`}
+      onClick={() => onClick(playlist.label)}
+    >
+      <div className="playlist__image-wrapper">
+        <PlaylistMusicPlaceholder />
+        <img
+          src={`/playlist/${playlist.image}`}
+          alt={playlist.label}
+          className={`playlist__image ${loaded ? "playlist__image--loaded" : ""}`}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+        <div className="playlist__label">{playlist.label}</div>
+      </div>
+    </div>
+  );
+};
+
 const FAVORITES_LABEL = "My Favorites";
 
 const Playlist = ({ hasFavorites = false }) => {
@@ -206,29 +256,14 @@ const Playlist = ({ hasFavorites = false }) => {
                 </div>
               </div>
             )}
-            {filteredPlaylists.map((playlist, index) => {
-              const isSelected = selectedPlaylist === playlist.label;
-              return (
-                <div
-                  key={index}
-                  className={`playlist__item ${isSelected ? "playlist__item--selected" : ""}`}
-                  onClick={() => handlePlaylistClick(playlist.label)}
-                >
-                  <div className="playlist__image-wrapper">
-                    <img
-                      src={`/playlist/${playlist.image}`}
-                      alt={playlist.label}
-                      className="playlist__image"
-                      onError={(e) => {
-                        // Fallback to playlistbg if playlist folder doesn't exist
-                        e.target.src = `/playlistbg/${playlist.image}`;
-                      }}
-                    />
-                    <div className="playlist__label">{playlist.label}</div>
-                  </div>
-                </div>
-              );
-            })}
+            {filteredPlaylists.map((playlist, index) => (
+              <PlaylistImageItem
+                key={index}
+                playlist={playlist}
+                isSelected={selectedPlaylist === playlist.label}
+                onClick={handlePlaylistClick}
+              />
+            ))}
           </>
         )}
       </div>
