@@ -11,6 +11,7 @@ import { NotificationsProvider } from './context/NotificationsContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import PromotionalModal from './components/PromotionalModal'
+import BeatifyLoadingScreen from './components/BeatifyLoadingScreen'
 import ListeningHistoryTracker from './components/ListeningHistoryTracker'
 import ListeningStatsSync from './components/ListeningStatsSync'
 import Home from './pages/Home'
@@ -41,6 +42,7 @@ const AppContent = () => {
 const App = () => {
   return (
     <ThemeProvider>
+      <BeatifyLoadingScreen />
       <CreateAccountProvider>
         <NotificationsProvider>
         <RequestSongProvider>

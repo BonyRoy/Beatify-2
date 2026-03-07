@@ -1,0 +1,154 @@
+.beatify-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0a0a0a 0%, #0f172a 50%, #1a1a2e 100%);
+  transition: opacity 0.4s ease-out;
+}
+
+.beatify-loading--fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.beatify-loading__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  animation: beatify-content-enter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.beatify-loading__icon-wrap {
+  animation: beatify-icon-float 2s ease-in-out infinite;
+}
+
+.beatify-loading__icon {
+  display: block;
+  animation: beatify-icon-pulse 1.5s ease-in-out infinite;
+}
+
+.beatify-loading__title {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, #06b6d4, #3b82f6, #8b5cf6);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: beatify-title-shimmer 2s ease-in-out infinite;
+}
+
+.beatify-loading__promo {
+  font-size: 0.85rem;
+  text-align: center;
+  max-width: 260px;
+  line-height: 1.4;
+  min-height: 2.8em;
+  animation: beatify-promo-fade 0.4s ease-out;
+}
+
+.beatify-loading__promo--0 {
+  background: linear-gradient(135deg, #9ca3af, #6b7280, #4b5563);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.beatify-loading__promo--1 {
+  background: linear-gradient(135deg, #0ea5e9, #3b82f6, #2563eb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.beatify-loading__promo--2 {
+  background: linear-gradient(135deg, #a78bfa, #8b5cf6, #7c3aed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes beatify-promo-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.beatify-loading__bar {
+  width: 120px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.beatify-loading__bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #06b6d4, #3b82f6, #8b5cf6);
+  border-radius: 3px;
+  animation: beatify-bar-fill 4s ease-out forwards;
+}
+
+@keyframes beatify-content-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes beatify-icon-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes beatify-icon-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes beatify-title-shimmer {
+  0%,
+  100% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+}
+
+@keyframes beatify-bar-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
