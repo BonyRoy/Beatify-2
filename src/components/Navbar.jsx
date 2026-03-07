@@ -386,6 +386,11 @@ const Navbar = () => {
       newSearchParams.delete("favorites");
       newSearchParams.delete("playlist");
 
+      // On mobile, when on playlist view, switch to tracks to show artist's songs
+      if (isMobile && view === "playlist") {
+        newSearchParams.set("view", "track");
+      }
+
       // Save to localStorage - remember first 4 selected artists
       const savedArtists = JSON.parse(
         localStorage.getItem("selectedArtists") || "[]",
@@ -487,15 +492,34 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile: hamburger button */}
+        {/* Mobile: profile icon when logged in, hamburger when not */}
         <button
           type="button"
-          className="navbar__hamburger"
+          className={`navbar__hamburger ${isLoggedIn ? "navbar__hamburger--profile" : ""} ${isLoggedIn && userAvatar ? "navbar__hamburger--avatar" : ""}`}
           onClick={() => setMenuOpen((prev) => !prev)}
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-label={menuOpen ? "Close menu" : isLoggedIn ? "Profile / Menu" : "Open menu"}
           aria-expanded={menuOpen}
         >
-          <HamburgerIcon open={menuOpen} />
+          {isLoggedIn ? (
+            <>
+              {userAvatar ? (
+                <img
+                  src={`/Avatars/${userAvatar}.png`}
+                  alt="Profile"
+                  className="navbar__hamburger-avatar"
+                />
+              ) : (
+                <User size={24} />
+              )}
+              {unreadCount > 0 && (
+                <span className="navbar__notification-badge navbar__notification-badge--hamburger">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </>
+          ) : (
+            <HamburgerIcon open={menuOpen} />
+          )}
         </button>
 
         <Sidebar

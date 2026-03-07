@@ -208,6 +208,43 @@
   cursor: pointer;
   padding: 0.25rem;
   line-height: 0;
+  position: relative;
+}
+
+.navbar__hamburger--profile {
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: visible;
+  border: 2px solid #fff;
+}
+
+[data-theme="light"] .navbar__hamburger--profile {
+  border: 2px solid transparent;
+  background-image: linear-gradient(var(--nav-bg, #fff), var(--nav-bg, #fff)),
+    linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+.navbar__hamburger--avatar {
+  border: none !important;
+  background: none !important;
+  background-image: none !important;
+}
+
+.navbar__hamburger-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.navbar__notification-badge--hamburger {
+  top: -2px;
+  right: -2px;
 }
 
 /* Mobile menu overlay */

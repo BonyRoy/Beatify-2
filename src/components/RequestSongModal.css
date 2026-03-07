@@ -1,8 +1,25 @@
 .request-song-modal {
   max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #1a1a2e 70%, #16213e 100%) !important;
   border: 1px solid rgba(6, 182, 212, 0.2);
   box-shadow: 0 8px 32px rgba(6, 182, 212, 0.15);
+}
+
+.request-song-modal .modal__content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.request-song-modal .modal__content::-webkit-scrollbar {
+  display: none;
 }
 
 [data-theme="light"] .request-song-modal {
