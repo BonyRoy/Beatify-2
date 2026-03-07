@@ -222,6 +222,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                   onChange={handleChange}
                   placeholder="Your name"
                   disabled={submitting}
+                  readOnly={isLoggedIn}
                 />
               </div>
               <div className="feedback-form-group">
@@ -236,6 +237,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                     isLoggedIn ? "Your email" : "Email (OTP will be sent here)"
                   }
                   disabled={submitting}
+                  readOnly={isLoggedIn}
                 />
               </div>
               <div className="feedback-form-group">
