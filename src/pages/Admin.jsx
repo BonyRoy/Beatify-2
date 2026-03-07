@@ -2531,9 +2531,6 @@ const Admin = () => {
                                 >
                                   <span className="admin-listening-stat-title">
                                     {stat.userName || "Unknown"}
-                                    <span className="admin-listening-stat-badge">
-                                      {(stat.last10Songs || []).length} songs
-                                    </span>
                                     {age && (
                                       <span
                                         className={`admin-listening-stat-badge admin-listening-stat-badge--age admin-listening-stat-badge--${age.tier}`}
