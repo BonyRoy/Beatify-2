@@ -112,6 +112,13 @@
 
 .profile-modal__accordion-content--open {
   max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.profile-modal__accordion-content--open::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .profile-modal__avatar-grid {

@@ -11,6 +11,11 @@ const AVATARS = [
   { id: "four", src: "/Avatars/four.png" },
   { id: "five", src: "/Avatars/five.png" },
   { id: "six", src: "/Avatars/six.png" },
+  { id: "seven", src: "/Avatars/seven.png" },
+  { id: "eight", src: "/Avatars/eight.png" },
+  { id: "nine", src: "/Avatars/nine.png" },
+  { id: "ten", src: "/Avatars/ten.png" },
+  { id: "leven", src: "/Avatars/leven.png" },
 ];
 
 const CloseIcon = () => (
