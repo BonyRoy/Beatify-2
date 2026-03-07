@@ -8,7 +8,10 @@ const ListeningHistoryContext = createContext();
 
 export const useListeningHistory = () => {
   const ctx = useContext(ListeningHistoryContext);
-  if (!ctx) throw new Error("useListeningHistory must be used within ListeningHistoryProvider");
+  if (!ctx)
+    throw new Error(
+      "useListeningHistory must be used within ListeningHistoryProvider",
+    );
   return ctx;
 };
 
@@ -100,6 +103,7 @@ export const ListeningHistoryProvider = ({ children }) => {
       name: track.name || "Unknown",
       artist: track.artist || "Unknown",
       album: track.album || "",
+      playedAt: new Date().toISOString(),
     };
     setLastSongs((prev) => {
       const filtered = prev.filter((s) => s.uuid !== uuid);

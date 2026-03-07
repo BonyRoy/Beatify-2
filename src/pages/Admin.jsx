@@ -169,8 +169,10 @@ const Admin = () => {
   const [listeningStats, setListeningStats] = useState([]);
   const [loadingListeningStats, setLoadingListeningStats] = useState(false);
   const [listeningStatsCurrentPage, setListeningStatsCurrentPage] = useState(1);
-  const [listeningStatsSearchQuery, setListeningStatsSearchQuery] = useState("");
+  const [listeningStatsSearchQuery, setListeningStatsSearchQuery] =
+    useState("");
   const [expandedListeningIds, setExpandedListeningIds] = useState(new Set());
+  const [listeningChartTab, setListeningChartTab] = useState("bar");
 
   const REQUEST_RECORDS_PER_PAGE = 10;
   const ACCOUNTS_RECORDS_PER_PAGE = 10;
@@ -286,18 +288,22 @@ const Admin = () => {
 
   useEffect(() => {
     if (activeTab === "listening" && isAuthenticated) {
-      const loadStats = async () => {
+      const loadStatsAndAccounts = async () => {
         setLoadingListeningStats(true);
         try {
-          const data = await fetchAllUserListeningStats();
-          setListeningStats(data);
+          const [stats, accountsData] = await Promise.all([
+            fetchAllUserListeningStats(),
+            fetchAccounts(),
+          ]);
+          setListeningStats(stats);
+          setAccounts(accountsData);
         } catch (err) {
           console.error("Error loading listening stats:", err);
         } finally {
           setLoadingListeningStats(false);
         }
       };
-      loadStats();
+      loadStatsAndAccounts();
       setListeningStatsCurrentPage(1);
     }
   }, [activeTab, isAuthenticated]);
@@ -2167,219 +2173,580 @@ const Admin = () => {
                 </div>
               ) : listeningStats.length === 0 ? (
                 <div className="admin-empty-requests">
-                  <p>No listening data yet. Users must be logged in and play
-                    songs for stats to appear.</p>
+                  <p>
+                    No listening data yet. Users must be logged in and play
+                    songs for stats to appear.
+                  </p>
                 </div>
-              ) : (() => {
-                const q = listeningStatsSearchQuery.trim().toLowerCase();
-                const filtered = q
-                  ? listeningStats.filter((s) =>
-                      (s.userName || "").toLowerCase().includes(q),
-                    )
-                  : listeningStats;
-                return filtered.length === 0 ? (
-                  <div className="admin-empty-requests">
-                    <p>No users match your search.</p>
-                  </div>
-                ) : (
-                <>
-                  <div className="admin-listening-stats-list">
-                    {(() => {
-                      const q = listeningStatsSearchQuery.trim().toLowerCase();
-                      const filtered = q
-                        ? listeningStats.filter((s) =>
-                            (s.userName || "").toLowerCase().includes(q),
-                          )
-                        : listeningStats;
-                      const start =
-                        (listeningStatsCurrentPage - 1) *
-                        LISTENING_STATS_RECORDS_PER_PAGE;
-                      const paginated = filtered.slice(
-                        start,
-                        start + LISTENING_STATS_RECORDS_PER_PAGE,
-                      );
-                      return paginated.map((stat) => {
-                        const isExpanded = expandedListeningIds.has(stat.id);
-                        return (
-                          <div
-                            key={stat.id}
-                            className={`admin-listening-stat-card ${isExpanded ? "admin-listening-stat-card--expanded" : ""}`}
+              ) : (
+                (() => {
+                  const q = listeningStatsSearchQuery.trim().toLowerCase();
+                  const filtered = q
+                    ? listeningStats.filter((s) =>
+                        (s.userName || "").toLowerCase().includes(q),
+                      )
+                    : listeningStats;
+                  return filtered.length === 0 ? (
+                    <div className="admin-empty-requests">
+                      <p>No users match your search.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="admin-listening-charts">
+                        <div className="admin-listening-chart-tabs">
+                          <button
+                            type="button"
+                            className={`admin-listening-chart-tab ${listeningChartTab === "bar" ? "admin-listening-chart-tab--active" : ""}`}
+                            onClick={() => setListeningChartTab("bar")}
                           >
+                            Bar chart
+                          </button>
+                          <button
+                            type="button"
+                            className={`admin-listening-chart-tab ${listeningChartTab === "pie" ? "admin-listening-chart-tab--active" : ""}`}
+                            onClick={() => setListeningChartTab("pie")}
+                          >
+                            Pie chart
+                          </button>
+                        </div>
+                        <div className="admin-listening-chart-panel">
+                          {listeningChartTab === "bar" ? (
+                            (() => {
+                              const artistMap = {};
+                              filtered.forEach((s) => {
+                                (s.top3Artists || []).forEach((a) => {
+                                  artistMap[a.name] =
+                                    (artistMap[a.name] || 0) + (a.count ?? 0);
+                                });
+                              });
+                              const artistData = Object.entries(artistMap)
+                                .sort(([, a], [, b]) => b - a)
+                                .slice(0, 12)
+                                .map(([name, count]) => ({ name, count }));
+                              const maxCount = Math.max(
+                                ...artistData.map((d) => d.count),
+                                1,
+                              );
+                              const BAR_COLORS = [
+                                "#a78bfa",
+                                "#2dd4bf",
+                                "#fbbf24",
+                                "#f472b6",
+                                "#60a5fa",
+                                "#34d399",
+                                "#c084fc",
+                                "#38bdf8",
+                                "#f97316",
+                                "#a3e635",
+                                "#818cf8",
+                                "#f0abfc",
+                              ];
+                              return artistData.length === 0 ? (
+                                <p className="admin-listening-chart-empty">
+                                  No artist data yet
+                                </p>
+                              ) : (
+                                <div className="admin-listening-bar-chart">
+                                  {artistData.map((d, i) => (
+                                    <div
+                                      key={d.name}
+                                      className="admin-listening-bar-row"
+                                    >
+                                      <span className="admin-listening-bar-label">
+                                        {d.name}
+                                      </span>
+                                      <div className="admin-listening-bar-wrap">
+                                        <div
+                                          className="admin-listening-bar-fill"
+                                          style={{
+                                            width: `${(d.count / maxCount) * 100}%`,
+                                            backgroundColor:
+                                              BAR_COLORS[i % BAR_COLORS.length],
+                                          }}
+                                        />
+                                      </div>
+                                      <span className="admin-listening-bar-value">
+                                        {d.count}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            (() => {
+                              const artistMap = {};
+                              filtered.forEach((s) => {
+                                (s.top3Artists || []).forEach((a) => {
+                                  artistMap[a.name] =
+                                    (artistMap[a.name] || 0) + (a.count ?? 0);
+                                });
+                              });
+                              const artistData = Object.entries(artistMap)
+                                .sort(([, a], [, b]) => b - a)
+                                .slice(0, 10)
+                                .map(([name, count]) => ({ name, count }));
+                              const total = artistData.reduce(
+                                (a, d) => a + d.count,
+                                0,
+                              );
+                              const COLORS = [
+                                "#a78bfa",
+                                "#2dd4bf",
+                                "#fbbf24",
+                                "#f472b6",
+                                "#60a5fa",
+                                "#34d399",
+                                "#c084fc",
+                                "#38bdf8",
+                                "#f97316",
+                                "#a3e635",
+                              ];
+                              let acc = 0;
+                              return artistData.length === 0 ? (
+                                <p className="admin-listening-chart-empty">
+                                  No artist data yet
+                                </p>
+                              ) : (
+                                <div className="admin-listening-pie-wrap">
+                                  <svg
+                                    viewBox="0 0 100 100"
+                                    className="admin-listening-pie-svg"
+                                  >
+                                    {artistData.map((d, i) => {
+                                      const pct = total
+                                        ? (d.count / total) * 100
+                                        : 0;
+                                      const start = (acc / 100) * 360;
+                                      acc += pct;
+                                      const sweep = (pct / 100) * 360;
+                                      const rad = (deg) =>
+                                        (deg * Math.PI) / 180;
+                                      const x1 =
+                                        50 + 40 * Math.cos(rad(start - 90));
+                                      const y1 =
+                                        50 + 40 * Math.sin(rad(start - 90));
+                                      const x2 =
+                                        50 +
+                                        40 *
+                                          Math.cos(
+                                            rad(start + sweep - 90),
+                                          );
+                                      const y2 =
+                                        50 +
+                                        40 *
+                                          Math.sin(
+                                            rad(start + sweep - 90),
+                                          );
+                                      const large =
+                                        sweep > 180 ? 1 : 0;
+                                      const path = `M 50 50 L ${x1} ${y1} A 40 40 0 ${large} 1 ${x2} ${y2} Z`;
+                                      return (
+                                        <path
+                                          key={d.name}
+                                          d={path}
+                                          fill={COLORS[i % COLORS.length]}
+                                        />
+                                      );
+                                    })}
+                                  </svg>
+                                  <ul className="admin-listening-pie-legend">
+                                    {artistData.map((d, i) => (
+                                      <li key={d.name}>
+                                        <span
+                                          className="admin-listening-pie-dot"
+                                          style={{
+                                            backgroundColor:
+                                              COLORS[i % COLORS.length],
+                                          }}
+                                        />
+                                        {d.name} ({d.count})
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              );
+                            })()
+                          )}
+                        </div>
+                      </div>
+                      <div className="admin-listening-summary">
+                        <div className="admin-listening-summary-card admin-listening-summary-card--users">
+                          <span className="admin-listening-summary-value">
+                            {filtered.length}
+                          </span>
+                          <span className="admin-listening-summary-label">
+                            Users
+                          </span>
+                        </div>
+                        {(() => {
+                          const getArtistFromSong = (song) =>
+                            (song.artist || "")
+                              .split(/\s*[,&|]\s*|\s+feat\.?\s+|\s+ft\.?\s+/i)[0]
+                              ?.trim() || "Unknown";
+                          const getPlaysInRange = (msAgo) => {
+                            const cutoff = Date.now() - msAgo;
+                            const counts = {};
+                            filtered.forEach((s) => {
+                              (s.last10Songs || []).forEach((song) => {
+                                const playedAt = song.playedAt;
+                                if (!playedAt) return;
+                                const t = new Date(playedAt).getTime();
+                                if (isNaN(t) || t < cutoff) return;
+                                const artist = getArtistFromSong(song);
+                                counts[artist] = (counts[artist] || 0) + 1;
+                              });
+                            });
+                            return Object.entries(counts)
+                              .sort(([, a], [, b]) => b - a)
+                              .slice(0, 3)
+                              .map(([name, count]) => ({ name, count }));
+                          };
+                          const weekMs = 7 * 24 * 60 * 60 * 1000;
+                          const monthMs = 30 * 24 * 60 * 60 * 1000;
+                          const yearMs = 365 * 24 * 60 * 60 * 1000;
+                          const topWeek = getPlaysInRange(weekMs);
+                          const topMonth = getPlaysInRange(monthMs);
+                          const topYear = getPlaysInRange(yearMs);
+                          const renderTop3 = (items, label, accent) => (
+                            <div
+                              key={label}
+                              className={`admin-listening-summary-card admin-listening-summary-card--top3 admin-listening-summary-card--${accent}`}
+                            >
+                              <span className="admin-listening-summary-label">
+                                Top 3 · {label}
+                              </span>
+                              <div className="admin-listening-top3-list">
+                                {items.length === 0 ? (
+                                  <span className="admin-listening-top3-empty">
+                                    —
+                                  </span>
+                                ) : (
+                                  items.map((a, i) => (
+                                    <span
+                                      key={a.name}
+                                      className="admin-listening-top3-item"
+                                    >
+                                      {i + 1}. {a.name}
+                                      {a.count > 0 && (
+                                        <span className="admin-listening-top3-count">
+                                          {" "}
+                                          ({a.count})
+                                        </span>
+                                      )}
+                                    </span>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          );
+                          return (
+                            <>
+                              {renderTop3(topWeek, "Week", "week")}
+                              {renderTop3(topMonth, "Month", "month")}
+                              {renderTop3(topYear, "Year", "year")}
+                            </>
+                          );
+                        })()}
+                      </div>
+                      <div className="admin-listening-stats-list">
+                        {(() => {
+                          const getAccountAge = (createdAt) => {
+                            if (!createdAt) return null;
+                            const t =
+                              typeof createdAt?.toDate === "function"
+                                ? createdAt.toDate()
+                                : new Date(
+                                    createdAt?.seconds
+                                      ? createdAt.seconds * 1000
+                                      : createdAt,
+                                  );
+                            if (isNaN(t.getTime())) return null;
+                            const now = Date.now();
+                            const ms = now - t.getTime();
+                            const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+                            if (days < 1) return { label: "Today", tier: "new" };
+                            if (days < 7)
+                              return { label: `${days}d`, tier: "new" };
+                            if (days < 30)
+                              return {
+                                label: `${Math.floor(days / 7)}w`,
+                                tier: "recent",
+                              };
+                            if (days < 365)
+                              return {
+                                label: `${Math.floor(days / 30)}mo`,
+                                tier: "established",
+                              };
+                            return {
+                              label: `${Math.floor(days / 365)}y`,
+                              tier: "veteran",
+                            };
+                          };
+                          const accountById = new Map();
+                          accounts.forEach((a) => accountById.set(a.id, a));
+                          const q = listeningStatsSearchQuery
+                            .trim()
+                            .toLowerCase();
+                          const filtered = q
+                            ? listeningStats.filter((s) =>
+                                (s.userName || "").toLowerCase().includes(q),
+                              )
+                            : listeningStats;
+                          const start =
+                            (listeningStatsCurrentPage - 1) *
+                            LISTENING_STATS_RECORDS_PER_PAGE;
+                          const paginated = filtered.slice(
+                            start,
+                            start + LISTENING_STATS_RECORDS_PER_PAGE,
+                          );
+                          return paginated.map((stat) => {
+                            const isExpanded = expandedListeningIds.has(
+                              stat.id,
+                            );
+                            const account = accountById.get(
+                              stat.accountId || stat.id,
+                            );
+                            const age = account
+                              ? getAccountAge(account.createdAt)
+                              : null;
+                            return (
+                              <div
+                                key={stat.id}
+                                className={`admin-listening-stat-card ${isExpanded ? "admin-listening-stat-card--expanded" : ""}`}
+                              >
+                                <button
+                                  type="button"
+                                  className="admin-listening-stat-header"
+                                  onClick={() => {
+                                    setExpandedListeningIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(stat.id))
+                                        next.delete(stat.id);
+                                      else next.add(stat.id);
+                                      return next;
+                                    });
+                                  }}
+                                  aria-expanded={isExpanded}
+                                >
+                                  <span className="admin-listening-stat-title">
+                                    {stat.userName || "Unknown"}
+                                    <span className="admin-listening-stat-badge">
+                                      {(stat.last10Songs || []).length} songs
+                                    </span>
+                                    {age && (
+                                      <span
+                                        className={`admin-listening-stat-badge admin-listening-stat-badge--age admin-listening-stat-badge--${age.tier}`}
+                                        title={`Account age: ${age.label}`}
+                                      >
+                                        {age.label}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="admin-listening-stat-header-right">
+                                    <span className="admin-listening-stat-meta">
+                                      {stat.updatedAt
+                                        ? new Date(
+                                            stat.updatedAt,
+                                          ).toLocaleDateString(undefined, {
+                                            month: "short",
+                                            day: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })
+                                        : "—"}
+                                    </span>
+                                    <span className="admin-listening-stat-chevron">
+                                      {isExpanded ? (
+                                        <ChevronUp size={18} />
+                                      ) : (
+                                        <ChevronDown size={18} />
+                                      )}
+                                    </span>
+                                  </span>
+                                </button>
+                                {isExpanded && (
+                                  <div className="admin-listening-stat-body">
+                                    <div className="admin-listening-stat-section admin-listening-stat-section--chart">
+                                      <h4>Top artists</h4>
+                                      {(stat.top3Artists || []).length === 0 ? (
+                                        <p className="admin-listening-empty">
+                                          —
+                                        </p>
+                                      ) : (
+                                        <div className="admin-listening-chart">
+                                          {(stat.top3Artists || []).map(
+                                            (a, i) => {
+                                              const maxCount = Math.max(
+                                                ...(stat.top3Artists || []).map(
+                                                  (x) => x.count ?? 1,
+                                                ),
+                                                1,
+                                              );
+                                              const pct =
+                                                ((a.count ?? 0) / maxCount) *
+                                                100;
+                                              return (
+                                                <div
+                                                  key={i}
+                                                  className="admin-listening-chart-row"
+                                                >
+                                                  <span className="admin-listening-chart-label">
+                                                    {a.name}
+                                                  </span>
+                                                  <div className="admin-listening-chart-bar-wrap">
+                                                    <div
+                                                      className="admin-listening-chart-bar"
+                                                      style={{
+                                                        width: `${pct}%`,
+                                                      }}
+                                                    />
+                                                  </div>
+                                                  <span className="admin-listening-chart-value">
+                                                    {a.count ?? 0}
+                                                  </span>
+                                                </div>
+                                              );
+                                            },
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="admin-listening-stat-section">
+                                      <h4>Last 10 listened</h4>
+                                      <ul className="admin-listening-song-list admin-listening-song-list--compact">
+                                        {(stat.last10Songs || []).length ===
+                                        0 ? (
+                                          <li className="admin-listening-empty">
+                                            —
+                                          </li>
+                                        ) : (
+                                          (stat.last10Songs || []).map(
+                                            (s, i) => (
+                                              <li key={i} title={s.uuid}>
+                                                <span className="admin-listening-song-name">
+                                                  {s.name}
+                                                </span>
+                                                {s.artist && (
+                                                  <span className="admin-listening-song-artist">
+                                                    {s.artist}
+                                                  </span>
+                                                )}
+                                              </li>
+                                            ),
+                                          )
+                                        )}
+                                      </ul>
+                                    </div>
+                                    <div className="admin-listening-stat-section admin-listening-stat-section--full">
+                                      <h4>
+                                        Favourites (
+                                        {(stat.favorites || []).length})
+                                      </h4>
+                                      <ul className="admin-listening-song-list admin-listening-song-list--compact">
+                                        {(stat.favorites || []).length === 0 ? (
+                                          <li className="admin-listening-empty">
+                                            —
+                                          </li>
+                                        ) : (
+                                          (() => {
+                                            const uuidToTrack = {};
+                                            existingTracks.forEach((t) => {
+                                              const id = t.uuid || t.id;
+                                              if (id) uuidToTrack[id] = t;
+                                            });
+                                            return (stat.favorites || []).map(
+                                              (uuid, i) => {
+                                                const track = uuidToTrack[uuid];
+                                                return (
+                                                  <li key={i} title={uuid}>
+                                                    <span className="admin-listening-song-name">
+                                                      {track?.name || "Unknown"}
+                                                    </span>
+                                                    {track?.artist && (
+                                                      <span className="admin-listening-song-artist">
+                                                        {track.artist}
+                                                      </span>
+                                                    )}
+                                                  </li>
+                                                );
+                                              },
+                                            );
+                                          })()
+                                        )}
+                                      </ul>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                      {(() => {
+                        const q = listeningStatsSearchQuery
+                          .trim()
+                          .toLowerCase();
+                        const filtered = q
+                          ? listeningStats.filter((s) =>
+                              (s.userName || "").toLowerCase().includes(q),
+                            )
+                          : listeningStats;
+                        return filtered.length >
+                          LISTENING_STATS_RECORDS_PER_PAGE ? (
+                          <div className="admin-bulk-pagination">
                             <button
                               type="button"
-                              className="admin-listening-stat-header"
-                              onClick={() => {
-                                setExpandedListeningIds((prev) => {
-                                  const next = new Set(prev);
-                                  if (next.has(stat.id)) next.delete(stat.id);
-                                  else next.add(stat.id);
-                                  return next;
-                                });
-                              }}
-                              aria-expanded={isExpanded}
+                              className="admin-bulk-page-btn"
+                              onClick={() =>
+                                setListeningStatsCurrentPage((p) =>
+                                  Math.max(1, p - 1),
+                                )
+                              }
+                              disabled={listeningStatsCurrentPage <= 1}
                             >
-                              <h3>{stat.userName || "Unknown"}</h3>
-                              <span className="admin-listening-stat-header-right">
-                                <span className="admin-listening-stat-meta">
-                                  {stat.updatedAt
-                                    ? new Date(stat.updatedAt).toLocaleString()
-                                    : "—"}
-                                </span>
-                                <span className="admin-listening-stat-chevron">
-                                  {isExpanded ? (
-                                    <ChevronUp size={20} />
-                                  ) : (
-                                    <ChevronDown size={20} />
-                                  )}
-                                </span>
-                              </span>
+                              <ChevronLeft size={18} />
                             </button>
-                            {isExpanded && (
-                              <div className="admin-listening-stat-body">
-                                <div className="admin-listening-stat-section">
-                                  <h4>Last 10 listened</h4>
-                                  <ul className="admin-listening-song-list">
-                                    {(stat.last10Songs || []).length === 0 ? (
-                                      <li className="admin-listening-empty">—</li>
-                                    ) : (
-                                      (stat.last10Songs || []).map((s, i) => (
-                                        <li key={i}>
-                                          <span className="admin-listening-song-name">
-                                            {s.name}
-                                          </span>
-                                          <span className="admin-listening-song-uuid">
-                                            {s.uuid}
-                                          </span>
-                                          {s.artist && (
-                                            <span className="admin-listening-song-artist">
-                                              {s.artist}
-                                            </span>
-                                          )}
-                                        </li>
-                                      ))
-                                    )}
-                                  </ul>
-                                </div>
-                                <div className="admin-listening-stat-section">
-                                  <h4>Top 3 artists</h4>
-                                  <ul className="admin-listening-artist-list">
-                                    {(stat.top3Artists || []).length === 0 ? (
-                                      <li className="admin-listening-empty">—</li>
-                                    ) : (
-                                      (stat.top3Artists || []).map((a, i) => (
-                                        <li key={i}>
-                                          {a.name}
-                                          {a.count != null && (
-                                            <span className="admin-listening-artist-count">
-                                              {" "}({a.count})
-                                            </span>
-                                          )}
-                                        </li>
-                                      ))
-                                    )}
-                                  </ul>
-                                </div>
-                                <div className="admin-listening-stat-section admin-listening-stat-section--full">
-                                  <h4>Favourite songs ({((stat.favorites || []).length)})</h4>
-                                  <ul className="admin-listening-song-list">
-                                    {(stat.favorites || []).length === 0 ? (
-                                      <li className="admin-listening-empty">—</li>
-                                    ) : (
-                                      (() => {
-                                        const uuidToTrack = {};
-                                        existingTracks.forEach((t) => {
-                                          const id = t.uuid || t.id;
-                                          if (id) uuidToTrack[id] = t;
-                                        });
-                                        return (stat.favorites || []).map((uuid, i) => {
-                                          const track = uuidToTrack[uuid];
-                                          return (
-                                            <li key={i}>
-                                              <span className="admin-listening-song-name">
-                                                {track?.name || "Unknown"}
-                                              </span>
-                                              <span className="admin-listening-song-uuid">
-                                                {uuid}
-                                              </span>
-                                              {track?.artist && (
-                                                <span className="admin-listening-song-artist">
-                                                  {track.artist}
-                                                </span>
-                                              )}
-                                            </li>
-                                          );
-                                        });
-                                      })()
-                                    )}
-                                  </ul>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                  {(() => {
-                    const q = listeningStatsSearchQuery.trim().toLowerCase();
-                    const filtered = q
-                      ? listeningStats.filter((s) =>
-                          (s.userName || "").toLowerCase().includes(q),
-                        )
-                      : listeningStats;
-                    return filtered.length > LISTENING_STATS_RECORDS_PER_PAGE ? (
-                      <div className="admin-bulk-pagination">
-                        <button
-                          type="button"
-                          className="admin-bulk-page-btn"
-                          onClick={() =>
-                            setListeningStatsCurrentPage((p) =>
-                              Math.max(1, p - 1),
-                            )
-                          }
-                          disabled={listeningStatsCurrentPage <= 1}
-                        >
-                          <ChevronLeft size={18} />
-                        </button>
-                        <span className="admin-bulk-page-info">
-                          Page {listeningStatsCurrentPage} of{" "}
-                          {Math.ceil(
-                            filtered.length /
-                              LISTENING_STATS_RECORDS_PER_PAGE,
-                          )}{" "}
-                          ({filtered.length} total
-                          {q ? " matching" : ""})
-                        </span>
-                        <button
-                          type="button"
-                          className="admin-bulk-page-btn"
-                          onClick={() =>
-                            setListeningStatsCurrentPage((p) =>
-                              Math.min(
+                            <span className="admin-bulk-page-info">
+                              Page {listeningStatsCurrentPage} of{" "}
+                              {Math.ceil(
+                                filtered.length /
+                                  LISTENING_STATS_RECORDS_PER_PAGE,
+                              )}{" "}
+                              ({filtered.length} total
+                              {q ? " matching" : ""})
+                            </span>
+                            <button
+                              type="button"
+                              className="admin-bulk-page-btn"
+                              onClick={() =>
+                                setListeningStatsCurrentPage((p) =>
+                                  Math.min(
+                                    Math.ceil(
+                                      filtered.length /
+                                        LISTENING_STATS_RECORDS_PER_PAGE,
+                                    ),
+                                    p + 1,
+                                  ),
+                                )
+                              }
+                              disabled={
+                                listeningStatsCurrentPage >=
                                 Math.ceil(
                                   filtered.length /
                                     LISTENING_STATS_RECORDS_PER_PAGE,
-                                ),
-                                p + 1,
-                              ),
-                            )
-                          }
-                          disabled={
-                            listeningStatsCurrentPage >=
-                            Math.ceil(
-                              filtered.length /
-                                LISTENING_STATS_RECORDS_PER_PAGE,
-                            )
-                          }
-                        >
-                          <ChevronRight size={18} />
-                        </button>
-                      </div>
-                    ) : null;
-                  })()}
-                </>
-                );
-              })()}
+                                )
+                              }
+                            >
+                              <ChevronRight size={18} />
+                            </button>
+                          </div>
+                        ) : null;
+                      })()}
+                    </>
+                  );
+                })()
+              )}
             </div>
           )}
         </div>

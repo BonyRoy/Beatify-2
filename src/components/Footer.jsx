@@ -336,9 +336,11 @@ const Footer = () => {
     }
 
     const fetchUrl =
-      typeof window !== "undefined" && url?.startsWith("https://firebasestorage.googleapis.com/")
+      typeof window !== "undefined" &&
+      url?.startsWith("https://firebasestorage.googleapis.com/")
         ? window.location.hostname === "localhost"
-          ? "/storage-proxy" + url.slice("https://firebasestorage.googleapis.com".length)
+          ? "/storage-proxy" +
+            url.slice("https://firebasestorage.googleapis.com".length)
           : "/api/storage-proxy?url=" + encodeURIComponent(url)
         : url;
 

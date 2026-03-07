@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from "react";
+import { useListeningHistory } from "./ListeningHistoryContext";
 
 const PlayerContext = createContext();
 
@@ -9,6 +10,7 @@ export const usePlayer = () => {
 };
 
 export const PlayerProvider = ({ children }) => {
+  const { recordArtistPlay, recordTrackPlay } = useListeningHistory();
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -20,6 +22,11 @@ export const PlayerProvider = ({ children }) => {
     setCurrentTrack(track);
     setCurrentTime(0);
     setIsPlaying(true);
+    // Count immediately on click (before audio loads)
+    if (track) {
+      if (track.artist) recordArtistPlay(track.artist);
+      recordTrackPlay(track);
+    }
     // Update playlist if tracksList is provided
     if (tracksList && Array.isArray(tracksList)) {
       setPlaylist(tracksList);

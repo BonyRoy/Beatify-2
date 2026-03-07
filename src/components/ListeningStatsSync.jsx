@@ -44,7 +44,9 @@ const ListeningStatsSync = () => {
         }
       })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [accountId, isLoggedIn, userName]);
 
   // Reset fetch ref when logged out
@@ -64,13 +66,20 @@ const ListeningStatsSync = () => {
         const favs = Array.isArray(stats?.favorites) ? stats.favorites : [];
         try {
           localStorage.setItem("favorites", JSON.stringify(favs));
-          window.dispatchEvent(new CustomEvent(FAVORITES_LOADED, { detail: favs }));
+          window.dispatchEvent(
+            new CustomEvent(FAVORITES_LOADED, { detail: favs }),
+          );
         } catch {}
       })
       .catch(() => {
-        if (!cancelled) window.dispatchEvent(new CustomEvent(FAVORITES_LOADED, { detail: [] }));
+        if (!cancelled)
+          window.dispatchEvent(
+            new CustomEvent(FAVORITES_LOADED, { detail: [] }),
+          );
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isLoggedIn, resolvedAccountId, accountId]);
 
   // Listen for favorites changes to trigger sync
