@@ -177,6 +177,7 @@ const Footer = () => {
   const wasPlayingBeforeInterruptionRef = useRef(false);
   const preloadAudioRef = useRef(null);
   const preloadStartedRef = useRef(false);
+  const transitionAt2SecTriggeredRef = useRef(false);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -456,9 +457,10 @@ const Footer = () => {
     }
   }, [volume]);
 
-  // Reset preload flag when track changes
+  // Reset preload and transition flags when track changes
   useEffect(() => {
     preloadStartedRef.current = false;
+    transitionAt2SecTriggeredRef.current = false;
     if (preloadAudioRef.current) {
       preloadAudioRef.current.src = "";
     }
@@ -470,39 +472,68 @@ const Footer = () => {
       const currentTime = audioRef.current.currentTime;
       updateTime(currentTime);
 
-      // Preload next track when 10 seconds remaining
       const audioDuration = audioRef.current.duration;
+      if (!(audioDuration > 0 && currentTrack && playlist.length > 0)) return;
+
+      const trackId = currentTrack.uuid || currentTrack.id;
+      const currentIndex = playlist.findIndex(
+        (t) => (t.uuid || t.id) === trackId,
+      );
+      const nextTrack =
+        currentIndex >= 0 && currentIndex < playlist.length - 1
+          ? playlist[currentIndex + 1]
+          : playlist.length > 1
+            ? playlist[0]
+            : null;
+
+      // Preload next track when 10 seconds remaining (does not stop current)
       if (
         audioDuration > 10 &&
         currentTime >= audioDuration - 10 &&
         !preloadStartedRef.current &&
-        currentTrack &&
-        playlist.length > 0
+        nextTrack
       ) {
-        const trackId = currentTrack.uuid || currentTrack.id;
-        const currentIndex = playlist.findIndex(
-          (t) => (t.uuid || t.id) === trackId,
-        );
-        const nextTrack =
-          currentIndex >= 0 && currentIndex < playlist.length - 1
-            ? playlist[currentIndex + 1]
-            : playlist.length > 1
-              ? playlist[0]
-              : null;
-        if (nextTrack) {
-          const nextUrl = nextTrack.fileUrl || nextTrack.url;
-          if (nextUrl) {
-            preloadStartedRef.current = true;
-            if (!preloadAudioRef.current) {
-              preloadAudioRef.current = new Audio();
-            }
-            preloadAudioRef.current.src = nextUrl;
-            preloadAudioRef.current.load();
+        const nextUrl = nextTrack.fileUrl || nextTrack.url;
+        if (nextUrl) {
+          preloadStartedRef.current = true;
+          if (!preloadAudioRef.current) {
+            preloadAudioRef.current = new Audio();
           }
+          preloadAudioRef.current.src = nextUrl;
+          preloadAudioRef.current.load();
         }
       }
+
+      // Transition to next track when 2 seconds remaining (smooth handoff)
+      if (
+        audioDuration > 2 &&
+        currentTime >= audioDuration - 2 &&
+        !transitionAt2SecTriggeredRef.current &&
+        !isChangingTrackRef.current &&
+        nextTrack
+      ) {
+        transitionAt2SecTriggeredRef.current = true;
+        isChangingTrackRef.current = true;
+        lastTrackChangeTimeRef.current = Date.now();
+        nextTrackPendingRef.current = true;
+        hasUserInteractedRef.current = true;
+
+        if ("mediaSession" in navigator && nextTrackHandlerRef.current) {
+          try {
+            nextTrackHandlerRef.current();
+          } catch (e) {
+            playNextTrack();
+          }
+        } else {
+          playNextTrack();
+        }
+
+        setTimeout(() => {
+          isChangingTrackRef.current = false;
+        }, 2000);
+      }
     }
-  }, [updateTime, currentTrack, playlist]);
+  }, [updateTime, currentTrack, playlist, playNextTrack]);
 
   // Handle loaded metadata
   const handleLoadedMetadata = useCallback(() => {
@@ -604,10 +635,11 @@ const Footer = () => {
     }
   }, [isPlaying]);
 
-  // Handle ended - auto-play next track
+  // Handle ended - auto-play next track (fallback if 2-sec-early transition missed)
   const handleEnded = useCallback(() => {
-    // Prevent multiple triggers
-    if (isChangingTrackRef.current) return;
+    // Prevent multiple triggers; skip if we already transitioned at 2 sec
+    if (isChangingTrackRef.current || transitionAt2SecTriggeredRef.current)
+      return;
 
     const isIOS =
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -787,8 +819,8 @@ const Footer = () => {
         const currentAudioTime = audio.currentTime;
         const timeRemaining = duration - currentAudioTime;
 
-        // If track is very close to end or past end
-        if (timeRemaining <= 0.5 && !audio.dataset.ending) {
+        // If track is within 2 sec of end (matches proactive transition)
+        if (timeRemaining <= 2 && !audio.dataset.ending) {
           audio.dataset.ending = "true";
           isChangingTrackRef.current = true;
           setPlaying(false);
