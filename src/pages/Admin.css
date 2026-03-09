@@ -417,6 +417,13 @@
   font-size: 0.85rem;
 }
 
+.admin-bulk-th-plays,
+.admin-bulk-td-plays {
+  text-align: center;
+  min-width: 60px;
+  font-variant-numeric: tabular-nums;
+}
+
 .admin-bulk-td-uuid {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -1716,10 +1723,128 @@ button .admin-icon-inline {
   overflow: hidden;
 }
 
+.admin-listening-chart-tabs-wrap {
+  border-bottom: 1px solid var(--nav-border);
+}
+
 .admin-listening-chart-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid var(--nav-border);
+}
+
+/* Mobile: custom dropdown */
+.admin-listening-chart-dropdown {
+  position: relative;
+  background-color: var(--nav-bg);
+}
+
+.admin-listening-chart-dropdown-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: var(--nav-bg);
+  border: none;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.admin-listening-chart-dropdown-toggle:hover {
+  background-color: var(--track-bg-hover);
+}
+
+.admin-listening-chart-dropdown-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.admin-listening-chart-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin-top: 2px;
+  padding: 0.25rem;
+  background-color: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 240px;
+  overflow-y: auto;
+  isolation: isolate;
+}
+
+.admin-listening-chart-dropdown-item {
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.2s, background-color 0.2s;
+  background-color: transparent;
+}
+
+.admin-listening-chart-dropdown-item:hover {
+  color: var(--text-primary);
+  background-color: var(--track-bg-hover);
+}
+
+.admin-listening-chart-dropdown-item--active {
+  color: var(--text-hover, #a78bfa);
+  font-weight: 600;
+  background-color: var(--track-bg-hover);
+}
+
+/* Dark mode: solid backgrounds for dropdown (no transparency) */
+[data-theme="dark"] .admin-listening-chart-dropdown,
+[data-theme="dark"] .admin-listening-chart-dropdown-toggle,
+[data-theme="dark"] .admin-listening-chart-dropdown-menu {
+  background-color: #1a1a1a;
+}
+
+[data-theme="dark"] .admin-listening-chart-dropdown-toggle:hover {
+  background-color: #252525;
+}
+
+[data-theme="dark"] .admin-listening-chart-dropdown-item:hover {
+  background-color: #252525;
+}
+
+[data-theme="dark"] .admin-listening-chart-dropdown-item--active {
+  background-color: #2d2440;
+}
+
+[data-theme="dark"] .admin-listening-chart-dropdown-menu {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Light mode: solid backgrounds for dropdown */
+[data-theme="light"] .admin-listening-chart-dropdown,
+[data-theme="light"] .admin-listening-chart-dropdown-toggle,
+[data-theme="light"] .admin-listening-chart-dropdown-menu {
+  background-color: #fff;
+}
+
+[data-theme="light"] .admin-listening-chart-dropdown-toggle:hover {
+  background-color: #f4f4f5;
+}
+
+[data-theme="light"] .admin-listening-chart-dropdown-item:hover {
+  background-color: #f4f4f5;
+}
+
+[data-theme="light"] .admin-listening-chart-dropdown-item--active {
+  background-color: #ede9fe;
+}
+
+[data-theme="light"] .admin-listening-chart-dropdown-menu {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .admin-listening-chart-tab {
@@ -1754,6 +1879,14 @@ button .admin-icon-inline {
   font-style: italic;
   text-align: center;
   padding: 2rem;
+}
+
+.admin-listening-songs-chart-title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
 }
 
 .admin-listening-bar-chart {

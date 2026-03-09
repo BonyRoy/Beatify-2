@@ -59,6 +59,7 @@ import {
   deleteFeedback,
   clearAllFeedback,
 } from "../services/feedbackService";
+import { fetchTrackPlayCounts } from "../services/trackPlayCountsService";
 import "./Admin.css";
 
 const SunIcon = () => (
@@ -165,6 +166,7 @@ const Admin = () => {
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const sortDropdownRef = useRef(null);
   const [bulkSearchQuery, setBulkSearchQuery] = useState("");
+  const [playCounts, setPlayCounts] = useState({});
   const [songRequests, setSongRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [clearingRequestId, setClearingRequestId] = useState(null);
@@ -185,6 +187,12 @@ const Admin = () => {
     useState("");
   const [expandedListeningIds, setExpandedListeningIds] = useState(new Set());
   const [listeningChartTab, setListeningChartTab] = useState("bar");
+  const [listeningChartDropdownOpen, setListeningChartDropdownOpen] =
+    useState(false);
+  const listeningChartDropdownRef = useRef(null);
+  const [isAdminMobile, setIsAdminMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= 768,
+  );
   const [messageModalAccount, setMessageModalAccount] = useState(null);
   const [messageModalSendToAll, setMessageModalSendToAll] = useState(false);
   const [messageSubject, setMessageSubject] = useState("");
@@ -250,6 +258,22 @@ const Admin = () => {
       fetchExistingTracks();
     }
   }, [isAuthenticated]);
+
+  const loadPlayCounts = () => {
+    fetchTrackPlayCounts().then(setPlayCounts).catch(() => setPlayCounts({}));
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadPlayCounts();
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if ((activeTab === "hip" || activeTab === "listening") && isAuthenticated) {
+      loadPlayCounts();
+    }
+  }, [activeTab, isAuthenticated]);
 
   useEffect(() => {
     if (activeTab === "hip" && existingTracks.length > 0) {
@@ -474,12 +498,26 @@ const Admin = () => {
       ) {
         setSortDropdownOpen(false);
       }
+      if (
+        listeningChartDropdownRef.current &&
+        !listeningChartDropdownRef.current.contains(e.target)
+      ) {
+        setListeningChartDropdownOpen(false);
+      }
     };
-    if (sortDropdownOpen) {
+    if (sortDropdownOpen || listeningChartDropdownOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [sortDropdownOpen]);
+  }, [sortDropdownOpen, listeningChartDropdownOpen]);
+
+  useEffect(() => {
+    const checkMobile = () =>
+      setIsAdminMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const fetchExistingTracks = async () => {
     try {
@@ -1199,6 +1237,11 @@ const Admin = () => {
           ? aVal.localeCompare(bVal)
           : bVal.localeCompare(aVal);
       }
+      if (sortBy === "playCount") {
+        const aVal = playCounts[a.uuid] ?? 0;
+        const bVal = playCounts[b.uuid] ?? 0;
+        return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+      }
       // uploadedAt: Firestore Timestamp or number
       const getTime = (t) => {
         const ts = t.uploadedAt;
@@ -1249,6 +1292,8 @@ const Admin = () => {
     },
     { field: "uploadedAt", order: "asc", label: "Upload Date (Oldest first)" },
     { field: "uploadedAt", order: "desc", label: "Upload Date (Newest first)" },
+    { field: "playCount", order: "desc", label: "Plays (Highest first)" },
+    { field: "playCount", order: "asc", label: "Plays (Lowest first)" },
   ];
 
   const activeSortLabel =
@@ -1804,6 +1849,7 @@ const Admin = () => {
                           <th className="admin-bulk-th">Genre</th>
                           <th className="admin-bulk-th">Album</th>
                           <th className="admin-bulk-th">Release Date</th>
+                          <th className="admin-bulk-th admin-bulk-th-plays">Plays</th>
                           <th className="admin-bulk-th admin-bulk-th-uuid">
                             UUID
                           </th>
@@ -1908,6 +1954,9 @@ const Admin = () => {
                                     }
                                     className="admin-bulk-input"
                                   />
+                                </td>
+                                <td className="admin-bulk-td admin-bulk-td-plays">
+                                  {playCounts[track.uuid] ?? 0}
                                 </td>
                                 <td className="admin-bulk-td admin-bulk-td-uuid">
                                   {track.uuid || "N/A"}
@@ -2601,24 +2650,165 @@ const Admin = () => {
                   ) : (
                     <>
                       <div className="admin-listening-charts">
-                        <div className="admin-listening-chart-tabs">
-                          <button
-                            type="button"
-                            className={`admin-listening-chart-tab ${listeningChartTab === "bar" ? "admin-listening-chart-tab--active" : ""}`}
-                            onClick={() => setListeningChartTab("bar")}
-                          >
-                            Bar chart
-                          </button>
-                          <button
-                            type="button"
-                            className={`admin-listening-chart-tab ${listeningChartTab === "pie" ? "admin-listening-chart-tab--active" : ""}`}
-                            onClick={() => setListeningChartTab("pie")}
-                          >
-                            Pie chart
-                          </button>
+                        <div className="admin-listening-chart-tabs-wrap">
+                          {isAdminMobile ? (
+                            <div
+                              className="admin-listening-chart-dropdown"
+                              ref={listeningChartDropdownRef}
+                            >
+                              <button
+                                type="button"
+                                className="admin-listening-chart-dropdown-toggle"
+                                onClick={() =>
+                                  setListeningChartDropdownOpen(
+                                    !listeningChartDropdownOpen,
+                                  )
+                                }
+                                aria-expanded={listeningChartDropdownOpen}
+                              >
+                                <span>
+                                  {listeningChartTab === "bar"
+                                    ? "Top Artists (Bar)"
+                                    : listeningChartTab === "pie"
+                                      ? "Top Artists (Pie)"
+                                      : "Top 10 Songs by Plays"}
+                                </span>
+                                <span className="admin-listening-chart-dropdown-arrow">
+                                  {listeningChartDropdownOpen ? (
+                                    <ChevronUp size={18} />
+                                  ) : (
+                                    <ChevronDown size={18} />
+                                  )}
+                                </span>
+                              </button>
+                              {listeningChartDropdownOpen && (
+                                <div className="admin-listening-chart-dropdown-menu">
+                                  {[
+                                    {
+                                      id: "bar",
+                                      label: "Top Artists (Bar)",
+                                    },
+                                    {
+                                      id: "pie",
+                                      label: "Top Artists (Pie)",
+                                    },
+                                    {
+                                      id: "songs",
+                                      label: "Top 10 Songs by Plays",
+                                    },
+                                  ].map((opt) => (
+                                    <div
+                                      key={opt.id}
+                                      className={`admin-listening-chart-dropdown-item ${
+                                        listeningChartTab === opt.id
+                                          ? "admin-listening-chart-dropdown-item--active"
+                                          : ""
+                                      }`}
+                                      onClick={() => {
+                                        setListeningChartTab(opt.id);
+                                        setListeningChartDropdownOpen(false);
+                                      }}
+                                    >
+                                      {opt.label}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="admin-listening-chart-tabs">
+                              <button
+                                type="button"
+                                className={`admin-listening-chart-tab ${listeningChartTab === "bar" ? "admin-listening-chart-tab--active" : ""}`}
+                                onClick={() => setListeningChartTab("bar")}
+                              >
+                                Top Artists (Bar)
+                              </button>
+                              <button
+                                type="button"
+                                className={`admin-listening-chart-tab ${listeningChartTab === "pie" ? "admin-listening-chart-tab--active" : ""}`}
+                                onClick={() => setListeningChartTab("pie")}
+                              >
+                                Top Artists (Pie)
+                              </button>
+                              <button
+                                type="button"
+                                className={`admin-listening-chart-tab ${listeningChartTab === "songs" ? "admin-listening-chart-tab--active" : ""}`}
+                                onClick={() => setListeningChartTab("songs")}
+                              >
+                                Top 10 Songs by Plays
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <div className="admin-listening-chart-panel">
-                          {listeningChartTab === "bar" ? (
+                          {listeningChartTab === "songs" ? (
+                            (() => {
+                              const uuidToName = {};
+                              existingTracks.forEach((t) => {
+                                if (t.uuid) uuidToName[t.uuid] = t.name || "Unknown";
+                              });
+                              const songData = Object.entries(playCounts)
+                                .map(([uuid, count]) => ({
+                                  name: uuidToName[uuid] || `Track ${uuid.slice(0, 8)}...`,
+                                  count,
+                                }))
+                                .sort((a, b) => b.count - a.count)
+                                .slice(0, 10);
+                              const maxCount = Math.max(
+                                ...songData.map((d) => d.count),
+                                1,
+                              );
+                              const SONG_BAR_COLORS = [
+                                "#a78bfa",
+                                "#2dd4bf",
+                                "#fbbf24",
+                                "#f472b6",
+                                "#60a5fa",
+                                "#34d399",
+                                "#c084fc",
+                                "#38bdf8",
+                                "#f97316",
+                                "#a3e635",
+                              ];
+                              return songData.length === 0 ? (
+                                <p className="admin-listening-chart-empty">
+                                  No play data yet. Songs will appear after users play them.
+                                </p>
+                              ) : (
+                                <>
+                                  <h4 className="admin-listening-songs-chart-title">
+                                    Bar graph of top 10 songs with most plays
+                                  </h4>
+                                  <div className="admin-listening-bar-chart">
+                                    {songData.map((d, i) => (
+                                      <div
+                                        key={d.name + i}
+                                        className="admin-listening-bar-row"
+                                      >
+                                        <span className="admin-listening-bar-label">
+                                          {d.name}
+                                        </span>
+                                        <div className="admin-listening-bar-wrap">
+                                          <div
+                                            className="admin-listening-bar-fill"
+                                            style={{
+                                              width: `${(d.count / maxCount) * 100}%`,
+                                              backgroundColor:
+                                                SONG_BAR_COLORS[i % SONG_BAR_COLORS.length],
+                                            }}
+                                          />
+                                        </div>
+                                        <span className="admin-listening-bar-value">
+                                          {d.count}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </>
+                              );
+                            })()
+                          ) : listeningChartTab === "bar" ? (
                             (() => {
                               const artistMap = {};
                               filtered.forEach((s) => {
