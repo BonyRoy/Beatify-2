@@ -11,6 +11,7 @@ import Playlist from "../components/Playlist";
 import { fetchMusicList } from "../services/musicService";
 import { usePlayer } from "../context/PlayerContext";
 import { useAlbumArt } from "../context/AlbumArtContext";
+import { useTrackPlayCounts } from "../context/TrackPlayCountsContext";
 import { useCreateAccount } from "../context/CreateAccountContext";
 import { useListeningHistory } from "../context/ListeningHistoryContext";
 import { fuzzyMatchesAny } from "../utils/searchUtils";
@@ -115,13 +116,6 @@ const ClockIconGradient = () => (
   </svg>
 );
 
-// Format file size from bytes to MB (matching reference implementation)
-const formatFileSize = (bytes) => {
-  if (!bytes) return "Unknown";
-  const mb = bytes / (1024 * 1024);
-  return `${mb.toFixed(1)} MB`;
-};
-
 // Extract year from releaseDate (handles "2020", "2020-01-15", "2020-01", etc.)
 const getYearFromReleaseDate = (releaseDate) => {
   if (!releaseDate) return null;
@@ -156,6 +150,7 @@ const MusicTrack = ({
   isPlaying = false,
 }) => {
   const { getAlbumArt, fetchAlbumArt } = useAlbumArt();
+  const { getPlayCount } = useTrackPlayCounts();
   const trackRowRef = useRef(null);
 
   // Use UUID if available, otherwise fall back to track ID (matching reference implementation)
@@ -192,13 +187,6 @@ const MusicTrack = ({
     observer.observe(el);
     return () => observer.disconnect();
   }, [track, albumArtUrl, fetchAlbumArt]);
-
-  // Format file size - handle both bytes (number) and string formats
-  const fileSize = track.fileSize
-    ? typeof track.fileSize === "number"
-      ? formatFileSize(track.fileSize)
-      : track.fileSize
-    : "Unknown";
 
   // Constant scrolling speed in pixels per second
   const SCROLL_SPEED = 15; // pixels per second
@@ -349,7 +337,11 @@ const MusicTrack = ({
             <FavoriteIcon filled={isFavorite} />
           </button>
         </div>
-        <p className="track-row__duration">{fileSize}</p>
+        <div className="track-row__meta">
+          <p className="track-row__plays">
+            {getPlayCount(trackIdentifier)} {getPlayCount(trackIdentifier) === 1 ? "play" : "plays"}
+          </p>
+        </div>
       </div>
     </div>
   );

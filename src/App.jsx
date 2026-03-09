@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { PlayerProvider } from './context/PlayerContext'
 import { AlbumArtProvider } from './context/AlbumArtContext'
 import { ListeningHistoryProvider } from './context/ListeningHistoryContext'
+import { TrackPlayCountsProvider } from './context/TrackPlayCountsContext'
 import { CreateAccountProvider } from './context/CreateAccountContext'
 import { RequestSongProvider } from './context/RequestSongContext'
 import { FeedbackProvider } from './context/FeedbackContext'
@@ -49,6 +50,7 @@ const App = () => {
         <RequestSongProvider>
         <FeedbackProvider>
         <ListeningHistoryProvider>
+          <TrackPlayCountsProvider>
           <PlayerProvider>
             <AlbumArtProvider>
               <ListeningHistoryTracker />
@@ -58,6 +60,7 @@ const App = () => {
               </Router>
             </AlbumArtProvider>
           </PlayerProvider>
+          </TrackPlayCountsProvider>
         </ListeningHistoryProvider>
         </FeedbackProvider>
         </RequestSongProvider>

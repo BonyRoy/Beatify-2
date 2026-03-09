@@ -43,5 +43,10 @@ service cloud.firestore {
       allow update, delete: if true;
     }
 
+    // Track play counts (global, per-track UUID)
+    match /trackPlayCounts/{document} {
+      allow read, create, update: if true;
+    }
+
   }
 }
