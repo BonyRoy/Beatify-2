@@ -44,6 +44,7 @@ import {
   Users,
   Headphones,
   X,
+  Settings,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import * as XLSX from "xlsx";
@@ -60,6 +61,14 @@ import {
   clearAllFeedback,
 } from "../services/feedbackService";
 import { fetchTrackPlayCounts } from "../services/trackPlayCountsService";
+import {
+  getAdminSettings,
+  updateAdminPassword,
+  createAdminSession,
+  verifyAdminSession,
+  invalidateAdminSession,
+  initAdminSettingsIfNeeded,
+} from "../services/adminSettingsService";
 import "./Admin.css";
 
 const SunIcon = () => (
@@ -199,6 +208,13 @@ const Admin = () => {
   const [messageBody, setMessageBody] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [accountsSearchQuery, setAccountsSearchQuery] = useState("");
+  const [settingsCurrentPwd, setSettingsCurrentPwd] = useState("");
+  const [settingsNewPwd, setSettingsNewPwd] = useState("");
+  const [settingsConfirmPwd, setSettingsConfirmPwd] = useState("");
+  const [settingsError, setSettingsError] = useState("");
+  const [settingsSuccess, setSettingsSuccess] = useState("");
+  const [settingsUpdating, setSettingsUpdating] = useState(false);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState("");
 
   const REQUEST_RECORDS_PER_PAGE = 10;
   const FEEDBACK_RECORDS_PER_PAGE = 10;
@@ -208,7 +224,6 @@ const Admin = () => {
   const excelFileInputRef = useRef(null);
 
   const BULK_RECORDS_PER_PAGE = 20;
-  const ADMIN_PASSWORD = "8369877891";
 
   const genres = [
     "Bollywood-Romantic",
@@ -246,10 +261,20 @@ const Admin = () => {
   const [artists, setArtists] = useState([]);
 
   useEffect(() => {
-    const authStatus = sessionStorage.getItem("adminAuthenticated");
-    if (authStatus === "true") {
-      setIsAuthenticated(true);
-      fetchExistingTracks();
+    initAdminSettingsIfNeeded();
+    sessionStorage.removeItem("adminAuthenticated");
+    const token = sessionStorage.getItem("adminSessionToken");
+    if (token) {
+      verifyAdminSession(token).then((valid) => {
+        if (valid) {
+          setIsAuthenticated(true);
+          fetchExistingTracks();
+          setSessionExpiredMessage("");
+        } else {
+          sessionStorage.removeItem("adminSessionToken");
+          setSessionExpiredMessage("Session expired. Please log in again.");
+        }
+      });
     }
   }, []);
 
@@ -259,8 +284,32 @@ const Admin = () => {
     }
   }, [isAuthenticated]);
 
+  // Periodic session verification - log out when token expires
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const token = sessionStorage.getItem("adminSessionToken");
+    if (!token) return;
+
+    const checkSession = () => {
+      verifyAdminSession(token).then((valid) => {
+        if (!valid) {
+          sessionStorage.removeItem("adminSessionToken");
+          invalidateAdminSession(token);
+          setSessionExpiredMessage("Session expired. Please log in again.");
+          setIsAuthenticated(false);
+        }
+      });
+    };
+
+    const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 1 min (match token expiry for testing)
+    const interval = setInterval(checkSession, SESSION_CHECK_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
   const loadPlayCounts = () => {
-    fetchTrackPlayCounts().then(setPlayCounts).catch(() => setPlayCounts({}));
+    fetchTrackPlayCounts()
+      .then(setPlayCounts)
+      .catch(() => setPlayCounts({}));
   };
 
   useEffect(() => {
@@ -463,8 +512,8 @@ const Admin = () => {
     setSendingMessage(true);
     try {
       if (messageModalSendToAll && messageModalAccount?.filteredAccounts) {
-        const targets = messageModalAccount.filteredAccounts.filter(
-          (a) => a.email?.trim(),
+        const targets = messageModalAccount.filteredAccounts.filter((a) =>
+          a.email?.trim(),
         );
         for (const acc of targets) {
           await createAdminMessageNotification({
@@ -512,8 +561,7 @@ const Admin = () => {
   }, [sortDropdownOpen, listeningChartDropdownOpen]);
 
   useEffect(() => {
-    const checkMobile = () =>
-      setIsAdminMobile(window.innerWidth <= 768);
+    const checkMobile = () => setIsAdminMobile(window.innerWidth <= 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -1160,16 +1208,24 @@ const Admin = () => {
     reader.readAsArrayBuffer(file);
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    if (passwordInput === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      setPasswordError("");
-      setPasswordInput("");
-      sessionStorage.setItem("adminAuthenticated", "true");
-    } else {
-      setPasswordError("Incorrect password. Please try again.");
-      setPasswordInput("");
+    const pwd = passwordInput.trim();
+    setPasswordInput("");
+    try {
+      const settings = await getAdminSettings();
+      if (pwd === settings.adminPassword) {
+        const token = await createAdminSession();
+        sessionStorage.setItem("adminSessionToken", token);
+        setIsAuthenticated(true);
+        setPasswordError("");
+        setSessionExpiredMessage("");
+        fetchExistingTracks();
+      } else {
+        setPasswordError("Incorrect password. Please try again.");
+      }
+    } catch (err) {
+      setPasswordError("Failed to verify. Please try again.");
     }
   };
 
@@ -1189,6 +1245,11 @@ const Admin = () => {
               onSubmit={handlePasswordSubmit}
               className="admin-password-form"
             >
+              {sessionExpiredMessage && (
+                <p className="admin-password-session-expired">
+                  {sessionExpiredMessage}
+                </p>
+              )}
               <div className="admin-password-input-group">
                 <input
                   type="password"
@@ -1196,6 +1257,7 @@ const Admin = () => {
                   onChange={(e) => {
                     setPasswordInput(e.target.value);
                     setPasswordError("");
+                    setSessionExpiredMessage("");
                   }}
                   placeholder="Enter password"
                   className="admin-password-input"
@@ -1397,6 +1459,13 @@ const Admin = () => {
             onClick={() => setActiveTab("listening")}
           >
             <Headphones size={18} className="admin-icon-inline" /> Listening
+          </button>
+          <button
+            type="button"
+            className={`admin-tab ${activeTab === "settings" ? "admin-tab--active" : ""}`}
+            onClick={() => setActiveTab("settings")}
+          >
+            <Settings size={18} className="admin-icon-inline" /> Settings
           </button>
         </div>
         <div className="admin-tab-content">
@@ -1849,7 +1918,9 @@ const Admin = () => {
                           <th className="admin-bulk-th">Genre</th>
                           <th className="admin-bulk-th">Album</th>
                           <th className="admin-bulk-th">Release Date</th>
-                          <th className="admin-bulk-th admin-bulk-th-plays">Plays</th>
+                          <th className="admin-bulk-th admin-bulk-th-plays">
+                            Plays
+                          </th>
                           <th className="admin-bulk-th admin-bulk-th-uuid">
                             UUID
                           </th>
@@ -2327,8 +2398,7 @@ const Admin = () => {
                           setFeedbackCurrentPage((p) =>
                             Math.min(
                               Math.ceil(
-                                feedbackList.length /
-                                  FEEDBACK_RECORDS_PER_PAGE,
+                                feedbackList.length / FEEDBACK_RECORDS_PER_PAGE,
                               ),
                               p + 1,
                             ),
@@ -2381,15 +2451,9 @@ const Admin = () => {
                       const filtered = q
                         ? accounts.filter(
                             (a) =>
-                              (a.name || "")
-                                .toLowerCase()
-                                .includes(q) ||
-                              (a.email || "")
-                                .toLowerCase()
-                                .includes(q) ||
-                              (a.uuid || "")
-                                .toLowerCase()
-                                .includes(q),
+                              (a.name || "").toLowerCase().includes(q) ||
+                              (a.email || "").toLowerCase().includes(q) ||
+                              (a.uuid || "").toLowerCase().includes(q),
                           )
                         : accounts;
                       if (filtered.length === 0) return;
@@ -2411,189 +2475,203 @@ const Admin = () => {
                 <div className="admin-empty-requests">
                   <p>No accounts yet.</p>
                 </div>
-              ) : (() => {
-                const q = accountsSearchQuery.trim().toLowerCase();
-                const filteredAccounts = q
-                  ? accounts.filter(
-                      (a) =>
-                        (a.name || "").toLowerCase().includes(q) ||
-                        (a.email || "").toLowerCase().includes(q) ||
-                        (a.uuid || "").toLowerCase().includes(q),
-                    )
-                  : accounts;
-                return filteredAccounts.length === 0 ? (
-                  <div className="admin-empty-requests">
-                    <p>No accounts match your search.</p>
-                  </div>
-                ) : (
-                <>
-                  <div className="admin-bulk-table-wrapper">
-                    <table className="admin-bulk-table admin-request-table">
-                      <thead>
-                        <tr>
-                          <th className="admin-bulk-th admin-bulk-th-num">#</th>
-                          <th className="admin-bulk-th">Name</th>
-                          <th className="admin-bulk-th">Email</th>
-                          <th className="admin-bulk-th admin-bulk-th-uuid">
-                            UUID
-                          </th>
-                          <th className="admin-bulk-th">Created</th>
-                          <th className="admin-bulk-th admin-bulk-th-action"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(() => {
-                          const q = accountsSearchQuery.trim().toLowerCase();
-                          const filteredAccounts = q
-                            ? accounts.filter(
-                                (a) =>
-                                  (a.name || "")
-                                    .toLowerCase()
-                                    .includes(q) ||
-                                  (a.email || "")
-                                    .toLowerCase()
-                                    .includes(q) ||
-                                  (a.uuid || "")
-                                    .toLowerCase()
-                                    .includes(q),
-                              )
-                            : accounts;
-                          const start =
-                            (accountsCurrentPage - 1) *
-                            ACCOUNTS_RECORDS_PER_PAGE;
-                          const paginatedAccounts = filteredAccounts.slice(
-                            start,
-                            start + ACCOUNTS_RECORDS_PER_PAGE,
-                          );
-                          return paginatedAccounts.map((acc, idx) => {
-                            const rowNum = start + idx + 1;
-                            const createdAt = acc.createdAt;
-                            let dateStr = "—";
-                            if (createdAt) {
-                              if (createdAt.toDate) {
-                                dateStr = createdAt.toDate().toLocaleString();
-                              } else if (typeof createdAt === "string") {
-                                dateStr = new Date(createdAt).toLocaleString();
+              ) : (
+                (() => {
+                  const q = accountsSearchQuery.trim().toLowerCase();
+                  const filteredAccounts = q
+                    ? accounts.filter(
+                        (a) =>
+                          (a.name || "").toLowerCase().includes(q) ||
+                          (a.email || "").toLowerCase().includes(q) ||
+                          (a.uuid || "").toLowerCase().includes(q),
+                      )
+                    : accounts;
+                  return filteredAccounts.length === 0 ? (
+                    <div className="admin-empty-requests">
+                      <p>No accounts match your search.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="admin-bulk-table-wrapper">
+                        <table className="admin-bulk-table admin-request-table">
+                          <thead>
+                            <tr>
+                              <th className="admin-bulk-th admin-bulk-th-num">
+                                #
+                              </th>
+                              <th className="admin-bulk-th">Name</th>
+                              <th className="admin-bulk-th">Email</th>
+                              <th className="admin-bulk-th admin-bulk-th-uuid">
+                                UUID
+                              </th>
+                              <th className="admin-bulk-th">Created</th>
+                              <th className="admin-bulk-th admin-bulk-th-action"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(() => {
+                              const q = accountsSearchQuery
+                                .trim()
+                                .toLowerCase();
+                              const filteredAccounts = q
+                                ? accounts.filter(
+                                    (a) =>
+                                      (a.name || "")
+                                        .toLowerCase()
+                                        .includes(q) ||
+                                      (a.email || "")
+                                        .toLowerCase()
+                                        .includes(q) ||
+                                      (a.uuid || "").toLowerCase().includes(q),
+                                  )
+                                : accounts;
+                              const start =
+                                (accountsCurrentPage - 1) *
+                                ACCOUNTS_RECORDS_PER_PAGE;
+                              const paginatedAccounts = filteredAccounts.slice(
+                                start,
+                                start + ACCOUNTS_RECORDS_PER_PAGE,
+                              );
+                              return paginatedAccounts.map((acc, idx) => {
+                                const rowNum = start + idx + 1;
+                                const createdAt = acc.createdAt;
+                                let dateStr = "—";
+                                if (createdAt) {
+                                  if (createdAt.toDate) {
+                                    dateStr = createdAt
+                                      .toDate()
+                                      .toLocaleString();
+                                  } else if (typeof createdAt === "string") {
+                                    dateStr = new Date(
+                                      createdAt,
+                                    ).toLocaleString();
+                                  }
+                                }
+                                return (
+                                  <tr key={acc.id} className="admin-bulk-tr">
+                                    <td className="admin-bulk-td admin-bulk-td-num">
+                                      {rowNum}
+                                    </td>
+                                    <td className="admin-bulk-td admin-bulk-td-name">
+                                      <span className="admin-account-name-cell">
+                                        {acc.name}
+                                        <button
+                                          type="button"
+                                          className="admin-account-message-btn"
+                                          onClick={() =>
+                                            handleOpenMessageModal(acc)
+                                          }
+                                          title="Send message"
+                                          aria-label="Send message"
+                                        >
+                                          <MessageSquare size={16} />
+                                        </button>
+                                      </span>
+                                    </td>
+                                    <td className="admin-bulk-td">
+                                      {acc.email ? (
+                                        <a
+                                          href={`mailto:${acc.email}`}
+                                          className="admin-request-contact-link"
+                                        >
+                                          {acc.email}
+                                        </a>
+                                      ) : (
+                                        "—"
+                                      )}
+                                    </td>
+                                    <td className="admin-bulk-td admin-bulk-td-uuid">
+                                      {acc.uuid || "—"}
+                                    </td>
+                                    <td className="admin-bulk-td admin-bulk-td-date">
+                                      {dateStr}
+                                    </td>
+                                    <td className="admin-bulk-td admin-bulk-td-action">
+                                      <button
+                                        type="button"
+                                        className="admin-request-clear-btn admin-account-delete-btn"
+                                        onClick={() =>
+                                          handleDeleteAccount(acc.id)
+                                        }
+                                        disabled={deletingAccountId === acc.id}
+                                        title="Delete account"
+                                        aria-label="Delete account"
+                                      >
+                                        <Trash2 size={18} />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              });
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                      {(() => {
+                        const q = accountsSearchQuery.trim().toLowerCase();
+                        const filteredAccounts = q
+                          ? accounts.filter(
+                              (a) =>
+                                (a.name || "").toLowerCase().includes(q) ||
+                                (a.email || "").toLowerCase().includes(q) ||
+                                (a.uuid || "").toLowerCase().includes(q),
+                            )
+                          : accounts;
+                        return filteredAccounts.length >
+                          ACCOUNTS_RECORDS_PER_PAGE ? (
+                          <div className="admin-bulk-pagination">
+                            <button
+                              type="button"
+                              className="admin-bulk-page-btn"
+                              onClick={() =>
+                                setAccountsCurrentPage((p) =>
+                                  Math.max(1, p - 1),
+                                )
                               }
-                            }
-                            return (
-                              <tr key={acc.id} className="admin-bulk-tr">
-                                <td className="admin-bulk-td admin-bulk-td-num">
-                                  {rowNum}
-                                </td>
-                                <td className="admin-bulk-td admin-bulk-td-name">
-                                  <span className="admin-account-name-cell">
-                                    {acc.name}
-                                    <button
-                                      type="button"
-                                      className="admin-account-message-btn"
-                                      onClick={() => handleOpenMessageModal(acc)}
-                                      title="Send message"
-                                      aria-label="Send message"
-                                    >
-                                      <MessageSquare size={16} />
-                                    </button>
-                                  </span>
-                                </td>
-                                <td className="admin-bulk-td">
-                                  {acc.email ? (
-                                    <a
-                                      href={`mailto:${acc.email}`}
-                                      className="admin-request-contact-link"
-                                    >
-                                      {acc.email}
-                                    </a>
-                                  ) : (
-                                    "—"
-                                  )}
-                                </td>
-                                <td className="admin-bulk-td admin-bulk-td-uuid">
-                                  {acc.uuid || "—"}
-                                </td>
-                                <td className="admin-bulk-td admin-bulk-td-date">
-                                  {dateStr}
-                                </td>
-                                <td className="admin-bulk-td admin-bulk-td-action">
-                                  <button
-                                    type="button"
-                                    className="admin-request-clear-btn admin-account-delete-btn"
-                                    onClick={() => handleDeleteAccount(acc.id)}
-                                    disabled={deletingAccountId === acc.id}
-                                    title="Delete account"
-                                    aria-label="Delete account"
-                                  >
-                                    <Trash2 size={18} />
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                  {(() => {
-                    const q = accountsSearchQuery.trim().toLowerCase();
-                    const filteredAccounts = q
-                      ? accounts.filter(
-                          (a) =>
-                            (a.name || "").toLowerCase().includes(q) ||
-                            (a.email || "").toLowerCase().includes(q) ||
-                            (a.uuid || "").toLowerCase().includes(q),
-                        )
-                      : accounts;
-                    return filteredAccounts.length >
-                      ACCOUNTS_RECORDS_PER_PAGE ? (
-                      <div className="admin-bulk-pagination">
-                        <button
-                          type="button"
-                          className="admin-bulk-page-btn"
-                          onClick={() =>
-                            setAccountsCurrentPage((p) => Math.max(1, p - 1))
-                          }
-                          disabled={accountsCurrentPage <= 1}
-                        >
-                          <ChevronLeft size={18} />
-                        </button>
-                        <span className="admin-bulk-page-info">
-                          Page {accountsCurrentPage} of{" "}
-                          {Math.ceil(
-                            filteredAccounts.length /
-                              ACCOUNTS_RECORDS_PER_PAGE,
-                          )}{" "}
-                          ({filteredAccounts.length} total
-                          {q ? " matching" : ""})
-                      </span>
-                      <button
-                        type="button"
-                        className="admin-bulk-page-btn"
-                        onClick={() =>
-                          setAccountsCurrentPage((p) =>
-                            Math.min(
-                              Math.ceil(
+                              disabled={accountsCurrentPage <= 1}
+                            >
+                              <ChevronLeft size={18} />
+                            </button>
+                            <span className="admin-bulk-page-info">
+                              Page {accountsCurrentPage} of{" "}
+                              {Math.ceil(
                                 filteredAccounts.length /
                                   ACCOUNTS_RECORDS_PER_PAGE,
-                              ),
-                              p + 1,
-                            ),
-                          )
-                        }
-                        disabled={
-                          accountsCurrentPage >=
-                          Math.ceil(
-                            filteredAccounts.length /
-                              ACCOUNTS_RECORDS_PER_PAGE,
-                          )
-                        }
-                      >
-                        <ChevronRight size={18} />
-                      </button>
-                    </div>
-                    ) : null;
-                  })()}
-                </>
-                );
-              })()}
+                              )}{" "}
+                              ({filteredAccounts.length} total
+                              {q ? " matching" : ""})
+                            </span>
+                            <button
+                              type="button"
+                              className="admin-bulk-page-btn"
+                              onClick={() =>
+                                setAccountsCurrentPage((p) =>
+                                  Math.min(
+                                    Math.ceil(
+                                      filteredAccounts.length /
+                                        ACCOUNTS_RECORDS_PER_PAGE,
+                                    ),
+                                    p + 1,
+                                  ),
+                                )
+                              }
+                              disabled={
+                                accountsCurrentPage >=
+                                Math.ceil(
+                                  filteredAccounts.length /
+                                    ACCOUNTS_RECORDS_PER_PAGE,
+                                )
+                              }
+                            >
+                              <ChevronRight size={18} />
+                            </button>
+                          </div>
+                        ) : null;
+                      })()}
+                    </>
+                  );
+                })()
+              )}
             </div>
           )}
           {activeTab === "listening" && (
@@ -2742,230 +2820,233 @@ const Admin = () => {
                           )}
                         </div>
                         <div className="admin-listening-chart-panel">
-                          {listeningChartTab === "songs" ? (
-                            (() => {
-                              const uuidToName = {};
-                              existingTracks.forEach((t) => {
-                                if (t.uuid) uuidToName[t.uuid] = t.name || "Unknown";
-                              });
-                              const songData = Object.entries(playCounts)
-                                .map(([uuid, count]) => ({
-                                  name: uuidToName[uuid] || `Track ${uuid.slice(0, 8)}...`,
-                                  count,
-                                }))
-                                .sort((a, b) => b.count - a.count)
-                                .slice(0, 10);
-                              const maxCount = Math.max(
-                                ...songData.map((d) => d.count),
-                                1,
-                              );
-                              const SONG_BAR_COLORS = [
-                                "#a78bfa",
-                                "#2dd4bf",
-                                "#fbbf24",
-                                "#f472b6",
-                                "#60a5fa",
-                                "#34d399",
-                                "#c084fc",
-                                "#38bdf8",
-                                "#f97316",
-                                "#a3e635",
-                              ];
-                              return songData.length === 0 ? (
-                                <p className="admin-listening-chart-empty">
-                                  No play data yet. Songs will appear after users play them.
-                                </p>
-                              ) : (
-                                <>
-                                  <h4 className="admin-listening-songs-chart-title">
-                                    Bar graph of top 10 songs with most plays
-                                  </h4>
-                                  <div className="admin-listening-bar-chart">
-                                    {songData.map((d, i) => (
-                                      <div
-                                        key={d.name + i}
-                                        className="admin-listening-bar-row"
-                                      >
-                                        <span className="admin-listening-bar-label">
-                                          {d.name}
-                                        </span>
-                                        <div className="admin-listening-bar-wrap">
-                                          <div
-                                            className="admin-listening-bar-fill"
-                                            style={{
-                                              width: `${(d.count / maxCount) * 100}%`,
-                                              backgroundColor:
-                                                SONG_BAR_COLORS[i % SONG_BAR_COLORS.length],
-                                            }}
-                                          />
-                                        </div>
-                                        <span className="admin-listening-bar-value">
-                                          {d.count}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </>
-                              );
-                            })()
-                          ) : listeningChartTab === "bar" ? (
-                            (() => {
-                              const artistMap = {};
-                              filtered.forEach((s) => {
-                                (s.top3Artists || []).forEach((a) => {
-                                  artistMap[a.name] =
-                                    (artistMap[a.name] || 0) + (a.count ?? 0);
+                          {listeningChartTab === "songs"
+                            ? (() => {
+                                const uuidToName = {};
+                                existingTracks.forEach((t) => {
+                                  if (t.uuid)
+                                    uuidToName[t.uuid] = t.name || "Unknown";
                                 });
-                              });
-                              const artistData = Object.entries(artistMap)
-                                .sort(([, a], [, b]) => b - a)
-                                .slice(0, 12)
-                                .map(([name, count]) => ({ name, count }));
-                              const maxCount = Math.max(
-                                ...artistData.map((d) => d.count),
-                                1,
-                              );
-                              const BAR_COLORS = [
-                                "#a78bfa",
-                                "#2dd4bf",
-                                "#fbbf24",
-                                "#f472b6",
-                                "#60a5fa",
-                                "#34d399",
-                                "#c084fc",
-                                "#38bdf8",
-                                "#f97316",
-                                "#a3e635",
-                                "#818cf8",
-                                "#f0abfc",
-                              ];
-                              return artistData.length === 0 ? (
-                                <p className="admin-listening-chart-empty">
-                                  No artist data yet
-                                </p>
-                              ) : (
-                                <div className="admin-listening-bar-chart">
-                                  {artistData.map((d, i) => (
-                                    <div
-                                      key={d.name}
-                                      className="admin-listening-bar-row"
-                                    >
-                                      <span className="admin-listening-bar-label">
-                                        {d.name}
-                                      </span>
-                                      <div className="admin-listening-bar-wrap">
+                                const songData = Object.entries(playCounts)
+                                  .map(([uuid, count]) => ({
+                                    name:
+                                      uuidToName[uuid] ||
+                                      `Track ${uuid.slice(0, 8)}...`,
+                                    count,
+                                  }))
+                                  .sort((a, b) => b.count - a.count)
+                                  .slice(0, 10);
+                                const maxCount = Math.max(
+                                  ...songData.map((d) => d.count),
+                                  1,
+                                );
+                                const SONG_BAR_COLORS = [
+                                  "#a78bfa",
+                                  "#2dd4bf",
+                                  "#fbbf24",
+                                  "#f472b6",
+                                  "#60a5fa",
+                                  "#34d399",
+                                  "#c084fc",
+                                  "#38bdf8",
+                                  "#f97316",
+                                  "#a3e635",
+                                ];
+                                return songData.length === 0 ? (
+                                  <p className="admin-listening-chart-empty">
+                                    No play data yet. Songs will appear after
+                                    users play them.
+                                  </p>
+                                ) : (
+                                  <>
+                                    <h4 className="admin-listening-songs-chart-title">
+                                      Bar graph of top 10 songs with most plays
+                                    </h4>
+                                    <div className="admin-listening-bar-chart">
+                                      {songData.map((d, i) => (
                                         <div
-                                          className="admin-listening-bar-fill"
-                                          style={{
-                                            width: `${(d.count / maxCount) * 100}%`,
-                                            backgroundColor:
-                                              BAR_COLORS[i % BAR_COLORS.length],
-                                          }}
-                                        />
-                                      </div>
-                                      <span className="admin-listening-bar-value">
-                                        {d.count}
-                                      </span>
+                                          key={d.name + i}
+                                          className="admin-listening-bar-row"
+                                        >
+                                          <span className="admin-listening-bar-label">
+                                            {d.name}
+                                          </span>
+                                          <div className="admin-listening-bar-wrap">
+                                            <div
+                                              className="admin-listening-bar-fill"
+                                              style={{
+                                                width: `${(d.count / maxCount) * 100}%`,
+                                                backgroundColor:
+                                                  SONG_BAR_COLORS[
+                                                    i % SONG_BAR_COLORS.length
+                                                  ],
+                                              }}
+                                            />
+                                          </div>
+                                          <span className="admin-listening-bar-value">
+                                            {d.count}
+                                          </span>
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
-                                </div>
-                              );
-                            })()
-                          ) : (
-                            (() => {
-                              const artistMap = {};
-                              filtered.forEach((s) => {
-                                (s.top3Artists || []).forEach((a) => {
-                                  artistMap[a.name] =
-                                    (artistMap[a.name] || 0) + (a.count ?? 0);
-                                });
-                              });
-                              const artistData = Object.entries(artistMap)
-                                .sort(([, a], [, b]) => b - a)
-                                .slice(0, 10)
-                                .map(([name, count]) => ({ name, count }));
-                              const total = artistData.reduce(
-                                (a, d) => a + d.count,
-                                0,
-                              );
-                              const COLORS = [
-                                "#a78bfa",
-                                "#2dd4bf",
-                                "#fbbf24",
-                                "#f472b6",
-                                "#60a5fa",
-                                "#34d399",
-                                "#c084fc",
-                                "#38bdf8",
-                                "#f97316",
-                                "#a3e635",
-                              ];
-                              let acc = 0;
-                              return artistData.length === 0 ? (
-                                <p className="admin-listening-chart-empty">
-                                  No artist data yet
-                                </p>
-                              ) : (
-                                <div className="admin-listening-pie-wrap">
-                                  <svg
-                                    viewBox="0 0 100 100"
-                                    className="admin-listening-pie-svg"
-                                  >
-                                    {artistData.map((d, i) => {
-                                      const pct = total
-                                        ? (d.count / total) * 100
-                                        : 0;
-                                      const start = (acc / 100) * 360;
-                                      acc += pct;
-                                      const sweep = (pct / 100) * 360;
-                                      const rad = (deg) =>
-                                        (deg * Math.PI) / 180;
-                                      const x1 =
-                                        50 + 40 * Math.cos(rad(start - 90));
-                                      const y1 =
-                                        50 + 40 * Math.sin(rad(start - 90));
-                                      const x2 =
-                                        50 +
-                                        40 *
-                                          Math.cos(
-                                            rad(start + sweep - 90),
-                                          );
-                                      const y2 =
-                                        50 +
-                                        40 *
-                                          Math.sin(
-                                            rad(start + sweep - 90),
-                                          );
-                                      const large =
-                                        sweep > 180 ? 1 : 0;
-                                      const path = `M 50 50 L ${x1} ${y1} A 40 40 0 ${large} 1 ${x2} ${y2} Z`;
-                                      return (
-                                        <path
+                                  </>
+                                );
+                              })()
+                            : listeningChartTab === "bar"
+                              ? (() => {
+                                  const artistMap = {};
+                                  filtered.forEach((s) => {
+                                    (s.top3Artists || []).forEach((a) => {
+                                      artistMap[a.name] =
+                                        (artistMap[a.name] || 0) +
+                                        (a.count ?? 0);
+                                    });
+                                  });
+                                  const artistData = Object.entries(artistMap)
+                                    .sort(([, a], [, b]) => b - a)
+                                    .slice(0, 12)
+                                    .map(([name, count]) => ({ name, count }));
+                                  const maxCount = Math.max(
+                                    ...artistData.map((d) => d.count),
+                                    1,
+                                  );
+                                  const BAR_COLORS = [
+                                    "#a78bfa",
+                                    "#2dd4bf",
+                                    "#fbbf24",
+                                    "#f472b6",
+                                    "#60a5fa",
+                                    "#34d399",
+                                    "#c084fc",
+                                    "#38bdf8",
+                                    "#f97316",
+                                    "#a3e635",
+                                    "#818cf8",
+                                    "#f0abfc",
+                                  ];
+                                  return artistData.length === 0 ? (
+                                    <p className="admin-listening-chart-empty">
+                                      No artist data yet
+                                    </p>
+                                  ) : (
+                                    <div className="admin-listening-bar-chart">
+                                      {artistData.map((d, i) => (
+                                        <div
                                           key={d.name}
-                                          d={path}
-                                          fill={COLORS[i % COLORS.length]}
-                                        />
-                                      );
-                                    })}
-                                  </svg>
-                                  <ul className="admin-listening-pie-legend">
-                                    {artistData.map((d, i) => (
-                                      <li key={d.name}>
-                                        <span
-                                          className="admin-listening-pie-dot"
-                                          style={{
-                                            backgroundColor:
-                                              COLORS[i % COLORS.length],
-                                          }}
-                                        />
-                                        {d.name} ({d.count})
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              );
-                            })()
-                          )}
+                                          className="admin-listening-bar-row"
+                                        >
+                                          <span className="admin-listening-bar-label">
+                                            {d.name}
+                                          </span>
+                                          <div className="admin-listening-bar-wrap">
+                                            <div
+                                              className="admin-listening-bar-fill"
+                                              style={{
+                                                width: `${(d.count / maxCount) * 100}%`,
+                                                backgroundColor:
+                                                  BAR_COLORS[
+                                                    i % BAR_COLORS.length
+                                                  ],
+                                              }}
+                                            />
+                                          </div>
+                                          <span className="admin-listening-bar-value">
+                                            {d.count}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                })()
+                              : (() => {
+                                  const artistMap = {};
+                                  filtered.forEach((s) => {
+                                    (s.top3Artists || []).forEach((a) => {
+                                      artistMap[a.name] =
+                                        (artistMap[a.name] || 0) +
+                                        (a.count ?? 0);
+                                    });
+                                  });
+                                  const artistData = Object.entries(artistMap)
+                                    .sort(([, a], [, b]) => b - a)
+                                    .slice(0, 10)
+                                    .map(([name, count]) => ({ name, count }));
+                                  const total = artistData.reduce(
+                                    (a, d) => a + d.count,
+                                    0,
+                                  );
+                                  const COLORS = [
+                                    "#a78bfa",
+                                    "#2dd4bf",
+                                    "#fbbf24",
+                                    "#f472b6",
+                                    "#60a5fa",
+                                    "#34d399",
+                                    "#c084fc",
+                                    "#38bdf8",
+                                    "#f97316",
+                                    "#a3e635",
+                                  ];
+                                  let acc = 0;
+                                  return artistData.length === 0 ? (
+                                    <p className="admin-listening-chart-empty">
+                                      No artist data yet
+                                    </p>
+                                  ) : (
+                                    <div className="admin-listening-pie-wrap">
+                                      <svg
+                                        viewBox="0 0 100 100"
+                                        className="admin-listening-pie-svg"
+                                      >
+                                        {artistData.map((d, i) => {
+                                          const pct = total
+                                            ? (d.count / total) * 100
+                                            : 0;
+                                          const start = (acc / 100) * 360;
+                                          acc += pct;
+                                          const sweep = (pct / 100) * 360;
+                                          const rad = (deg) =>
+                                            (deg * Math.PI) / 180;
+                                          const x1 =
+                                            50 + 40 * Math.cos(rad(start - 90));
+                                          const y1 =
+                                            50 + 40 * Math.sin(rad(start - 90));
+                                          const x2 =
+                                            50 +
+                                            40 *
+                                              Math.cos(rad(start + sweep - 90));
+                                          const y2 =
+                                            50 +
+                                            40 *
+                                              Math.sin(rad(start + sweep - 90));
+                                          const large = sweep > 180 ? 1 : 0;
+                                          const path = `M 50 50 L ${x1} ${y1} A 40 40 0 ${large} 1 ${x2} ${y2} Z`;
+                                          return (
+                                            <path
+                                              key={d.name}
+                                              d={path}
+                                              fill={COLORS[i % COLORS.length]}
+                                            />
+                                          );
+                                        })}
+                                      </svg>
+                                      <ul className="admin-listening-pie-legend">
+                                        {artistData.map((d, i) => (
+                                          <li key={d.name}>
+                                            <span
+                                              className="admin-listening-pie-dot"
+                                              style={{
+                                                backgroundColor:
+                                                  COLORS[i % COLORS.length],
+                                              }}
+                                            />
+                                            {d.name} ({d.count})
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  );
+                                })()}
                         </div>
                       </div>
                       <div className="admin-listening-summary">
@@ -2980,7 +3061,9 @@ const Admin = () => {
                         {(() => {
                           const getArtistFromSong = (song) =>
                             (song.artist || "")
-                              .split(/\s*[,&|]\s*|\s+feat\.?\s+|\s+ft\.?\s+/i)[0]
+                              .split(
+                                /\s*[,&|]\s*|\s+feat\.?\s+|\s+ft\.?\s+/i,
+                              )[0]
                               ?.trim() || "Unknown";
                           const getPlaysInRange = (msAgo) => {
                             const cutoff = Date.now() - msAgo;
@@ -3063,7 +3146,8 @@ const Admin = () => {
                             const now = Date.now();
                             const ms = now - t.getTime();
                             const days = Math.floor(ms / (24 * 60 * 60 * 1000));
-                            if (days < 1) return { label: "Today", tier: "new" };
+                            if (days < 1)
+                              return { label: "Today", tier: "new" };
                             if (days < 7)
                               return { label: `${days}d`, tier: "new" };
                             if (days < 30)
@@ -3344,6 +3428,127 @@ const Admin = () => {
               )}
             </div>
           )}
+          {activeTab === "settings" && (
+            <div className="admin-hip-tab admin-settings-tab">
+              <div className="admin-bulk-header">
+                <h2>
+                  <Settings size={22} className="admin-icon-inline" /> Admin
+                  Settings
+                </h2>
+                <p className="admin-bulk-subtitle">
+                  Change admin password and manage security settings.
+                </p>
+              </div>
+              <div className="admin-settings-form-wrap">
+                <form
+                  className="admin-settings-form"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setSettingsError("");
+                    setSettingsSuccess("");
+                    if (settingsNewPwd !== settingsConfirmPwd) {
+                      setSettingsError("New passwords do not match.");
+                      return;
+                    }
+                    setSettingsUpdating(true);
+                    const result = await updateAdminPassword(
+                      settingsCurrentPwd,
+                      settingsNewPwd,
+                    );
+                    setSettingsUpdating(false);
+                    if (result.success) {
+                      setSettingsSuccess("Password updated successfully.");
+                      setSettingsCurrentPwd("");
+                      setSettingsNewPwd("");
+                      setSettingsConfirmPwd("");
+                    } else {
+                      setSettingsError(result.error || "Update failed.");
+                    }
+                  }}
+                >
+                  <div className="admin-settings-field">
+                    <label htmlFor="admin-settings-current-pwd">
+                      Current password
+                    </label>
+                    <input
+                      id="admin-settings-current-pwd"
+                      type="password"
+                      value={settingsCurrentPwd}
+                      onChange={(e) => {
+                        setSettingsCurrentPwd(e.target.value);
+                        setSettingsError("");
+                      }}
+                      placeholder="Enter current password"
+                      className="admin-settings-input"
+                      required
+                    />
+                  </div>
+                  <div className="admin-settings-field">
+                    <label htmlFor="admin-settings-new-pwd">
+                      New password (min 6 characters)
+                    </label>
+                    <input
+                      id="admin-settings-new-pwd"
+                      type="password"
+                      value={settingsNewPwd}
+                      onChange={(e) => {
+                        setSettingsNewPwd(e.target.value);
+                        setSettingsError("");
+                      }}
+                      placeholder="Enter new password"
+                      className="admin-settings-input"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+                  <div className="admin-settings-field">
+                    <label htmlFor="admin-settings-confirm-pwd">
+                      Confirm new password
+                    </label>
+                    <input
+                      id="admin-settings-confirm-pwd"
+                      type="password"
+                      value={settingsConfirmPwd}
+                      onChange={(e) => {
+                        setSettingsConfirmPwd(e.target.value);
+                        setSettingsError("");
+                      }}
+                      placeholder="Confirm new password"
+                      className="admin-settings-input"
+                      required
+                    />
+                  </div>
+                  {settingsError && (
+                    <p className="admin-settings-error">{settingsError}</p>
+                  )}
+                  {settingsSuccess && (
+                    <p className="admin-settings-success">{settingsSuccess}</p>
+                  )}
+                  <button
+                    type="submit"
+                    className="admin-settings-submit"
+                    disabled={settingsUpdating}
+                  >
+                    {settingsUpdating ? "Updating..." : "Update Password"}
+                  </button>
+                </form>
+                <div className="admin-settings-logout">
+                  <button
+                    type="button"
+                    className="admin-settings-logout-btn"
+                    onClick={async () => {
+                      const token = sessionStorage.getItem("adminSessionToken");
+                      await invalidateAdminSession(token);
+                      sessionStorage.removeItem("adminSessionToken");
+                      setIsAuthenticated(false);
+                    }}
+                  >
+                    <Lock size={18} className="admin-icon-inline" /> Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -3375,7 +3580,9 @@ const Admin = () => {
                   : "This will appear in the user&apos;s notification center."}
               </p>
               <div className="admin-message-modal__field">
-                <label htmlFor="admin-message-subject">Subject (optional)</label>
+                <label htmlFor="admin-message-subject">
+                  Subject (optional)
+                </label>
                 <input
                   id="admin-message-subject"
                   type="text"

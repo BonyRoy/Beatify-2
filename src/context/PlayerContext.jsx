@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState } from "react";
 import { useListeningHistory } from "./ListeningHistoryContext";
-import { useTrackPlayCounts } from "./TrackPlayCountsContext";
 
 const PlayerContext = createContext();
 
@@ -12,7 +11,6 @@ export const usePlayer = () => {
 
 export const PlayerProvider = ({ children }) => {
   const { recordArtistPlay, recordTrackPlay } = useListeningHistory();
-  const { incrementPlayCount } = useTrackPlayCounts();
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -21,6 +19,12 @@ export const PlayerProvider = ({ children }) => {
   const [playlist, setPlaylist] = useState([]);
 
   const selectTrack = (track, tracksList = null) => {
+    // Same track already playing: don't reload, don't update, don't count
+    const currentId = currentTrack?.uuid || currentTrack?.id;
+    const trackId = track?.uuid || track?.id;
+    if (track && currentId && trackId && currentId === trackId) {
+      return;
+    }
     setCurrentTrack(track);
     setCurrentTime(0);
     setIsPlaying(true);
@@ -28,7 +32,7 @@ export const PlayerProvider = ({ children }) => {
     if (track) {
       if (track.artist) recordArtistPlay(track.artist);
       recordTrackPlay(track);
-      incrementPlayCount(track);
+      // Play count is incremented in Footer after 30 sec of playback
     }
     // Update playlist if tracksList is provided
     if (tracksList && Array.isArray(tracksList)) {

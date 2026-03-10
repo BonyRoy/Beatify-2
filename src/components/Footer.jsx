@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useAlbumArt } from "../context/AlbumArtContext";
+import { useTrackPlayCounts } from "../context/TrackPlayCountsContext";
 import {
   extractDominantColors,
   toDarkGradientColors,
@@ -121,6 +122,7 @@ const SpinnerIcon = () => (
 
 const Footer = () => {
   const { getAlbumArt, fetchAlbumArt } = useAlbumArt();
+  const { incrementPlayCount } = useTrackPlayCounts();
   const {
     currentTrack,
     isPlaying,
@@ -178,6 +180,7 @@ const Footer = () => {
   const preloadAudioRef = useRef(null);
   const preloadStartedRef = useRef(false);
   const transitionAt2SecTriggeredRef = useRef(false);
+  const playCountIncrementedRef = useRef(false);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -457,20 +460,33 @@ const Footer = () => {
     }
   }, [volume]);
 
-  // Reset preload and transition flags when track changes
+  // Reset preload, transition, and play-count flags when track changes
   useEffect(() => {
     preloadStartedRef.current = false;
     transitionAt2SecTriggeredRef.current = false;
+    playCountIncrementedRef.current = false;
     if (preloadAudioRef.current) {
       preloadAudioRef.current.src = "";
     }
   }, [currentTrack]);
+
+  const PLAY_COUNT_THRESHOLD_SEC = 30;
 
   // Handle time updates
   const handleTimeUpdate = useCallback(() => {
     if (audioRef.current) {
       const currentTime = audioRef.current.currentTime;
       updateTime(currentTime);
+
+      // Increment play count only after 30 sec of playback (once per track)
+      if (
+        currentTrack &&
+        currentTime >= PLAY_COUNT_THRESHOLD_SEC &&
+        !playCountIncrementedRef.current
+      ) {
+        playCountIncrementedRef.current = true;
+        incrementPlayCount(currentTrack);
+      }
 
       const audioDuration = audioRef.current.duration;
       if (!(audioDuration > 0 && currentTrack && playlist.length > 0)) return;
@@ -486,10 +502,10 @@ const Footer = () => {
             ? playlist[0]
             : null;
 
-      // Preload next track when 10 seconds remaining (does not stop current)
+      // Preload next track when 5 seconds remaining (does not stop current)
       if (
-        audioDuration > 10 &&
-        currentTime >= audioDuration - 10 &&
+        audioDuration > 5 &&
+        currentTime >= audioDuration - 5 &&
         !preloadStartedRef.current &&
         nextTrack
       ) {
@@ -533,7 +549,7 @@ const Footer = () => {
         }, 2000);
       }
     }
-  }, [updateTime, currentTrack, playlist, playNextTrack]);
+  }, [updateTime, currentTrack, playlist, playNextTrack, incrementPlayCount]);
 
   // Handle loaded metadata
   const handleLoadedMetadata = useCallback(() => {

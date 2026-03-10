@@ -339,7 +339,8 @@ const MusicTrack = ({
         </div>
         <div className="track-row__meta">
           <p className="track-row__plays">
-            {getPlayCount(trackIdentifier)} {getPlayCount(trackIdentifier) === 1 ? "play" : "plays"}
+            {getPlayCount(trackIdentifier)}{" "}
+            {getPlayCount(trackIdentifier) === 1 ? "play" : "plays"}
           </p>
         </div>
       </div>

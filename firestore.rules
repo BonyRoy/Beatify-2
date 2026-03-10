@@ -48,5 +48,15 @@ service cloud.firestore {
       allow read, create, update: if true;
     }
 
+    // Admin settings (password etc.) - restrict in production
+    match /adminSettings/{document} {
+      allow read, write: if true;
+    }
+
+    // Admin session tokens - for session verification
+    match /adminValidSessions/{document} {
+      allow read, create, update, delete: if true;
+    }
+
   }
 }
