@@ -2682,7 +2682,7 @@ const Admin = () => {
                   Listening Activity
                 </h2>
                 <p className="admin-bulk-subtitle">
-                  Last 10 listened songs and top 3 artists per user (logged-in
+                  Last 50 listened songs and top 3 artists per user (logged-in
                   only).
                 </p>
                 <div className="admin-search-sort-row admin-listening-search-row">

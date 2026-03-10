@@ -679,7 +679,7 @@ const Home = () => {
   const selectedPlaylist = searchParams.get("playlist");
   const selectedEra = searchParams.get("era") || "";
   const searchQuery = searchParams.get("search") || "";
-  const { selectTrack, currentTrack, setPlaylist, isPlaying } = usePlayer();
+  const { selectTrack, currentTrack, setPlaylist, setFullMusicList, isPlaying } = usePlayer();
   const { openRequestSong } = useRequestSong();
   const { openFeedback } = useFeedback();
   const { isLoggedIn } = useCreateAccount();
@@ -803,6 +803,7 @@ const Home = () => {
       setError(null);
       const tracks = await fetchMusicList();
       setMusicList(tracks);
+      setFullMusicList(tracks);
     } catch (err) {
       console.error("Error loading music list:", err);
       setError(
@@ -976,11 +977,16 @@ const Home = () => {
     setSelectedTrack(null);
   };
 
-  // Tracks to display (first N for lazy load)
-  const visibleTracks = useMemo(
-    () => sortedMusicList.slice(0, visibleCount),
-    [sortedMusicList, visibleCount],
-  );
+  // Tracks to display (first N for lazy load). Put currently playing track at top when in list.
+  const visibleTracks = useMemo(() => {
+    const slice = sortedMusicList.slice(0, visibleCount);
+    if (!currentTrack) return slice;
+    const currentId = currentTrack.uuid || currentTrack.id;
+    const idx = sortedMusicList.findIndex((t) => (t.uuid || t.id) === currentId);
+    if (idx < 0) return slice;
+    const rest = sortedMusicList.filter((t) => (t.uuid || t.id) !== currentId);
+    return [currentTrack, ...rest.slice(0, visibleCount - 1)];
+  }, [sortedMusicList, visibleCount, currentTrack]);
   const hasMore = visibleCount < sortedMusicList.length;
 
   // Load more on scroll

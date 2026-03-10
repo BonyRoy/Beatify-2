@@ -4,10 +4,10 @@ import { db } from "../firebase/config";
 const COLLECTION = "userListeningStats";
 
 /**
- * Save or update listening stats for a user (last 10 songs, top 3 artists, favorites)
+ * Save or update listening stats for a user (last 50 songs, top 3 artists, favorites)
  * @param {string} accountId - Firestore account document ID
  * @param {string} userName - Display name
- * @param {Array<{uuid, name, artist, album}>} last10Songs
+ * @param {Array<{uuid, name, artist, album}>} lastSongs - up to 50 songs
  * @param {Array<{name, count}>} top3Artists
  * @param {Array<string>} favorites - Track UUIDs
  */

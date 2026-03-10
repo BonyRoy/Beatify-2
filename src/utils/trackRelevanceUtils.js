@@ -50,7 +50,7 @@ const trackMatchesArtist = (track, artistName) => {
  *
  * @param {Object} track - { artist, genre, uuid, releaseDate }
  * @param {Array<{name, count}>} topArtists - Top 3 artists from listening history
- * @param {Array<{uuid, artist}>} lastSongs - Last 10 listened songs
+ * @param {Array<{uuid, artist}>} lastSongs - Last 50 listened songs
  * @param {Map<string, string>} uuidToGenre - Map of track uuid -> genre (from musicList)
  * @param {Set<string>} listenedUuids - UUIDs of songs user has listened to (for discovery)
  * @param {Set<string>} preferredEras - Eras from user's listening (70s, 80s, etc.)
@@ -69,6 +69,15 @@ export const getTrackRelevanceScore = (
   const trackArtist = track.artist || "";
   const trackGenre = (track.genre || "").trim().toLowerCase();
   const trackId = track.uuid || track.id;
+
+  // Penalty: recently played songs should not be re-recommended (position-based)
+  const recentIndex = lastSongs.findIndex((s) => (s.uuid || s.id) === trackId);
+  if (recentIndex >= 0) {
+    if (recentIndex < 10) score -= 200;      // last 10: very strong
+    else if (recentIndex < 25) score -= 140; // 11–25: strong
+    else if (recentIndex < 40) score -= 80;  // 26–40: medium
+    else score -= 40;                         // 41–50: light
+  }
 
   // Discovery: prefer NEW songs user hasn't listened to (+40)
   const isNew = trackId && !listenedUuids.has(trackId);

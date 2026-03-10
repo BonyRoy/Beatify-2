@@ -15,7 +15,7 @@ export const dispatchFavoritesChanged = () => {
 };
 
 /**
- * When user is logged in, sync last 10 songs, top 3 artists, and favorites to Firestore.
+ * When user is logged in, sync last 50 songs, top 3 artists, and favorites to Firestore.
  * Fetches favorites from cloud on login for cross-device sync.
  */
 const ListeningStatsSync = () => {
@@ -89,7 +89,7 @@ const ListeningStatsSync = () => {
     return () => window.removeEventListener(FAVORITES_CHANGED, handler);
   }, []);
 
-  // Sync to Firestore (last 10 songs, top 3 artists, favorites)
+  // Sync to Firestore (last 50 songs, top 3 artists, favorites)
   useEffect(() => {
     const id = resolvedAccountId || accountId;
     if (!isLoggedIn || !id) return;

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 const STORAGE_KEY = "artistPlayCounts";
 const STORAGE_LAST_SONGS = "beatify_last10_songs";
-const MAX_LAST_SONGS = 10;
+const MAX_LAST_SONGS = 50;
 
 const ListeningHistoryContext = createContext();
 

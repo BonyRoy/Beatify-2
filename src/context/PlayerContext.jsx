@@ -1,7 +1,44 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { useListeningHistory } from "./ListeningHistoryContext";
 
 const PlayerContext = createContext();
+const SESSION_PLAYED_KEY = "beatify_session_played";
+const SESSION_PLAYED_MAX = 100;
+
+const getSessionPlayedArray = () => {
+  try {
+    const raw = sessionStorage.getItem(SESSION_PLAYED_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+};
+
+const getSessionPlayedIds = () => new Set(getSessionPlayedArray());
+
+const addToSessionPlayed = (id) => {
+  if (!id) return;
+  const sid = String(id).trim();
+  if (!sid) return;
+  try {
+    const arr = getSessionPlayedArray();
+    if (arr.some((x) => String(x) === sid)) return;
+    arr.push(sid);
+    if (arr.length > SESSION_PLAYED_MAX) {
+      arr.shift();
+    }
+    sessionStorage.setItem(SESSION_PLAYED_KEY, JSON.stringify(arr));
+  } catch (e) {
+    console.warn("Failed to save session played:", e);
+  }
+};
+
+const clearSessionPlayed = () => {
+  try {
+    sessionStorage.removeItem(SESSION_PLAYED_KEY);
+  } catch {}
+};
 
 export const usePlayer = () => {
   const ctx = useContext(PlayerContext);
@@ -11,12 +48,18 @@ export const usePlayer = () => {
 
 export const PlayerProvider = ({ children }) => {
   const { recordArtistPlay, recordTrackPlay } = useListeningHistory();
+
+  // Clear session-played list on app load/reload
+  useEffect(() => {
+    clearSessionPlayed();
+  }, []);
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const [playlist, setPlaylist] = useState([]);
+  const [fullMusicList, setFullMusicList] = useState([]);
 
   const selectTrack = (track, tracksList = null) => {
     // Same track already playing: don't reload, don't update, don't count
@@ -32,6 +75,8 @@ export const PlayerProvider = ({ children }) => {
     if (track) {
       if (track.artist) recordArtistPlay(track.artist);
       recordTrackPlay(track);
+      const tid = track.uuid ?? track.id;
+      if (tid) addToSessionPlayed(String(tid));
       // Play count is incremented in Footer after 30 sec of playback
     }
     // Update playlist if tracksList is provided
@@ -47,18 +92,53 @@ export const PlayerProvider = ({ children }) => {
   };
 
   const playNextTrack = () => {
+    const sessionArr = getSessionPlayedArray();
+    const sessionPlayed = new Set(sessionArr.map((x) => String(x)));
+    const isInSessionPlayed = (t) => {
+      const uid = t?.uuid != null ? String(t.uuid) : null;
+      const iid = t?.id != null ? String(t.id) : null;
+      return (uid && sessionPlayed.has(uid)) || (iid && sessionPlayed.has(iid));
+    };
+
     const currentIndex = getCurrentTrackIndex();
+    let candidates;
     if (currentIndex >= 0 && playlist.length > 0) {
-      if (currentIndex < playlist.length - 1) {
-        // Play next track
-        const nextTrack = playlist[currentIndex + 1];
-        selectTrack(nextTrack);
+      const afterCurrent = playlist.slice(currentIndex + 1);
+      candidates = afterCurrent.length > 0 ? afterCurrent : playlist;
+    } else {
+      candidates = fullMusicList.length > 0 ? fullMusicList : playlist;
+    }
+    if (candidates.length === 0) return;
+
+    // Only pick tracks NOT in beatify_session_played
+    let notPlayed = candidates.filter((t) => !isInSessionPlayed(t));
+    let nextTrack;
+    if (notPlayed.length > 0) {
+      nextTrack = notPlayed[0];
+    } else {
+      // Recommendations exhausted: randomly pick from full catalog, excluding session played
+      const pool = fullMusicList.length > 0 ? fullMusicList : candidates;
+      const notInSession = pool.filter((t) => !isInSessionPlayed(t));
+      if (notInSession.length > 0) {
+        nextTrack = notInSession[Math.floor(Math.random() * notInSession.length)];
       } else {
-        // Loop back to first track
-        const firstTrack = playlist[0];
-        selectTrack(firstTrack);
+        // Entire catalog in session: pick oldest from session
+        for (const oldId of sessionArr) {
+          const oldStr = String(oldId);
+          const t = pool.find(
+            (c) =>
+              String(c?.uuid ?? "") === oldStr || String(c?.id ?? "") === oldStr,
+          );
+          if (t) {
+            nextTrack = t;
+            break;
+          }
+        }
+        if (!nextTrack) nextTrack = pool[0];
       }
     }
+
+    if (nextTrack) selectTrack(nextTrack);
   };
 
   const playPreviousTrack = () => {
@@ -118,6 +198,7 @@ export const PlayerProvider = ({ children }) => {
         playNextTrack,
         playPreviousTrack,
         setPlaylist,
+        setFullMusicList,
       }}
     >
       {children}
