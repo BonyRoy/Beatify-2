@@ -508,6 +508,13 @@ const playlistTrackIds = {
     "e3213c19-52e7-4678-9c43-b16574dfcda9",
   ],
   "Global Hits": [
+    "f2288625-73c8-4a91-8f5f-b21b82254531",
+    "be18a6e9-9028-4151-8ee6-0c6570c6826e",
+    "8de92b9d-ebf8-47b7-86f5-f713554840eb",
+    "402e5c6c-0bfa-4c8c-a88f-bd45bdcb4355",
+    "4edf5cdb-77f9-4ad5-9238-cf3dc8f715c2",
+    "99084d69-ead5-495d-a1e1-26333bed0586",
+    "791484f1-3cb0-466a-b817-d7febc188ef0",
     "a38ea889-149a-4822-976f-a29112fd3bdb",
     "9fdf27de-0cf8-4ee2-a7fa-e8ea079e9adc",
     "52d7235e-1106-4c42-9580-71b1bff156c4",
@@ -596,6 +603,7 @@ const playlistTrackIds = {
     "5642a24c-e580-4d71-b48f-1199acde0279",
   ],
   Dhurandhar: [
+    "21ba63e3-42ef-4a22-9ca8-0749d6c3c132",
     "4a27a9f3-e6ca-4729-a1eb-3cd20b8fc86c",
     "c0e9a3b3-ae6c-4e3d-8349-6e2d21a9e6d2",
     "6c259636-4a67-4474-917a-313206f1a017",
@@ -636,6 +644,7 @@ const playlistTrackIds = {
     "660acb34-f365-426a-b29e-bf90df630f30",
     "1da3616f-90b6-4004-819f-7026b1ae2b6e",
     "56645bf7-e909-4b9f-bb92-80571d82159b",
+    "c0f35567-181c-4430-9b4b-bf71e4afaca5",
   ],
 };
 
@@ -679,7 +688,13 @@ const Home = () => {
   const selectedPlaylist = searchParams.get("playlist");
   const selectedEra = searchParams.get("era") || "";
   const searchQuery = searchParams.get("search") || "";
-  const { selectTrack, currentTrack, setPlaylist, setFullMusicList, isPlaying } = usePlayer();
+  const {
+    selectTrack,
+    currentTrack,
+    setPlaylist,
+    setFullMusicList,
+    isPlaying,
+  } = usePlayer();
   const { openRequestSong } = useRequestSong();
   const { openFeedback } = useFeedback();
   const { isLoggedIn } = useCreateAccount();
@@ -982,7 +997,9 @@ const Home = () => {
     const slice = sortedMusicList.slice(0, visibleCount);
     if (!currentTrack) return slice;
     const currentId = currentTrack.uuid || currentTrack.id;
-    const idx = sortedMusicList.findIndex((t) => (t.uuid || t.id) === currentId);
+    const idx = sortedMusicList.findIndex(
+      (t) => (t.uuid || t.id) === currentId,
+    );
     if (idx < 0) return slice;
     const rest = sortedMusicList.filter((t) => (t.uuid || t.id) !== currentId);
     return [currentTrack, ...rest.slice(0, visibleCount - 1)];
