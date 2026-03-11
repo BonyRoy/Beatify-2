@@ -1,5 +1,6 @@
 // Playlist images with labels - update this list with actual image filenames from /public/playlist
 export const playlistImages = [
+  { image: "Top10.png", label: "Top 10 of the Week" },
   { image: "dhurandhar.png", label: "Dhurandhar" },
   { image: "god.png", label: "Spiritual" },
   { image: "Disney.png", label: "Disney & Pixar" },

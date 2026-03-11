@@ -60,7 +60,10 @@ import {
   deleteFeedback,
   clearAllFeedback,
 } from "../services/feedbackService";
-import { fetchTrackPlayCounts } from "../services/trackPlayCountsService";
+import {
+  fetchTrackPlayCounts,
+  clearAllCounts,
+} from "../services/trackPlayCountsService";
 import {
   getAdminSettings,
   updateAdminPassword,
@@ -123,6 +126,46 @@ const ThemeToggle = ({ isDark, toggleTheme }) => (
     </span>
   </button>
 );
+
+const ClearWeeklyCountsButton = ({ onClear, disabled = false }) => {
+  const [clearing, setClearing] = useState(false);
+  const handleClick = async () => {
+    if (clearing || disabled) return;
+    if (!window.confirm("Reset all weekly play counts to 0? This starts a new week."))
+      return;
+    setClearing(true);
+    try {
+      await clearAllCounts();
+      onClear?.();
+    } catch (err) {
+      console.error("Failed to clear counts:", err);
+      alert("Failed to clear counts. Please try again.");
+    } finally {
+      setClearing(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      className="admin-clear-weekly-counts-btn"
+      onClick={handleClick}
+      disabled={disabled || clearing}
+      title="Reset all play counts to 0 (start new week)"
+    >
+      {clearing ? (
+        <>
+          <RefreshCw size={14} className="admin-clear-weekly-counts-spinner" />
+          Resetting...
+        </>
+      ) : (
+        <>
+          <RefreshCw size={14} />
+          Reset weekly counts
+        </>
+      )}
+    </button>
+  );
+};
 
 const Admin = () => {
   const { isDark, toggleTheme } = useTheme();
@@ -1354,8 +1397,16 @@ const Admin = () => {
     },
     { field: "uploadedAt", order: "asc", label: "Upload Date (Oldest first)" },
     { field: "uploadedAt", order: "desc", label: "Upload Date (Newest first)" },
-    { field: "playCount", order: "desc", label: "Plays (Highest first)" },
-    { field: "playCount", order: "asc", label: "Plays (Lowest first)" },
+    {
+      field: "playCount",
+      order: "desc",
+      label: "Plays this week (Highest first)",
+    },
+    {
+      field: "playCount",
+      order: "asc",
+      label: "Plays this week (Lowest first)",
+    },
   ];
 
   const activeSortLabel =
@@ -1919,7 +1970,7 @@ const Admin = () => {
                           <th className="admin-bulk-th">Album</th>
                           <th className="admin-bulk-th">Release Date</th>
                           <th className="admin-bulk-th admin-bulk-th-plays">
-                            Plays
+                            Plays (Week)
                           </th>
                           <th className="admin-bulk-th admin-bulk-th-uuid">
                             UUID
@@ -2749,7 +2800,7 @@ const Admin = () => {
                                     ? "Top Artists (Bar)"
                                     : listeningChartTab === "pie"
                                       ? "Top Artists (Pie)"
-                                      : "Top 10 Songs by Plays"}
+                                      : "Top 10 Songs of the Week"}
                                 </span>
                                 <span className="admin-listening-chart-dropdown-arrow">
                                   {listeningChartDropdownOpen ? (
@@ -2772,7 +2823,7 @@ const Admin = () => {
                                     },
                                     {
                                       id: "songs",
-                                      label: "Top 10 Songs by Plays",
+                                      label: "Top 10 Songs of the Week",
                                     },
                                   ].map((opt) => (
                                     <div
@@ -2814,7 +2865,7 @@ const Admin = () => {
                                 className={`admin-listening-chart-tab ${listeningChartTab === "songs" ? "admin-listening-chart-tab--active" : ""}`}
                                 onClick={() => setListeningChartTab("songs")}
                               >
-                                Top 10 Songs by Plays
+                                Top 10 Songs of the Week
                               </button>
                             </div>
                           )}
@@ -2853,15 +2904,29 @@ const Admin = () => {
                                   "#a3e635",
                                 ];
                                 return songData.length === 0 ? (
-                                  <p className="admin-listening-chart-empty">
-                                    No play data yet. Songs will appear after
-                                    users play them.
-                                  </p>
+                                  <div className="admin-listening-chart-empty-wrapper">
+                                    <p className="admin-listening-chart-empty">
+                                      No play data yet. Songs will appear after
+                                      users play them.
+                                    </p>
+                                    <p className="admin-listening-chart-empty-hint">
+                                      Clear counts to start a new week.
+                                    </p>
+                                    <ClearWeeklyCountsButton
+                                      onClear={loadPlayCounts}
+                                      disabled={Object.keys(playCounts).length === 0}
+                                    />
+                                  </div>
                                 ) : (
                                   <>
-                                    <h4 className="admin-listening-songs-chart-title">
-                                      Bar graph of top 10 songs with most plays
-                                    </h4>
+                                    <div className="admin-listening-songs-chart-header">
+                                      <h4 className="admin-listening-songs-chart-title">
+                                        Top 10 Songs of the Week on Beatify
+                                      </h4>
+                                      <ClearWeeklyCountsButton
+                                        onClear={loadPlayCounts}
+                                      />
+                                    </div>
                                     <div className="admin-listening-bar-chart">
                                       {songData.map((d, i) => (
                                         <div

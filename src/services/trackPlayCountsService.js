@@ -44,3 +44,16 @@ export async function incrementTrackPlayCount(trackUuid) {
     console.warn("Failed to increment track play count:", e);
   }
 }
+
+/**
+ * Clear all play counts to 0 (weekly reset). Resets the counts object to empty.
+ */
+export async function clearAllCounts() {
+  try {
+    const ref = doc(db, COLLECTION, DOC_ID);
+    await setDoc(ref, { counts: {} }, { merge: true });
+  } catch (e) {
+    console.warn("Failed to clear track play counts:", e);
+    throw e;
+  }
+}

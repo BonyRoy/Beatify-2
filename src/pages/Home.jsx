@@ -340,7 +340,7 @@ const MusicTrack = ({
         <div className="track-row__meta">
           <p className="track-row__plays">
             {getPlayCount(trackIdentifier)}{" "}
-            {getPlayCount(trackIdentifier) === 1 ? "play" : "plays"}
+            {getPlayCount(trackIdentifier) === 1 ? "play" : "plays"} this week
           </p>
         </div>
       </div>
@@ -700,6 +700,8 @@ const Home = () => {
   const { isLoggedIn } = useCreateAccount();
   const { getTopArtists, getLastSongs, lastSongs, artistCounts } =
     useListeningHistory();
+  const { counts: playCounts } = useTrackPlayCounts();
+  const { fetchAlbumArt } = useAlbumArt();
 
   const [musicList, setMusicList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -710,6 +712,7 @@ const Home = () => {
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [visibleCount, setVisibleCount] = useState(15);
   const sidebarContentRef = useRef(null);
+  const preloadedRef = useRef(false);
 
   // Auto-scroll back to playing track after 10s of inactivity
   useEffect(() => {
@@ -893,16 +896,40 @@ const Home = () => {
     let filtered = musicList;
 
     // Apply playlist filter first if present (highest priority)
-    if (selectedPlaylist && playlistTrackIds[selectedPlaylist]) {
-      const playlistUuids = playlistTrackIds[selectedPlaylist];
-      if (playlistUuids.length > 0) {
-        filtered = filtered.filter((track) => {
-          const trackIdentifier = track.uuid || track.id;
-          return playlistUuids.includes(trackIdentifier);
-        });
-      } else {
-        // Empty playlist - return empty array
-        return [];
+    if (selectedPlaylist) {
+      if (selectedPlaylist === "Top 10 of the Week") {
+        // Dynamic playlist from weekly play counts
+        const top10Uuids = Object.entries(playCounts)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 10)
+          .map(([uuid]) => uuid);
+        if (top10Uuids.length > 0) {
+          filtered = filtered.filter((track) => {
+            const id = track.uuid || track.id;
+            return top10Uuids.includes(id);
+          });
+          // Preserve order by play count (highest first)
+          const uuidToOrder = Object.fromEntries(
+            top10Uuids.map((uuid, i) => [uuid, i]),
+          );
+          filtered = [...filtered].sort(
+            (a, b) =>
+              (uuidToOrder[a.uuid || a.id] ?? 999) -
+              (uuidToOrder[b.uuid || b.id] ?? 999),
+          );
+        } else {
+          return [];
+        }
+      } else if (playlistTrackIds[selectedPlaylist]) {
+        const playlistUuids = playlistTrackIds[selectedPlaylist];
+        if (playlistUuids.length > 0) {
+          filtered = filtered.filter((track) => {
+            const trackIdentifier = track.uuid || track.id;
+            return playlistUuids.includes(trackIdentifier);
+          });
+        } else {
+          return [];
+        }
       }
     }
 
@@ -950,6 +977,7 @@ const Home = () => {
     selectedPlaylist,
     selectedEra,
     favorites,
+    playCounts,
   ]);
 
   // For logged-in users: sort by relevance (top artists, last listened). Otherwise keep order.
@@ -1005,6 +1033,19 @@ const Home = () => {
     return [currentTrack, ...rest.slice(0, visibleCount - 1)];
   }, [sortedMusicList, visibleCount, currentTrack]);
   const hasMore = visibleCount < sortedMusicList.length;
+
+  // On mobile: preload track images during 4 sec loading screen so they're ready when it fades
+  useEffect(() => {
+    if (!isMobile || loading || preloadedRef.current || sortedMusicList.length === 0)
+      return;
+    preloadedRef.current = true;
+    const toPreload = sortedMusicList.slice(0, 15);
+    toPreload.forEach((track) => {
+      if (!track?.coverUrl && !track?.artworkUrl && !track?.albumArtUrl && track?.fileUrl) {
+        fetchAlbumArt(track);
+      }
+    });
+  }, [isMobile, loading, sortedMusicList, fetchAlbumArt]);
 
   // Load more on scroll
   const loadMoreRef = useRef(null);
@@ -1081,7 +1122,9 @@ const Home = () => {
               <h3 className="home__sidebar-title home__sidebar-title--tracks">
                 <MusicIconGradient />
                 {selectedPlaylist
-                  ? `Tracks for "${selectedPlaylist}" playlist`
+                  ? selectedPlaylist === "Top 10 of the Week"
+                    ? "Top 10 Songs of the Week on Beatify"
+                    : `Tracks for "${selectedPlaylist}" playlist`
                   : selectedEra
                     ? `Tracks from ${selectedEra}`
                     : "Tracks"}
