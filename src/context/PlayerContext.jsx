@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { toast } from "react-toastify";
 import { useListeningHistory } from "./ListeningHistoryContext";
+import { useCreateAccount } from "./CreateAccountContext";
+import {
+  checkGuestCanPlay,
+  addGuestPlay,
+  GUEST_PLAYS_MAX,
+} from "../utils/guestPlayLimit";
 
 const PlayerContext = createContext();
 const SESSION_PLAYED_KEY = "beatify_session_played";
@@ -48,11 +55,23 @@ export const usePlayer = () => {
 
 export const PlayerProvider = ({ children }) => {
   const { recordArtistPlay, recordTrackPlay } = useListeningHistory();
+  const { isLoggedIn } = useCreateAccount();
 
   // Clear session-played list on app load/reload
   useEffect(() => {
     clearSessionPlayed();
   }, []);
+
+  // Show toast when guest limit renews (on app load if data was > 24h old)
+  useEffect(() => {
+    if (isLoggedIn) return;
+    const { renewed } = checkGuestCanPlay();
+    if (renewed) {
+      toast.info(
+        `Your daily listening limit has been renewed! Listen to ${GUEST_PLAYS_MAX} more songs.`
+      );
+    }
+  }, [isLoggedIn]);
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -68,6 +87,23 @@ export const PlayerProvider = ({ children }) => {
     if (track && currentId && trackId && currentId === trackId) {
       return;
     }
+
+    // Guest limit: 4 songs per day for non-logged-in users
+    if (!isLoggedIn && track) {
+      const { canPlay, renewed } = checkGuestCanPlay();
+      if (renewed) {
+        toast.info(
+          `Your daily listening limit has been renewed! Listen to ${GUEST_PLAYS_MAX} more songs.`
+        );
+      }
+      if (!canPlay) {
+        toast.warning(
+          `You've reached your daily limit of ${GUEST_PLAYS_MAX} songs. Sign in for unlimited listening!`
+        );
+        return;
+      }
+    }
+
     setCurrentTrack(track);
     setCurrentTime(0);
     setIsPlaying(true);
@@ -77,6 +113,7 @@ export const PlayerProvider = ({ children }) => {
       recordTrackPlay(track);
       const tid = track.uuid ?? track.id;
       if (tid) addToSessionPlayed(String(tid));
+      if (!isLoggedIn && tid) addGuestPlay(String(tid));
       // Play count is incremented in Footer after 30 sec of playback
     }
     // Update playlist if tracksList is provided
