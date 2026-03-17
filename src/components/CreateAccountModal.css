@@ -49,6 +49,72 @@
   gap: 1rem;
 }
 
+.create-account-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-primary);
+  background-color: var(--track-bg, #252525);
+  border: 1px solid var(--nav-border, #333);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.create-account-google-btn:hover:not(:disabled) {
+  background-color: var(--track-bg-hover, #2d2d2d);
+  border-color: var(--text-muted);
+}
+
+.create-account-google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+[data-theme="light"] .create-account-google-btn {
+  background-color: #fff;
+  border-color: #d4d4d8;
+  color: #18181b;
+}
+
+[data-theme="light"] .create-account-google-btn:hover:not(:disabled) {
+  background-color: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+.create-account-google-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.create-account-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.create-account-divider::before,
+.create-account-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: var(--nav-border, #333);
+}
+
+[data-theme="light"] .create-account-divider::before,
+[data-theme="light"] .create-account-divider::after {
+  background-color: #e4e4e7;
+}
+
 .create-account-form-group {
   display: flex;
   flex-direction: column;

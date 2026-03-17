@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 import CreateAccountModal from "../components/CreateAccountModal";
+import NativeBridgeHandler from "../components/NativeBridgeHandler";
 
 const STORAGE_KEY = "beatify_logged_in";
 const STORAGE_USER_NAME = "beatify_user_name";
@@ -94,6 +95,7 @@ export function CreateAccountProvider({ children }) {
         onClose={closeCreateAccount}
         onAccountCreated={login}
       />
+      <NativeBridgeHandler login={login} isLoggedIn={isLoggedIn} />
     </CreateAccountContext.Provider>
   );
 }

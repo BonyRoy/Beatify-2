@@ -39,6 +39,24 @@ export async function isEmailTaken(email) {
 }
 
 /**
+ * Get a unique display name by appending a number if the base name exists.
+ * e.g. "harsh" -> "harsh1" if "harsh" is taken, "harsh2" if "harsh1" is also taken, etc.
+ * @param {string} baseName - Base display name (e.g. from Google profile)
+ * @returns {Promise<string>} Unique display name
+ */
+export async function getUniqueDisplayName(baseName) {
+  const base = (baseName || "").trim();
+  const fallback = base || "user";
+  let candidate = fallback;
+  let count = 0;
+  while (await isNameTaken(candidate)) {
+    count++;
+    candidate = fallback + count;
+  }
+  return candidate;
+}
+
+/**
  * Check if a display name is already taken (case-insensitive)
  * @param {string} name - Display name to check
  * @returns {Promise<boolean>} True if name is taken

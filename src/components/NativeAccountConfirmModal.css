@@ -1,0 +1,119 @@
+.native-account-confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.native-account-confirm-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  width: 90%;
+  max-width: 440px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0a0a0f 0%, #0f172a 30%, #1e1b4b 70%, #0f0f1a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] .native-account-confirm-modal {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 30%, #f1f5f9 70%, #fafafa 100%);
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  color: #18181b;
+}
+
+.native-account-confirm-modal__subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: -0.5rem 0 1rem 0;
+  text-align: center;
+}
+
+.native-account-confirm-modal__details {
+  background: var(--track-bg, #252525);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+[data-theme="light"] .native-account-confirm-modal__details {
+  background: #f4f4f5;
+}
+
+.native-account-confirm-modal__details p {
+  margin: 0.35rem 0;
+  font-size: 0.95rem;
+}
+
+.native-account-confirm-modal__details strong {
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+.native-account-confirm-modal__actions {
+  flex-direction: row;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.native-account-confirm-modal__actions .modal__btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+.native-account-confirm-modal .modal__btn--secondary {
+  background-color: var(--track-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--nav-border, #333);
+}
+
+[data-theme="light"] .native-account-confirm-modal .modal__btn--secondary {
+  background-color: #f4f4f5;
+  color: #18181b;
+  border-color: #d4d4d8;
+}
+
+.native-account-confirm-modal .modal__btn--submit {
+  background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+  color: #fff;
+  border: none;
+}
+
+.native-account-confirm-modal .modal__content {
+  padding: 1.5rem;
+}
+
+.native-account-confirm-modal .modal__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+.native-account-confirm-modal .modal__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.native-account-confirm-modal .modal__btn {
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.native-account-confirm-modal .modal__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
