@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { fuzzyMatches } from "../utils/searchUtils";
-import { playlistImages } from "../constants/playlistImages";
+import { usePlaylist } from "../context/PlaylistContext";
 import "./Playlist.css";
 
 const PlaylistIconGradient = () => (
@@ -113,7 +113,7 @@ const PlaylistImageItem = ({ playlist, isSelected, onClick }) => {
   const handleError = (e) => {
     if (!triedFallback) {
       setTriedFallback(true);
-      e.target.src = `/playlistbg/${playlist.image}`;
+      e.target.src = `/playlistbg/${playlist.image || "thar.png"}`;
     }
   };
 
@@ -125,7 +125,7 @@ const PlaylistImageItem = ({ playlist, isSelected, onClick }) => {
       <div className="playlist__image-wrapper">
         <PlaylistMusicPlaceholder />
         <img
-          src={`/playlist/${playlist.image}`}
+          src={`/playlistbg/${playlist.image || "thar.png"}`}
           alt={playlist.label}
           className={`playlist__image ${loaded ? "playlist__image--loaded" : ""}`}
           onLoad={handleLoad}
@@ -140,6 +140,7 @@ const PlaylistImageItem = ({ playlist, isSelected, onClick }) => {
 const FAVORITES_LABEL = "My Favorites";
 
 const Playlist = ({ hasFavorites = false }) => {
+  const { playlistImages, refreshPlaylists } = usePlaylist();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const searchQuery = searchParams.get("search") || "";
@@ -163,7 +164,7 @@ const Playlist = ({ hasFavorites = false }) => {
     return playlistImages.filter((playlist) =>
       fuzzyMatches(searchQuery, playlist.label),
     );
-  }, [searchQuery]);
+  }, [searchQuery, playlistImages]);
 
   // Include My Favorites card only when user has favorites, and when search matches or no search
   const showFavoritesCard =
@@ -241,7 +242,25 @@ const Playlist = ({ hasFavorites = false }) => {
       <div className="playlist__grid">
         {!showFavoritesCard && filteredPlaylists.length === 0 ? (
           <div className="playlist__empty">
-            <p>No playlists found matching "{searchQuery}"</p>
+            <p>
+              {searchQuery
+                ? `No playlists found matching "${searchQuery}"`
+                : "No playlists yet."}
+            </p>
+            {!searchQuery && (
+              <>
+                <p className="playlist__empty-hint">
+                  Go to Admin → Playlist and click &quot;Add playlist&quot; to create playlists.
+                </p>
+                <button
+                  type="button"
+                  className="playlist__retry-btn"
+                  onClick={() => refreshPlaylists()}
+                >
+                  Retry loading
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>

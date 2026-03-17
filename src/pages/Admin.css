@@ -421,6 +421,142 @@
   border-color: #ef4444;
 }
 
+/* Admin Playlist tab */
+.admin-playlist-tab {
+  width: 100%;
+  max-width: 100%;
+}
+
+.admin-playlist-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-playlist-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--nav-border);
+  transition: opacity 0.2s;
+}
+
+.admin-playlist-btn--primary {
+  background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+  border: none;
+  color: white;
+}
+
+.admin-playlist-btn--secondary {
+  background-color: var(--track-bg);
+  color: var(--text-primary);
+}
+
+.admin-playlist-btn:hover {
+  opacity: 0.9;
+}
+
+.admin-playlist-form-card {
+  background-color: var(--track-bg);
+  border: 1px solid var(--nav-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  max-width: 560px;
+}
+
+.admin-playlist-form-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+  color: var(--text-primary);
+}
+
+.admin-playlist-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-playlist-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.admin-playlist-form-btns {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.admin-playlist-loading,
+.admin-playlist-empty {
+  color: var(--text-muted);
+  margin: 1rem 0;
+}
+
+.admin-playlist-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--nav-border);
+  border-radius: 8px;
+}
+
+.admin-playlist-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-playlist-th,
+.admin-playlist-td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--nav-border);
+}
+
+.admin-playlist-th {
+  font-weight: 600;
+  color: var(--text-primary);
+  background-color: var(--track-bg);
+}
+
+.admin-playlist-td:last-child,
+.admin-playlist-th:last-child {
+  border-bottom: none;
+}
+
+.admin-playlist-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.admin-playlist-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--nav-border);
+  border-radius: 6px;
+  background-color: var(--track-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  margin-right: 0.5rem;
+  transition: opacity 0.2s;
+}
+
+.admin-playlist-action-btn:hover {
+  opacity: 0.9;
+}
+
+.admin-playlist-action-btn--danger:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
 .admin-feedback-header {
   display: flex;
   flex-wrap: wrap;

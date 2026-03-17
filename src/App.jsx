@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import { ThemeProvider } from './context/ThemeContext'
+import { PlaylistProvider } from './context/PlaylistContext'
 import { PlayerProvider } from './context/PlayerContext'
 import { AlbumArtProvider } from './context/AlbumArtContext'
 import { ListeningHistoryProvider } from './context/ListeningHistoryContext'
@@ -50,6 +51,7 @@ const App = () => {
         <RequestSongProvider>
         <FeedbackProvider>
         <ListeningHistoryProvider>
+          <PlaylistProvider>
           <TrackPlayCountsProvider>
           <PlayerProvider>
             <AlbumArtProvider>
@@ -61,6 +63,7 @@ const App = () => {
             </AlbumArtProvider>
           </PlayerProvider>
           </TrackPlayCountsProvider>
+          </PlaylistProvider>
         </ListeningHistoryProvider>
         </FeedbackProvider>
         </RequestSongProvider>

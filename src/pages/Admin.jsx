@@ -47,6 +47,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { usePlaylist } from "../context/PlaylistContext";
 import * as XLSX from "xlsx";
 import {
   fetchSongRequests,
@@ -73,6 +74,12 @@ import {
   invalidateAdminSession,
   initAdminSettingsIfNeeded,
 } from "../services/adminSettingsService";
+import {
+  fetchPlaylists,
+  createPlaylist,
+  updatePlaylist,
+  deletePlaylist,
+} from "../services/playlistService";
 import "./Admin.css";
 
 const SunIcon = () => (
@@ -174,6 +181,7 @@ const ClearWeeklyCountsButton = ({ onClear, disabled = false }) => {
 
 const Admin = () => {
   const { isDark, toggleTheme } = useTheme();
+  const { refreshPlaylists } = usePlaylist();
   // Generate UUID function
   const generateUUID = () => {
     if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -267,6 +275,17 @@ const Admin = () => {
   const [sessionTimeoutError, setSessionTimeoutError] = useState("");
   const [sessionTimeoutSuccess, setSessionTimeoutSuccess] = useState("");
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState("");
+  const [playlists, setPlaylists] = useState([]);
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  const [playlistForm, setPlaylistForm] = useState({
+    name: "",
+    image: "",
+    trackIds: "",
+  });
+  const [editingPlaylistId, setEditingPlaylistId] = useState(null);
+  const [playlistSaving, setPlaylistSaving] = useState(false);
+  const [playlistError, setPlaylistError] = useState("");
+  const [showPlaylistForm, setShowPlaylistForm] = useState(false);
 
   const REQUEST_RECORDS_PER_PAGE = 10;
   const FEEDBACK_RECORDS_PER_PAGE = 10;
@@ -373,6 +392,15 @@ const Admin = () => {
   useEffect(() => {
     if ((activeTab === "hip" || activeTab === "listening") && isAuthenticated) {
       loadPlayCounts();
+    }
+  }, [activeTab, isAuthenticated]);
+
+  useEffect(() => {
+    if (activeTab === "playlist" && isAuthenticated) {
+      setLoadingPlaylists(true);
+      fetchPlaylists()
+        .then(setPlaylists)
+        .finally(() => setLoadingPlaylists(false));
     }
   }, [activeTab, isAuthenticated]);
 
@@ -1527,6 +1555,13 @@ const Admin = () => {
             onClick={() => setActiveTab("listening")}
           >
             <Headphones size={18} className="admin-icon-inline" /> Listening
+          </button>
+          <button
+            type="button"
+            className={`admin-tab ${activeTab === "playlist" ? "admin-tab--active" : ""}`}
+            onClick={() => setActiveTab("playlist")}
+          >
+            <List size={18} className="admin-icon-inline" /> Playlist
           </button>
           <button
             type="button"
@@ -3509,6 +3544,219 @@ const Admin = () => {
                     </>
                   );
                 })()
+              )}
+            </div>
+          )}
+          {activeTab === "playlist" && (
+            <div className="admin-hip-tab admin-playlist-tab">
+              <div className="admin-bulk-header">
+                <h2>
+                  <List size={22} className="admin-icon-inline" /> Playlists
+                </h2>
+                <p className="admin-bulk-subtitle">
+                  Manage playlists: name, image, and track UUIDs. Stored in DB.
+                </p>
+              </div>
+              <div className="admin-playlist-actions">
+                <button
+                  type="button"
+                  className="admin-playlist-btn admin-playlist-btn--primary"
+                  onClick={() => {
+                    setEditingPlaylistId(null);
+                    setPlaylistForm({
+                      name: "",
+                      image: "",
+                      trackIds: "",
+                    });
+                    setPlaylistError("");
+                    setShowPlaylistForm(true);
+                  }}
+                >
+                  Add playlist
+                </button>
+              </div>
+              {(showPlaylistForm || editingPlaylistId) && (
+                <div className="admin-playlist-form-card">
+                  <h3 className="admin-playlist-form-title">
+                    {editingPlaylistId ? "Edit playlist" : "New playlist"}
+                  </h3>
+                  <div className="admin-playlist-form">
+                    <div className="admin-settings-field">
+                      <label>Name</label>
+                      <input
+                        type="text"
+                        value={playlistForm.name}
+                        onChange={(e) =>
+                          setPlaylistForm((p) => ({ ...p, name: e.target.value }))
+                        }
+                        placeholder="e.g. Top 10 of the Week"
+                        className="admin-settings-input"
+                      />
+                    </div>
+                    <div className="admin-settings-field">
+                      <label>Image (filename in /public/playlistbg/)</label>
+                      <input
+                        type="text"
+                        value={playlistForm.image}
+                        onChange={(e) =>
+                          setPlaylistForm((p) => ({ ...p, image: e.target.value }))
+                        }
+                        placeholder="e.g. Top10.png"
+                        className="admin-settings-input"
+                      />
+                    </div>
+                    <div className="admin-settings-field">
+                      <label>Track UUIDs (comma-separated)</label>
+                      <textarea
+                        value={playlistForm.trackIds}
+                        onChange={(e) =>
+                          setPlaylistForm((p) => ({ ...p, trackIds: e.target.value }))
+                        }
+                        placeholder="uuid1, uuid2, uuid3..."
+                        className="admin-settings-input admin-playlist-textarea"
+                        rows={4}
+                      />
+                    </div>
+                    {playlistError && (
+                      <p className="admin-settings-error">{playlistError}</p>
+                    )}
+                    <div className="admin-playlist-form-btns">
+                      <button
+                        type="button"
+                        className="admin-playlist-btn admin-playlist-btn--primary"
+                        disabled={playlistSaving}
+                        onClick={async () => {
+                          setPlaylistError("");
+                          if (!playlistForm.name.trim()) {
+                            setPlaylistError("Name is required.");
+                            return;
+                          }
+                          setPlaylistSaving(true);
+                          const trackIds = playlistForm.trackIds
+                            .split(/[,\s]+/)
+                            .map((s) => s.trim())
+                            .filter(Boolean);
+                          if (editingPlaylistId) {
+                            const res = await updatePlaylist(editingPlaylistId, {
+                              name: playlistForm.name,
+                              image: playlistForm.image,
+                              trackIds,
+                            });
+                            if (res.success) {
+                              const list = await fetchPlaylists();
+                              setPlaylists(list);
+                              await refreshPlaylists();
+                              setEditingPlaylistId(null);
+                              setPlaylistForm({ name: "", image: "", trackIds: "" });
+                              setShowPlaylistForm(false);
+                            } else {
+                              setPlaylistError(res.error);
+                            }
+                          } else {
+                            const res = await createPlaylist({
+                              name: playlistForm.name,
+                              image: playlistForm.image,
+                              trackIds,
+                            });
+                            if (res.success) {
+                              const list = await fetchPlaylists();
+                              setPlaylists(list);
+                              await refreshPlaylists();
+                              setPlaylistForm({ name: "", image: "", trackIds: "" });
+                              setShowPlaylistForm(false);
+                            } else {
+                              setPlaylistError(res.error);
+                            }
+                          }
+                          setPlaylistSaving(false);
+                        }}
+                      >
+                        {playlistSaving ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-playlist-btn admin-playlist-btn--secondary"
+                        onClick={() => {
+                          setEditingPlaylistId(null);
+                          setPlaylistForm({ name: "", image: "", trackIds: "" });
+                          setPlaylistError("");
+                          setShowPlaylistForm(false);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {loadingPlaylists ? (
+                <p className="admin-playlist-loading">Loading playlists...</p>
+              ) : playlists.length === 0 ? (
+                <p className="admin-playlist-empty">
+                  No playlists. Click &quot;Add playlist&quot; to create one.
+                </p>
+              ) : (
+                <div className="admin-playlist-table-wrap">
+                  <table className="admin-playlist-table">
+                    <thead>
+                      <tr>
+                        <th className="admin-playlist-th">Image</th>
+                        <th className="admin-playlist-th">Name</th>
+                        <th className="admin-playlist-th">Tracks</th>
+                        <th className="admin-playlist-th">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {playlists.map((p) => (
+                        <tr key={p.id}>
+                          <td className="admin-playlist-td">
+                            <img
+                              src={`/playlistbg/${p.image || "thar.png"}`}
+                              alt={p.name}
+                              className="admin-playlist-thumb"
+                              onError={(e) => {
+                                e.target.src = "/playlistbg/thar.png";
+                              }}
+                            />
+                          </td>
+                          <td className="admin-playlist-td">{p.name}</td>
+                          <td className="admin-playlist-td">{p.trackIds?.length ?? 0}</td>
+                          <td className="admin-playlist-td">
+                            <button
+                              type="button"
+                              className="admin-playlist-action-btn"
+                              onClick={() => {
+                                setEditingPlaylistId(p.id);
+                                setPlaylistForm({
+                                  name: p.name,
+                                  image: p.image,
+                                  trackIds: (p.trackIds || []).join(", "),
+                                });
+                                setPlaylistError("");
+                              }}
+                            >
+                              <Pencil size={14} /> Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="admin-playlist-action-btn admin-playlist-action-btn--danger"
+                              onClick={async () => {
+                                if (!window.confirm(`Delete "${p.name}"?`)) return;
+                                const res = await deletePlaylist(p.id);
+                                if (res.success) {
+                                  setPlaylists(await fetchPlaylists());
+                                  await refreshPlaylists();
+                                }
+                              }}
+                            >
+                              <Trash2 size={14} /> Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}

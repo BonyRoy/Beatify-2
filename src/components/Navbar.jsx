@@ -16,7 +16,7 @@ import EmptyFavoritesModal from "./EmptyFavoritesModal";
 import NotificationsModal from "./NotificationsModal";
 import { getStoredAvatar, setStoredAvatar } from "./ProfileModal";
 import { getAccountById } from "../services/accountService";
-import { playlistImages } from "../constants/playlistImages";
+import { usePlaylist } from "../context/PlaylistContext";
 import { fuzzyMatches } from "../utils/searchUtils";
 import "./Navbar.css";
 
@@ -250,6 +250,7 @@ const allArtists = [
 
 const Navbar = () => {
   const { isDark, toggleTheme } = useTheme();
+  const { playlistImages } = usePlaylist();
   const { openCreateAccount, isLoggedIn, userName, userEmail, accountId, logout } =
     useCreateAccount();
   const { openRequestSong } = useRequestSong();
@@ -632,11 +633,11 @@ const Navbar = () => {
         <div
           className="playlist-header-mobile"
           style={{
-            backgroundImage: `url(${`/playlist/${playlistImages.find((p) => p.label === selectedPlaylist)?.image || "thar.png"}`})`,
+            backgroundImage: `url(${`/playlistbg/${playlistImages.find((p) => p.label === selectedPlaylist)?.image || "thar.png"}`})`,
           }}
         >
           <img
-            src={`/playlist/${playlistImages.find((p) => p.label === selectedPlaylist)?.image || "thar.png"}`}
+            src={`/playlistbg/${playlistImages.find((p) => p.label === selectedPlaylist)?.image || "thar.png"}`}
             alt={selectedPlaylist}
             className="playlist-header-mobile__image"
             onError={(e) => {
@@ -644,7 +645,7 @@ const Navbar = () => {
                 (p) => p.label === selectedPlaylist,
               );
               const fallbackSrc = fallback
-                ? `/playlistbg/${fallback.image}`
+                ? `/playlistbg/${fallback.image || "thar.png"}`
                 : "/playlistbg/thar.png";
               e.target.src = fallbackSrc;
               e.target.parentElement.style.backgroundImage = `url(${fallbackSrc})`;
