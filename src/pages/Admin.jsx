@@ -67,6 +67,7 @@ import {
 import {
   getAdminSettings,
   updateAdminPassword,
+  updateSessionTimeout,
   createAdminSession,
   verifyAdminSession,
   invalidateAdminSession,
@@ -261,6 +262,10 @@ const Admin = () => {
   const [settingsError, setSettingsError] = useState("");
   const [settingsSuccess, setSettingsSuccess] = useState("");
   const [settingsUpdating, setSettingsUpdating] = useState(false);
+  const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState(5);
+  const [sessionTimeoutUpdating, setSessionTimeoutUpdating] = useState(false);
+  const [sessionTimeoutError, setSessionTimeoutError] = useState("");
+  const [sessionTimeoutSuccess, setSessionTimeoutSuccess] = useState("");
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState("");
 
   const REQUEST_RECORDS_PER_PAGE = 10;
@@ -348,7 +353,7 @@ const Admin = () => {
       });
     };
 
-    const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 1 min (match token expiry for testing)
+    const SESSION_CHECK_INTERVAL_MS = 60 * 1000; // Check every 1 min
     const interval = setInterval(checkSession, SESSION_CHECK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
@@ -368,6 +373,14 @@ const Admin = () => {
   useEffect(() => {
     if ((activeTab === "hip" || activeTab === "listening") && isAuthenticated) {
       loadPlayCounts();
+    }
+  }, [activeTab, isAuthenticated]);
+
+  useEffect(() => {
+    if (activeTab === "settings" && isAuthenticated) {
+      getAdminSettings().then((s) =>
+        setSessionTimeoutMinutes(s.sessionTimeoutMinutes),
+      );
     }
   }, [activeTab, isAuthenticated]);
 
@@ -1262,7 +1275,7 @@ const Admin = () => {
     try {
       const settings = await getAdminSettings();
       if (pwd === settings.adminPassword) {
-        const token = await createAdminSession();
+        const token = await createAdminSession(settings.sessionTimeoutMinutes);
         sessionStorage.setItem("adminSessionToken", token);
         setIsAuthenticated(true);
         setPasswordError("");
@@ -3510,9 +3523,11 @@ const Admin = () => {
                   Change admin password and manage security settings.
                 </p>
               </div>
-              <div className="admin-settings-form-wrap">
-                <form
-                  className="admin-settings-form"
+              <div className="admin-settings-wrap">
+                <section className="admin-settings-card">
+                  <h3 className="admin-settings-card-title">Change password</h3>
+                  <form
+                    className="admin-settings-form"
                   onSubmit={async (e) => {
                     e.preventDefault();
                     setSettingsError("");
@@ -3603,6 +3618,70 @@ const Admin = () => {
                     {settingsUpdating ? "Updating..." : "Update Password"}
                   </button>
                 </form>
+                </section>
+                <section className="admin-settings-card">
+                  <h3 className="admin-settings-card-title">
+                    Auto logout
+                  </h3>
+                  <p className="admin-settings-card-desc">
+                    Session will automatically expire after this many minutes of
+                    inactivity.
+                  </p>
+                  <div className="admin-settings-timeout-row">
+                    <select
+                      value={sessionTimeoutMinutes}
+                      onChange={(e) => {
+                        setSessionTimeoutMinutes(Number(e.target.value));
+                        setSessionTimeoutError("");
+                        setSessionTimeoutSuccess("");
+                      }}
+                      className="admin-settings-input admin-settings-select"
+                      disabled={sessionTimeoutUpdating}
+                    >
+                      <option value={5}>5 minutes</option>
+                      <option value={10}>10 minutes</option>
+                      <option value={15}>15 minutes</option>
+                      <option value={30}>30 minutes</option>
+                      <option value={60}>1 hour</option>
+                      <option value={120}>2 hours</option>
+                      <option value={480}>8 hours</option>
+                      <option value={1440}>24 hours</option>
+                    </select>
+                    <button
+                      type="button"
+                      className="admin-settings-submit admin-settings-timeout-btn"
+                      disabled={sessionTimeoutUpdating}
+                      onClick={async () => {
+                        setSessionTimeoutError("");
+                        setSessionTimeoutSuccess("");
+                        setSessionTimeoutUpdating(true);
+                        const result = await updateSessionTimeout(
+                          sessionTimeoutMinutes,
+                        );
+                        setSessionTimeoutUpdating(false);
+                        if (result.success) {
+                          setSessionTimeoutSuccess(
+                            "Session timeout updated. New logins will use this setting.",
+                          );
+                        } else {
+                          setSessionTimeoutError(
+                            result.error || "Update failed.",
+                          );
+                        }
+                      }}
+                    >
+                      {sessionTimeoutUpdating ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                  {sessionTimeoutError && (
+                    <p className="admin-settings-error">{sessionTimeoutError}</p>
+                  )}
+                  {sessionTimeoutSuccess && (
+                    <p className="admin-settings-success">
+                      {sessionTimeoutSuccess}
+                    </p>
+                  )}
+                </section>
                 <div className="admin-settings-logout">
                   <button
                     type="button"

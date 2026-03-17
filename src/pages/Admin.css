@@ -243,19 +243,61 @@
   width: 100%;
 }
 
-.admin-settings-form-wrap {
+.admin-settings-wrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2rem;
+  align-items: stretch;
+  gap: 1.5rem;
   width: 100%;
-  max-width: 480px;
+  max-width: 420px;
+}
+
+@media (min-width: 900px) {
+  .admin-settings-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    max-width: 800px;
+    align-items: start;
+  }
+
+  .admin-settings-logout {
+    grid-column: 1 / -1;
+    padding-top: 1rem;
+  }
+}
+
+.admin-settings-card {
+  background-color: var(--track-bg);
+  border: 1px solid var(--nav-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.admin-settings-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem;
+}
+
+.admin-settings-card-desc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.admin-settings-card .admin-settings-input {
+  background-color: var(--bg);
 }
 
 .admin-settings-form {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 1.25rem;
   width: 100%;
 }
@@ -265,7 +307,6 @@
   flex-direction: column;
   gap: 0.5rem;
   width: 100%;
-  max-width: 320px;
 }
 
 .admin-settings-field label {
@@ -313,8 +354,11 @@
   width: 100%;
 }
 
+.admin-settings-form .admin-settings-submit {
+  align-self: flex-start;
+}
+
 .admin-settings-submit {
-  align-self: center;
   padding: 0.6rem 1.5rem;
   background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
   border: none;
@@ -335,11 +379,25 @@
   cursor: not-allowed;
 }
 
+.admin-settings-timeout-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-settings-select {
+  flex: 1;
+  min-width: 140px;
+  cursor: pointer;
+}
+
+.admin-settings-timeout-btn {
+  flex-shrink: 0;
+}
+
 .admin-settings-logout {
-  padding-top: 1rem;
-  border-top: 1px solid var(--nav-border);
-  width: 100%;
-  max-width: 320px;
+  padding-top: 0.5rem;
   display: flex;
   justify-content: center;
 }

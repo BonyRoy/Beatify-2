@@ -4,8 +4,7 @@ import { db } from "../firebase/config";
 const ADMIN_SETTINGS_COLLECTION = "adminSettings";
 const VALID_SESSIONS_COLLECTION = "adminValidSessions";
 const CONFIG_DOC_ID = "config";
-const SESSION_EXPIRY_HOURS = 24;
-const SESSION_EXPIRY_MINUTES = 1; // Use for testing; set to null to use hours
+const DEFAULT_SESSION_TIMEOUT_MINUTES = 5;
 const DEFAULT_PASSWORD = "8369877891";
 
 /**
@@ -18,6 +17,7 @@ export async function initAdminSettingsIfNeeded() {
     if (!snap.exists()) {
       await setDoc(ref, {
         adminPassword: DEFAULT_PASSWORD,
+        sessionTimeoutMinutes: DEFAULT_SESSION_TIMEOUT_MINUTES,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -28,22 +28,33 @@ export async function initAdminSettingsIfNeeded() {
 
 /**
  * Fetch admin settings from Firebase
- * @returns {Promise<{adminPassword: string}>}
+ * @returns {Promise<{adminPassword: string, sessionTimeoutMinutes: number}>}
  */
 export async function getAdminSettings() {
   try {
     const ref = doc(db, ADMIN_SETTINGS_COLLECTION, CONFIG_DOC_ID);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
-      return { adminPassword: DEFAULT_PASSWORD };
+      return {
+        adminPassword: DEFAULT_PASSWORD,
+        sessionTimeoutMinutes: DEFAULT_SESSION_TIMEOUT_MINUTES,
+      };
     }
     const data = snap.data();
+    const timeout = data?.sessionTimeoutMinutes;
     return {
       adminPassword: data?.adminPassword || DEFAULT_PASSWORD,
+      sessionTimeoutMinutes:
+        typeof timeout === "number" && timeout >= 1 && timeout <= 1440
+          ? timeout
+          : DEFAULT_SESSION_TIMEOUT_MINUTES,
     };
   } catch (e) {
     console.warn("Failed to fetch admin settings:", e);
-    return { adminPassword: DEFAULT_PASSWORD };
+    return {
+      adminPassword: DEFAULT_PASSWORD,
+      sessionTimeoutMinutes: DEFAULT_SESSION_TIMEOUT_MINUTES,
+    };
   }
 }
 
@@ -80,19 +91,22 @@ export async function updateAdminPassword(currentPassword, newPassword) {
 
 /**
  * Create a session token and store in Firestore
+ * @param {number} [sessionTimeoutMinutes] - Session duration in minutes (default from settings)
  * @returns {Promise<string>} Session token
  */
-export async function createAdminSession() {
+export async function createAdminSession(sessionTimeoutMinutes) {
+  const minutes =
+    typeof sessionTimeoutMinutes === "number" &&
+    sessionTimeoutMinutes >= 1 &&
+    sessionTimeoutMinutes <= 1440
+      ? sessionTimeoutMinutes
+      : DEFAULT_SESSION_TIMEOUT_MINUTES;
   const token =
     typeof crypto !== "undefined" && crypto.randomUUID
       ? crypto.randomUUID()
       : `sess-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const expiresAt = new Date();
-  if (SESSION_EXPIRY_MINUTES) {
-    expiresAt.setMinutes(expiresAt.getMinutes() + SESSION_EXPIRY_MINUTES);
-  } else {
-    expiresAt.setHours(expiresAt.getHours() + SESSION_EXPIRY_HOURS);
-  }
+  expiresAt.setMinutes(expiresAt.getMinutes() + minutes);
   try {
     const ref = doc(db, VALID_SESSIONS_COLLECTION, token);
     await setDoc(ref, {
@@ -103,6 +117,39 @@ export async function createAdminSession() {
   } catch (e) {
     console.warn("Failed to create session:", e);
     return token;
+  }
+}
+
+/**
+ * Update session timeout (auto-logout duration)
+ * @param {number} minutes - Session duration in minutes (1–1440)
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export async function updateSessionTimeout(minutes) {
+  const val = Number(minutes);
+  if (!Number.isFinite(val) || val < 1 || val > 1440) {
+    return {
+      success: false,
+      error: "Session timeout must be between 1 and 1440 minutes (24 hours).",
+    };
+  }
+  try {
+    const ref = doc(db, ADMIN_SETTINGS_COLLECTION, CONFIG_DOC_ID);
+    await setDoc(
+      ref,
+      {
+        sessionTimeoutMinutes: Math.round(val),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true },
+    );
+    return { success: true };
+  } catch (e) {
+    console.error("Failed to update session timeout:", e);
+    return {
+      success: false,
+      error: e.message || "Failed to update session timeout.",
+    };
   }
 }
 
