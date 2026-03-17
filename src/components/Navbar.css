@@ -599,4 +599,31 @@
     font-weight: 600;
     text-align: center;
   }
+
+  /* Moods header - gradient blue header with "Moods" in white */
+  .moods-header-mobile {
+    position: fixed;
+    top: 73px;
+    left: 0;
+    right: 0;
+    z-index: 99;
+    width: 100%;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+  }
+
+  .moods-header-mobile__icon {
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .moods-header-mobile__label {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
 }

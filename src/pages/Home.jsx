@@ -16,6 +16,8 @@ import { useCreateAccount } from "../context/CreateAccountContext";
 import { useListeningHistory } from "../context/ListeningHistoryContext";
 import { fuzzyMatchesAny } from "../utils/searchUtils";
 import { sortTracksByRelevance } from "../utils/trackRelevanceUtils";
+import { THEME_OPTIONS } from "../utils/themeOptions";
+import { MOODS_IMAGES } from "../utils/moodsImages";
 import "./Home.css";
 
 const DownloadIcon = ({ filled }) => (
@@ -93,7 +95,7 @@ const MusicIconGradient = () => (
   </svg>
 );
 
-const ClockIconGradient = () => (
+const MoodsIconGradient = () => (
   <svg
     width="24"
     height="24"
@@ -105,14 +107,19 @@ const ClockIconGradient = () => (
     strokeLinejoin="round"
   >
     <defs>
-      <linearGradient id="era-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <linearGradient id="moods-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
         <stop offset="0%" stopColor="#06b6d4" />
         <stop offset="50%" stopColor="#3b82f6" />
         <stop offset="100%" stopColor="#8b5cf6" />
       </linearGradient>
     </defs>
-    <circle cx="12" cy="12" r="10" stroke="url(#era-gradient)" />
-    <polyline points="12 6 12 12 16 14" stroke="url(#era-gradient)" />
+    <path
+      d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"
+      stroke="url(#moods-gradient)"
+    />
+    <path d="M20 2v4" stroke="url(#moods-gradient)" />
+    <path d="M22 4h-4" stroke="url(#moods-gradient)" />
+    <circle cx="4" cy="20" r="2" stroke="url(#moods-gradient)" />
   </svg>
 );
 
@@ -136,7 +143,7 @@ const getEraFromYear = (year) => {
   return null;
 };
 
-// Era display order
+// Era (years) display order
 const ERA_ORDER = ["70s", "80s", "90s", "2000s", "2010s", "2020s"];
 
 const MusicTrack = ({
@@ -687,6 +694,7 @@ const Home = () => {
   const selectedArtist = searchParams.get("artist");
   const selectedPlaylist = searchParams.get("playlist");
   const selectedEra = searchParams.get("era") || "";
+  const selectedTheme = searchParams.get("theme") || "";
   const searchQuery = searchParams.get("search") || "";
   const {
     selectTrack,
@@ -891,6 +899,16 @@ const Home = () => {
     return ERA_ORDER.filter((e) => eraSet.has(e));
   }, [musicList]);
 
+  // Extract available themes from music list (themes that appear in at least one track's genre)
+  const availableThemes = useMemo(() => {
+    return THEME_OPTIONS.filter((theme) =>
+      musicList.some((track) => {
+        const genreStr = String(track.genre || "").trim();
+        return genreStr && genreStr.includes(theme);
+      }),
+    );
+  }, [musicList]);
+
   // Filter music list based on search, favorites filter, artist selection, or playlist selection
   const filteredMusicList = useMemo(() => {
     let filtered = musicList;
@@ -961,10 +979,24 @@ const Home = () => {
       });
     }
 
+    // Apply theme filter if present (genre contains theme)
+    if (selectedTheme) {
+      filtered = filtered.filter((track) => {
+        const genreStr = String(track.genre || "").trim();
+        return genreStr && genreStr.includes(selectedTheme);
+      });
+    }
+
     // Finally apply search filter if present (fuzzy match, ~75% similarity)
     if (searchQuery) {
       filtered = filtered.filter((track) =>
-        fuzzyMatchesAny(searchQuery, track.name, track.artist, track.album),
+        fuzzyMatchesAny(
+          searchQuery,
+          track.name,
+          track.artist,
+          track.album,
+          track.genre,
+        ),
       );
     }
 
@@ -976,6 +1008,7 @@ const Home = () => {
     selectedArtist,
     selectedPlaylist,
     selectedEra,
+    selectedTheme,
     favorites,
     playCounts,
   ]);
@@ -1036,12 +1069,22 @@ const Home = () => {
 
   // On mobile: preload track images during 4 sec loading screen so they're ready when it fades
   useEffect(() => {
-    if (!isMobile || loading || preloadedRef.current || sortedMusicList.length === 0)
+    if (
+      !isMobile ||
+      loading ||
+      preloadedRef.current ||
+      sortedMusicList.length === 0
+    )
       return;
     preloadedRef.current = true;
     const toPreload = sortedMusicList.slice(0, 15);
     toPreload.forEach((track) => {
-      if (!track?.coverUrl && !track?.artworkUrl && !track?.albumArtUrl && track?.fileUrl) {
+      if (
+        !track?.coverUrl &&
+        !track?.artworkUrl &&
+        !track?.albumArtUrl &&
+        track?.fileUrl
+      ) {
         fetchAlbumArt(track);
       }
     });
@@ -1079,6 +1122,18 @@ const Home = () => {
       newSearchParams.delete("era");
     } else {
       newSearchParams.set("era", era);
+      newSearchParams.delete("playlist");
+      newSearchParams.delete("favorites");
+    }
+    setSearchParams(newSearchParams);
+  };
+
+  const handleThemeClick = (theme) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (selectedTheme === theme) {
+      newSearchParams.delete("theme");
+    } else {
+      newSearchParams.set("theme", theme);
       newSearchParams.delete("playlist");
       newSearchParams.delete("favorites");
     }
@@ -1127,8 +1182,10 @@ const Home = () => {
                     : `Tracks for "${selectedPlaylist}" playlist`
                   : selectedEra
                     ? `Tracks from ${selectedEra}`
-                    : "Tracks"}
-                {(selectedPlaylist || selectedEra) && (
+                    : selectedTheme
+                      ? `Tracks with theme: ${selectedTheme}`
+                      : "Tracks"}
+                {(selectedPlaylist || selectedEra || selectedTheme) && (
                   <button
                     type="button"
                     className="home__clear-filter-btn"
@@ -1136,6 +1193,7 @@ const Home = () => {
                       const p = new URLSearchParams(searchParams);
                       p.delete("playlist");
                       p.delete("era");
+                      p.delete("theme");
                       setSearchParams(p);
                     }}
                     aria-label="Clear filter"
@@ -1230,11 +1288,64 @@ const Home = () => {
         <main className="home__main">
           <Playlist hasFavorites={favorites.length > 0} />
         </main>
+        {isMobile && (
+          <section className="home__moods" aria-hidden={mobileView !== "moods"}>
+            <div className="home__moods-grid">
+              {ERA_ORDER.filter((e) => availableEras.includes(e)).map(
+                (era, idx) => (
+                  <button
+                    key={era}
+                    type="button"
+                    className={`home__moods-rect home__moods-rect--img ${selectedEra === era ? "home__moods-rect--selected" : ""}`}
+                    style={{
+                      backgroundImage: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url("${MOODS_IMAGES[idx % MOODS_IMAGES.length]}")`,
+                    }}
+                    onClick={() => {
+                      const p = new URLSearchParams(searchParams);
+                      if (selectedEra === era) p.delete("era");
+                      else p.set("era", era);
+                      p.set("view", "track");
+                      setSearchParams(p);
+                    }}
+                  >
+                    {era}
+                  </button>
+                ),
+              )}
+              {availableThemes.map((theme, idx) => {
+                const eraCount = ERA_ORDER.filter((e) =>
+                  availableEras.includes(e),
+                ).length;
+                const imgIdx = eraCount + idx;
+                return (
+                  <button
+                    key={theme}
+                    type="button"
+                    className={`home__moods-rect home__moods-rect--img ${selectedTheme === theme ? "home__moods-rect--selected" : ""}`}
+                    style={{
+                      backgroundImage: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url("${MOODS_IMAGES[imgIdx % MOODS_IMAGES.length]}")`,
+                    }}
+                    onClick={() => {
+                      const p = new URLSearchParams(searchParams);
+                      if (selectedTheme === theme) p.delete("theme");
+                      else p.set("theme", theme);
+                      p.set("view", "track");
+                      setSearchParams(p);
+                    }}
+                    title={theme}
+                  >
+                    {theme}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
         <aside className="home__era">
           <div className="home__era-header">
             <h4 className="home__era-title">
-              <ClockIconGradient />
-              ERA
+              <MoodsIconGradient />
+              Moods
             </h4>
           </div>
           <div className="home__era-content">
@@ -1251,6 +1362,34 @@ const Home = () => {
                   {era}
                 </button>
               ))
+            )}
+            {availableThemes.length > 0 && (
+              <div className="home__era-themes">
+                {availableThemes.map((theme, idx) => {
+                  const isLong = theme.length > 20;
+                  const colorClass = `home__era-theme-badge--c${idx % 10}`;
+                  return (
+                    <button
+                      key={theme}
+                      type="button"
+                      className={`home__era-theme-badge ${colorClass} ${selectedTheme === theme ? "home__era-theme-badge--selected" : ""} ${isLong ? "home__era-theme-badge--scroll" : ""}`}
+                      onClick={() => handleThemeClick(theme)}
+                      title={theme}
+                    >
+                      <span className="home__era-theme-badge-inner">
+                        <span className="home__era-theme-badge-text">
+                          {theme}
+                        </span>
+                        {isLong && (
+                          <span className="home__era-theme-badge-text home__era-theme-badge-text--duplicate">
+                            {theme}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </aside>

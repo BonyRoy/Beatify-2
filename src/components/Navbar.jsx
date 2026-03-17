@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { UserPlus, User, MessageSquare } from "lucide-react";
+import { UserPlus, User, MessageSquare, Sparkles } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useListeningHistory } from "../context/ListeningHistoryContext";
 import { useCreateAccount } from "../context/CreateAccountContext";
@@ -297,6 +297,8 @@ const Navbar = () => {
   }, [isLoggedIn, accountId]);
 
   const showPlaylistHeader = isMobile && selectedPlaylist && view === "track";
+  const showMoodsView = isMobile && view === "moods";
+
   useEffect(() => {
     if (showPlaylistHeader) {
       document.body.classList.add("playlist-header-visible");
@@ -305,6 +307,15 @@ const Navbar = () => {
     }
     return () => document.body.classList.remove("playlist-header-visible");
   }, [showPlaylistHeader]);
+
+  useEffect(() => {
+    if (showMoodsView) {
+      document.body.classList.add("moods-header-visible");
+    } else {
+      document.body.classList.remove("moods-header-visible");
+    }
+    return () => document.body.classList.remove("moods-header-visible");
+  }, [showMoodsView]);
 
   // Remove artist filter on page reload
   useEffect(() => {
@@ -612,7 +623,12 @@ const Navbar = () => {
           onClose={() => setEmptyFavModalOpen(false)}
         />
       </nav>
-      {isMobile && selectedPlaylist && view === "track" ? (
+      {isMobile && view === "moods" ? (
+        <div className="moods-header-mobile">
+          <Sparkles size={22} strokeWidth={2} className="moods-header-mobile__icon" aria-hidden />
+          <span className="moods-header-mobile__label">Moods</span>
+        </div>
+      ) : isMobile && selectedPlaylist && view === "track" ? (
         <div
           className="playlist-header-mobile"
           style={{

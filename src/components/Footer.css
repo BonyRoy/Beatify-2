@@ -106,7 +106,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-primary, #fff);
+  color: white;
   cursor: pointer;
   transition:
     background-color 0.2s,
@@ -183,7 +183,7 @@
 .player__fullscreen-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--text-primary, #fff);
+  color: white;
   margin: 0 0 0.5rem 0;
 }
 
@@ -206,7 +206,7 @@
 
 .player__fullscreen-artist {
   font-size: 1rem;
-  color: var(--text-muted, #a1a1aa);
+  color: white;
   margin: 0;
   white-space: nowrap;
   display: inline-block;
@@ -247,7 +247,11 @@
 
 .player__control-btn--fullscreen {
   padding: 0.75rem;
-  color: var(--text-primary, #fff);
+  color: white;
+}
+
+.player__control-btn--fullscreen:hover {
+  color: white;
 }
 
 .player__control-btn--fullscreen-play {
@@ -289,7 +293,7 @@
 }
 
 .player__fullscreen-volume svg {
-  color: var(--text-primary, #fff);
+  color: white;
   flex-shrink: 0;
 }
 
@@ -307,11 +311,11 @@
   flex-shrink: 0;
 }
 
-.player__speed-btn {
+.footer--fullscreen .player__speed-btn {
   background: var(--track-bg, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--nav-border, #27272a);
   border-radius: 8px;
-  color: var(--text-primary, #fff);
+  color: white;
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
   font-weight: 500;
@@ -345,10 +349,10 @@
   z-index: 10001;
 }
 
-.player__speed-option {
+.footer--fullscreen .player__speed-option {
   background: transparent;
   border: none;
-  color: var(--text-primary, #fff);
+  color: white;
   padding: 0.5rem 0.75rem;
   font-size: 0.9rem;
   cursor: pointer;
@@ -392,6 +396,11 @@ body.footer-fullscreen-active .app__content {
 
 body.footer-fullscreen-active {
   overflow: hidden !important;
+}
+
+/* Fullscreen player: time display always white */
+.footer--fullscreen .player__time {
+  color: white;
 }
 
 /* Hide full-screen mode on desktop */

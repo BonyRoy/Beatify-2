@@ -131,7 +131,11 @@ const ClearWeeklyCountsButton = ({ onClear, disabled = false }) => {
   const [clearing, setClearing] = useState(false);
   const handleClick = async () => {
     if (clearing || disabled) return;
-    if (!window.confirm("Reset all weekly play counts to 0? This starts a new week."))
+    if (
+      !window.confirm(
+        "Reset all weekly play counts to 0? This starts a new week.",
+      )
+    )
       return;
     setClearing(true);
     try {
@@ -1878,7 +1882,7 @@ const Admin = () => {
                     type="button"
                     className="admin-bulk-excel-btn admin-bulk-upload-btn"
                     onClick={() => excelFileInputRef.current?.click()}
-                    disabled
+                    disabled={existingTracks.length === 0 || bulkUpdating}
                   >
                     <FileUp size={18} className="admin-icon-inline" /> Upload
                     Excel
@@ -2914,7 +2918,9 @@ const Admin = () => {
                                     </p>
                                     <ClearWeeklyCountsButton
                                       onClear={loadPlayCounts}
-                                      disabled={Object.keys(playCounts).length === 0}
+                                      disabled={
+                                        Object.keys(playCounts).length === 0
+                                      }
                                     />
                                   </div>
                                 ) : (

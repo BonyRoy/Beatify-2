@@ -20,7 +20,13 @@ const PlayIcon = () => (
   </svg>
 );
 
-const ArtistCard = ({ artist, isSelected, shouldGrayOut, onArtistClick, selectedCardRef }) => {
+const ArtistCard = ({
+  artist,
+  isSelected,
+  shouldGrayOut,
+  onArtistClick,
+  selectedCardRef,
+}) => {
   const nameRef = useRef(null);
   const [shouldScrollName, setShouldScrollName] = useState(false);
   const [nameDuration, setNameDuration] = useState(20);
@@ -34,7 +40,8 @@ const ArtistCard = ({ artist, isSelected, shouldGrayOut, onArtistClick, selected
             const wrapperEl = nameEl.closest(".artist-name-wrapper");
             const innerEl = nameEl.closest(".artist-name-inner");
             if (wrapperEl && innerEl) {
-              const isOverflowing = nameEl.scrollWidth > wrapperEl.offsetWidth + 5;
+              const isOverflowing =
+                nameEl.scrollWidth > wrapperEl.offsetWidth + 5;
               setShouldScrollName(isOverflowing);
               if (isOverflowing) {
                 const totalWidth = innerEl.scrollWidth;
@@ -69,7 +76,9 @@ const ArtistCard = ({ artist, isSelected, shouldGrayOut, onArtistClick, selected
           onError={(e) => {
             e.target.style.display = "none";
             e.target.parentElement.innerHTML =
-              '<div class="artist-placeholder">' + artist.name.charAt(0) + "</div>";
+              '<div class="artist-placeholder">' +
+              artist.name.charAt(0) +
+              "</div>";
           }}
         />
         {isSelected && (
@@ -78,7 +87,11 @@ const ArtistCard = ({ artist, isSelected, shouldGrayOut, onArtistClick, selected
             className="artist-play-btn"
             onClick={(e) => {
               e.stopPropagation();
-              window.dispatchEvent(new CustomEvent("playArtist", { detail: { artistName: artist.name } }));
+              window.dispatchEvent(
+                new CustomEvent("playArtist", {
+                  detail: { artistName: artist.name },
+                }),
+              );
             }}
             aria-label={`Play ${artist.name}`}
           >
@@ -89,7 +102,11 @@ const ArtistCard = ({ artist, isSelected, shouldGrayOut, onArtistClick, selected
       <div className="artist-name-wrapper">
         <div
           className={`artist-name-inner ${isSelected && shouldScrollName ? "artist-name--scroll" : ""}`}
-          style={isSelected && shouldScrollName ? { "--scroll-duration": `${nameDuration}s` } : {}}
+          style={
+            isSelected && shouldScrollName
+              ? { "--scroll-duration": `${nameDuration}s` }
+              : {}
+          }
         >
           <p
             ref={nameRef}
@@ -177,7 +194,13 @@ const Artists = ({ artists, selectedArtist, searchQuery, onArtistClick }) => {
   const filteredTracks = React.useMemo(() => {
     if (!searchQuery || musicList.length === 0) return [];
     return musicList.filter((track) =>
-      fuzzyMatchesAny(searchQuery, track.name, track.artist, track.album),
+      fuzzyMatchesAny(
+        searchQuery,
+        track.name,
+        track.artist,
+        track.album,
+        track.genre,
+      ),
     );
   }, [musicList, searchQuery]);
 

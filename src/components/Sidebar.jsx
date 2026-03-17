@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { UserPlus, User, MessageSquarePlus, MessageSquare } from "lucide-react";
+import {
+  UserPlus,
+  User,
+  MessageSquarePlus,
+  MessageSquare,
+  Sparkles,
+} from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import EmptyFavoritesModal from "./EmptyFavoritesModal";
+import { THEME_OPTIONS } from "../utils/themeOptions";
 import "./Sidebar.css";
 
 const FavoriteIcon = ({ filled }) => (
@@ -215,6 +222,7 @@ const Sidebar = ({
   const currentView = searchParams.get("view") || defaultView;
   const showFavorites = searchParams.get("favorites") === "true";
   const selectedEra = searchParams.get("era") || "";
+  const selectedTheme = searchParams.get("theme") || "";
 
   const handleEraClick = (era) => {
     const newParams = new URLSearchParams(searchParams);
@@ -227,8 +235,20 @@ const Sidebar = ({
     onClose();
   };
 
+  const handleThemeClick = (theme) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (selectedTheme === theme) {
+      newParams.delete("theme");
+    } else {
+      newParams.set("theme", theme);
+    }
+    setSearchParams(newParams);
+    onClose();
+  };
+
   const handleTrackOrPlaylist = () => {
-    navigate(currentView === "track" ? "/?view=playlist" : "/?view=track");
+    const nextView = currentView === "track" ? "playlist" : "track";
+    navigate(`/?view=${nextView}`);
     onClose();
   };
 
@@ -342,9 +362,15 @@ const Sidebar = ({
 
           <div className="sidebar__era-section">
             <div className="sidebar__era-header">
-              <span className="sidebar__era-label">ERA</span>
+              <span className="sidebar__era-label">
+                {isMobile ? "Era" : "Moods"}
+              </span>
               <span className="sidebar__icon">
-                <ClockIcon />
+                {isMobile ? (
+                  <ClockIcon />
+                ) : (
+                  <Sparkles size={20} strokeWidth={1.8} aria-hidden />
+                )}
               </span>
             </div>
             <div className="sidebar__era-badges">
@@ -358,6 +384,32 @@ const Sidebar = ({
                   {era}
                 </button>
               ))}
+            </div>
+            <div className="sidebar__era-themes">
+              {THEME_OPTIONS.map((theme, idx) => {
+                const isLong = theme.length > 20;
+                const colorClass = `sidebar__era-theme-badge--c${idx % 10}`;
+                return (
+                  <button
+                    key={theme}
+                    type="button"
+                    className={`sidebar__era-theme-badge ${colorClass} ${selectedTheme === theme ? "sidebar__era-theme-badge--selected" : ""} ${isLong ? "sidebar__era-theme-badge--scroll" : ""}`}
+                    onClick={() => handleThemeClick(theme)}
+                    title={theme}
+                  >
+                    <span className="sidebar__era-theme-badge-inner">
+                      <span className="sidebar__era-theme-badge-text">
+                        {theme}
+                      </span>
+                      {isLong && (
+                        <span className="sidebar__era-theme-badge-text sidebar__era-theme-badge-text--duplicate">
+                          {theme}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -376,9 +428,26 @@ const Sidebar = ({
             </button>
           )}
 
+          {isMobile && (
+            <button
+              type="button"
+              className={`sidebar__item sidebar__item--button ${currentView === "moods" ? "sidebar__item--active" : ""}`}
+              onClick={() => {
+                const newParams = new URLSearchParams(searchParams);
+                newParams.set("view", "moods");
+                setSearchParams(newParams);
+                onClose();
+              }}
+            >
+              <span className="sidebar__label">Moods</span>
+              <span className="sidebar__icon">
+                <Sparkles size={20} strokeWidth={1.8} aria-hidden />
+              </span>
+            </button>
+          )}
           <button
             type="button"
-            className="sidebar__item sidebar__item--button"
+            className={`sidebar__item sidebar__item--button ${currentView === "playlist" ? "sidebar__item--active" : ""}`}
             onClick={handleTrackOrPlaylist}
           >
             <span className="sidebar__label">

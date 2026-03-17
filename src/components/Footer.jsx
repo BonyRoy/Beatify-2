@@ -181,6 +181,8 @@ const Footer = () => {
   const preloadStartedRef = useRef(false);
   const transitionAt2SecTriggeredRef = useRef(false);
   const playCountIncrementedRef = useRef(false);
+  const swipeStartYRef = useRef(null);
+  const footerRef = useRef(null);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -207,6 +209,50 @@ const Footer = () => {
       document.body.classList.remove("footer-fullscreen-active");
     };
   }, [isFullScreen, isMobile]);
+
+  // Touchmove with passive: false so preventDefault works during swipe-down
+  useEffect(() => {
+    const el = footerRef.current;
+    if (!el || !isFullScreen || !isMobile) return;
+    const onTouchMove = (e) => {
+      if (swipeStartYRef.current === null) return;
+      const deltaY = e.touches[0].clientY - swipeStartYRef.current;
+      if (deltaY > 30) e.preventDefault();
+    };
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
+  }, [isFullScreen, isMobile]);
+
+  // Swipe-down gesture to close fullscreen player (mobile only)
+  const handleFullscreenTouchStart = useCallback(
+    (e) => {
+      if (!isFullScreen || !isMobile) return;
+      if (
+        e.target.closest(".player__fullscreen-progress") ||
+        e.target.closest(".player__fullscreen-controls") ||
+        e.target.closest(".player__fullscreen-extra-controls") ||
+        e.target.closest(".player__fullscreen-close")
+      ) {
+        return;
+      }
+      swipeStartYRef.current = e.touches[0].clientY;
+    },
+    [isFullScreen, isMobile]
+  );
+
+  const handleFullscreenTouchEnd = useCallback(
+    (e) => {
+      if (swipeStartYRef.current === null) return;
+      const endY = e.changedTouches[0].clientY;
+      const deltaY = endY - swipeStartYRef.current;
+      const threshold = Math.min(80, window.innerHeight * 0.15);
+      if (deltaY > threshold) {
+        setIsFullScreen(false);
+      }
+      swipeStartYRef.current = null;
+    },
+    []
+  );
 
   // Handle footer click to toggle full-screen player (mobile only)
   const handleFooterClick = (e) => {
@@ -1948,8 +1994,11 @@ const Footer = () => {
   return (
     <>
       <footer
+        ref={footerRef}
         className={`footer footer--player ${isFullScreen ? "footer--fullscreen" : ""}`}
         onClick={!isFullScreen ? handleFooterClick : handleFooterClick}
+        onTouchStart={isFullScreen ? handleFullscreenTouchStart : undefined}
+        onTouchEnd={isFullScreen ? handleFullscreenTouchEnd : undefined}
         style={
           isFullScreen && dynamicBgGradient
             ? { background: dynamicBgGradient }

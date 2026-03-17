@@ -82,6 +82,11 @@ body.artists-hidden .app__content {
     /* Only navbar height on mobile */
   }
 
+  body.moods-header-visible .app__content {
+    padding-top: 135px;
+    /* Navbar ~73px + Moods header ~52px + buffer */
+  }
+
   .app__content--admin {
     padding-top: 0;
   }
@@ -101,6 +106,11 @@ body.artists-hidden .app__content {
   body.artists-hidden .app__content {
     padding-top: 70px;
     /* Only navbar height on mobile */
+  }
+
+  body.moods-header-visible .app__content {
+    padding-top: 120px;
+    /* Navbar ~73px + Moods header ~52px + buffer */
   }
 
   .app__content--admin {
