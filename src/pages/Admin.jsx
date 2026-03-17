@@ -1560,6 +1560,7 @@ const Admin = () => {
             type="button"
             className={`admin-tab ${activeTab === "playlist" ? "admin-tab--active" : ""}`}
             onClick={() => setActiveTab("playlist")}
+            aria-label="Manage playlists"
           >
             <List size={18} className="admin-icon-inline" /> Playlist
           </button>
