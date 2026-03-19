@@ -14,11 +14,13 @@ Song requests now require email verification via OTP. Follow these steps to conf
 2. Set the template content. Example:
 
 **Subject:**
+
 ```
 Your Beatify Song Request OTP: {{otp}}
 ```
 
 **Content (HTML):**
+
 ```html
 <p>Hi {{user_name}},</p>
 <p>Your OTP for submitting a song request on Beatify is:</p>
@@ -40,6 +42,7 @@ Your Beatify Song Request OTP: {{otp}}
 ## 3. Get Your Credentials
 
 From the EmailJS Dashboard:
+
 - **Service ID** – Email Services → your service
 - **Template ID** – Email Templates → your template
 - **Public Key** – Account → API Keys
