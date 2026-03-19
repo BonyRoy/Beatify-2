@@ -1,7 +1,13 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
 import { getAccountByEmail, createAccount, getUniqueDisplayName } from "../services/accountService";
+import { tryGetNativeUserData } from "../utils/nativeUserData";
 import NativeAccountConfirmModal from "./NativeAccountConfirmModal";
+
+const validateEmail = (value) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return value && value.trim() && emailRegex.test(value.trim());
+};
 
 const generateUUID = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -12,55 +18,6 @@ const generateUUID = () => {
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
-};
-
-const validateEmail = (value) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return value && value.trim() && emailRegex.test(value.trim());
-};
-
-const NATIVE_MOCK_PARAM = "nativeMock";
-
-const tryGetNativeUserData = () => {
-  try {
-    if (typeof window === "undefined") return null;
-
-    // Dev: simulate native call in browser when ?nativeMock=1 in URL
-    const urlParams = new URLSearchParams(window.location?.search || "");
-    if (urlParams.get(NATIVE_MOCK_PARAM) === "1") {
-      const mock = { name: "Test User", email: "test@example.com" };
-      console.log("[NativeBridge] MOCK MODE - simulating native data:", mock);
-      return mock;
-    }
-
-    if (!window.Android) {
-      console.log("[NativeBridge] window.Android not found (running in browser)");
-      return null;
-    }
-    if (typeof window.Android.getUserData !== "function") {
-      console.log("[NativeBridge] window.Android.getUserData is not a function");
-      return null;
-    }
-    const raw = window.Android.getUserData();
-    console.log("[NativeBridge] getUserData() raw:", raw);
-    if (!raw) {
-      console.log("[NativeBridge] getUserData() returned empty");
-      return null;
-    }
-    const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-    console.log("[NativeBridge] Parsed data:", data);
-    const name = (data?.name ?? "").trim();
-    const email = (data?.email ?? "").trim();
-    if (email && validateEmail(email)) {
-      const result = { name: name || email.split("@")[0] || "user", email };
-      console.log("[NativeBridge] Valid user data:", result);
-      return result;
-    }
-    console.log("[NativeBridge] Invalid or missing email:", { name, email });
-  } catch (e) {
-    console.warn("[NativeBridge] Failed to get user data:", e);
-  }
-  return null;
 };
 
 /**

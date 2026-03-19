@@ -115,6 +115,13 @@
   background-color: #e4e4e7;
 }
 
+.create-account-native-hint {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+}
+
 .create-account-form-group {
   display: flex;
   flex-direction: column;
