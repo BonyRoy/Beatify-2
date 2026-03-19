@@ -14,7 +14,9 @@
   justify-content: center;
   box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
   z-index: 100;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   user-select: none;
   touch-action: none;
 }
@@ -80,7 +82,9 @@ body:has(.footer--player) .floating-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .floating-button-overlay__close:hover {
@@ -187,7 +191,9 @@ body:has(.footer--player) .floating-button {
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
 }
 
 .floating-button-overlay__card:hover {
@@ -286,6 +292,7 @@ body:has(.footer--player) .floating-button {
   .floating-button-overlay__card {
     width: 100%;
     max-width: 320px;
+    margin-top: 30px !important;
   }
 
   .floating-button-overlay__banner {

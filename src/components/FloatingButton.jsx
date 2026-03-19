@@ -1,15 +1,16 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { fetchMusicList } from "../services/musicService";
+import { fetchFeaturedStory } from "../services/featuredStoryService";
 import { useAlbumArt } from "../context/AlbumArtContext";
 import { usePlayer } from "../context/PlayerContext";
 import "./FloatingButton.css";
 
-const FEATURED_TRACK_UUID = "5ffeb49c-da15-4553-8450-68513e8b8a31";
-
 const STORAGE_KEY = "beatify-floating-button-position";
 const DRAG_THRESHOLD = 5;
+const SWIPE_CLOSE_THRESHOLD = 80;
+const SWIPE_START_TOP_ZONE = 150; /* only close when swipe starts in top area */
 
-const PlusIcon = () => (
+const StoryBookIcon = () => (
   <svg
     width="24"
     height="24"
@@ -20,8 +21,8 @@ const PlusIcon = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
   </svg>
 );
 
@@ -84,12 +85,14 @@ const FloatingButton = ({
   const { selectTrack } = usePlayer();
   const [position, setPosition] = useState(loadStoredPosition);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [storyConfig, setStoryConfig] = useState(null);
   const [featuredTrack, setFeaturedTrack] = useState(null);
   const [bannerError, setBannerError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
   const hasMovedRef = useRef(false);
   const lastPositionRef = useRef(null);
+  const swipeStartRef = useRef(null);
 
   const getDefaultPosition = useCallback(() => {
     const btnSize = 56;
@@ -186,13 +189,27 @@ const FloatingButton = ({
   }, [showOverlay]);
 
   useEffect(() => {
-    if (!showOverlay) return;
     let cancelled = false;
+    fetchFeaturedStory()
+      .then((config) => {
+        if (cancelled) return;
+        setStoryConfig(config);
+      })
+      .catch(() => setStoryConfig(null));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showOverlay || !storyConfig) return;
+    let cancelled = false;
+    const uuid = storyConfig.featuredTrackUuid;
     fetchMusicList()
       .then((tracks) => {
         if (cancelled) return;
         const track = tracks.find(
-          (t) => (t.uuid || t.id) === FEATURED_TRACK_UUID,
+          (t) => (t.uuid || t.id) === uuid,
         );
         setFeaturedTrack(track ?? null);
       })
@@ -200,7 +217,7 @@ const FloatingButton = ({
     return () => {
       cancelled = true;
     };
-  }, [showOverlay]);
+  }, [showOverlay, storyConfig]);
 
   useEffect(() => {
     if (featuredTrack && !getAlbumArt(featuredTrack)) {
@@ -226,12 +243,41 @@ const FloatingButton = ({
 
   const pos = position ?? getDefaultPosition();
 
+  const handleOverlayTouchStart = useCallback((e) => {
+    const y = e.touches?.[0]?.clientY;
+    if (y != null && y < SWIPE_START_TOP_ZONE) {
+      swipeStartRef.current = y;
+    } else {
+      swipeStartRef.current = null;
+    }
+  }, []);
+
+  const handleOverlayTouchEnd = useCallback(
+    (e) => {
+      const startY = swipeStartRef.current;
+      if (startY == null) return;
+      swipeStartRef.current = null;
+      const endY = e.changedTouches?.[0]?.clientY ?? 0;
+      const deltaY = endY - startY;
+      if (deltaY > SWIPE_CLOSE_THRESHOLD) {
+        setShowOverlay(false);
+      }
+    },
+    [],
+  );
+
+  if (storyConfig === null) {
+    return null;
+  }
+
   return (
     <>
       {showOverlay && (
         <div
           className="floating-button-overlay"
           onClick={() => setShowOverlay(false)}
+          onTouchStart={handleOverlayTouchStart}
+          onTouchEnd={handleOverlayTouchEnd}
           role="dialog"
           aria-modal="true"
           aria-label="AI gradient overlay"
@@ -241,13 +287,19 @@ const FloatingButton = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="floating-button-overlay__header">
-              <p className="floating-button-overlay__byline">brought to you by beatify</p>
-              <h1 className="floating-button-overlay__brand">Kahaani Beats</h1>
-              <p className="floating-button-overlay__tagline">There is Always a Story Behind a Great Song</p>
+              <p className="floating-button-overlay__byline">
+                {storyConfig.byline}
+              </p>
+              <h1 className="floating-button-overlay__brand">
+                {storyConfig.brand}
+              </h1>
+              <p className="floating-button-overlay__tagline">
+                {storyConfig.tagline}
+              </p>
             </div>
-            {bannerError ? null : (
+            {bannerError || !storyConfig.bannerImageUrl ? null : (
               <img
-                src="/story.png"
+                src={storyConfig.bannerImageUrl}
                 alt="Story"
                 className="floating-button-overlay__banner"
                 onError={() => setBannerError(true)}
@@ -255,13 +307,10 @@ const FloatingButton = ({
             )}
             <div className="floating-button-overlay__story">
               <h2 className="floating-button-overlay__song-title">
-                Itna na na mujh se tu pyar badha (Film: Chhaaya)
+                {storyConfig.songTitle}
               </h2>
               <p className="floating-button-overlay__song-desc">
-                Salil Chowdhury loved Mozart&apos;s music and wanted to use that
-                classical style in this song. The producer wasn&apos;t sure at
-                first, but Salil insisted it would work. The song was recorded
-                with that symphony—and it became a timeless classic.
+                {storyConfig.songDescription}
               </p>
             </div>
             {featuredTrack ? (
@@ -336,7 +385,7 @@ const FloatingButton = ({
         onTouchStart={handlePointerDown}
         aria-label={ariaLabel}
       >
-        {children ?? <PlusIcon />}
+        {children ?? <StoryBookIcon />}
       </button>
     </>
   );

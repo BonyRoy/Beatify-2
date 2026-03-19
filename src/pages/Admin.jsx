@@ -45,6 +45,7 @@ import {
   Headphones,
   X,
   Settings,
+  BookOpen,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { usePlaylist } from "../context/PlaylistContext";
@@ -80,6 +81,10 @@ import {
   updatePlaylist,
   deletePlaylist,
 } from "../services/playlistService";
+import {
+  fetchFeaturedStory,
+  updateFeaturedStory,
+} from "../services/featuredStoryService";
 import "./Admin.css";
 
 const SunIcon = () => (
@@ -287,12 +292,29 @@ const Admin = () => {
   const [playlistError, setPlaylistError] = useState("");
   const [showPlaylistForm, setShowPlaylistForm] = useState(false);
 
+  const [storyForm, setStoryForm] = useState({
+    byline: "",
+    brand: "",
+    tagline: "",
+    bannerImageUrl: "",
+    songTitle: "",
+    songDescription: "",
+    featuredTrackUuid: "",
+  });
+  const [storyBannerFile, setStoryBannerFile] = useState(null);
+  const [storyBannerPreviewUrl, setStoryBannerPreviewUrl] = useState(null);
+  const [storyLoading, setStoryLoading] = useState(false);
+  const [storySaving, setStorySaving] = useState(false);
+  const [storyError, setStoryError] = useState("");
+  const [storySuccess, setStorySuccess] = useState("");
+
   const REQUEST_RECORDS_PER_PAGE = 10;
   const FEEDBACK_RECORDS_PER_PAGE = 10;
   const ACCOUNTS_RECORDS_PER_PAGE = 10;
   const LISTENING_STATS_RECORDS_PER_PAGE = 10;
 
   const excelFileInputRef = useRef(null);
+  const storyBannerInputRef = useRef(null);
 
   const BULK_RECORDS_PER_PAGE = 20;
 
@@ -409,6 +431,35 @@ const Admin = () => {
       getAdminSettings().then((s) =>
         setSessionTimeoutMinutes(s.sessionTimeoutMinutes),
       );
+    }
+  }, [activeTab, isAuthenticated]);
+
+  useEffect(() => {
+    if (storyBannerFile) {
+      const url = URL.createObjectURL(storyBannerFile);
+      setStoryBannerPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setStoryBannerPreviewUrl(null);
+    }
+  }, [storyBannerFile]);
+
+  useEffect(() => {
+    if (activeTab === "story" && isAuthenticated) {
+      setStoryLoading(true);
+      fetchFeaturedStory()
+        .then((s) =>
+          setStoryForm({
+            byline: s?.byline ?? "",
+            brand: s?.brand ?? "",
+            tagline: s?.tagline ?? "",
+            bannerImageUrl: s?.bannerImageUrl ?? "",
+            songTitle: s?.songTitle ?? "",
+            songDescription: s?.songDescription ?? "",
+            featuredTrackUuid: s?.featuredTrackUuid ?? "",
+          }),
+        )
+        .finally(() => setStoryLoading(false));
     }
   }, [activeTab, isAuthenticated]);
 
@@ -1563,6 +1614,14 @@ const Admin = () => {
             aria-label="Manage playlists"
           >
             <List size={18} className="admin-icon-inline" /> Playlist
+          </button>
+          <button
+            type="button"
+            className={`admin-tab ${activeTab === "story" ? "admin-tab--active" : ""}`}
+            onClick={() => setActiveTab("story")}
+            aria-label="Featured story overlay"
+          >
+            <BookOpen size={18} className="admin-icon-inline" /> Story
           </button>
           <button
             type="button"
@@ -3757,6 +3816,232 @@ const Admin = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          )}
+          {activeTab === "story" && (
+            <div className="admin-hip-tab admin-story-tab">
+              <div className="admin-bulk-header">
+                <h2>
+                  <BookOpen size={22} className="admin-icon-inline" /> Featured
+                  Story (Floating Button Overlay)
+                </h2>
+                <p className="admin-bulk-subtitle">
+                  Configure the Kahaani Beats story overlay shown when users tap
+                  the floating book button.
+                </p>
+              </div>
+              {storyLoading ? (
+                <p className="admin-playlist-loading">Loading story config...</p>
+              ) : (
+                <div className="admin-playlist-form-card">
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      setStoryError("");
+                      setStorySuccess("");
+                      setStorySaving(true);
+                      try {
+                        let bannerImageUrl = storyForm.bannerImageUrl;
+                        if (storyBannerFile) {
+                          const storageRef = ref(
+                            storage,
+                            `story/banner_${Date.now()}.${storyBannerFile.name.split(".").pop() || "png"}`,
+                          );
+                          await uploadBytes(storageRef, storyBannerFile);
+                          bannerImageUrl = await getDownloadURL(storageRef);
+                        }
+                        const res = await updateFeaturedStory({
+                          ...storyForm,
+                          bannerImageUrl: bannerImageUrl || storyForm.bannerImageUrl,
+                        });
+                        if (res.success) {
+                          setStorySuccess("Story config saved successfully.");
+                          setStoryForm((f) => ({
+                            ...f,
+                            bannerImageUrl: bannerImageUrl || f.bannerImageUrl,
+                          }));
+                          setStoryBannerFile(null);
+                        } else {
+                          setStoryError(res.error || "Save failed.");
+                        }
+                      } catch (err) {
+                        setStoryError(err.message || "Upload failed.");
+                      } finally {
+                        setStorySaving(false);
+                      }
+                    }}
+                  >
+                    <div className="admin-form-section">
+                      <h3>Header</h3>
+                      <div className="admin-form-group">
+                        <label>Byline</label>
+                        <input
+                          type="text"
+                          value={storyForm.byline}
+                          onChange={(e) =>
+                            setStoryForm((f) => ({
+                              ...f,
+                              byline: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g. brought to you by beatify"
+                          className="admin-settings-input"
+                        />
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Brand</label>
+                        <input
+                          type="text"
+                          value={storyForm.brand}
+                          onChange={(e) =>
+                            setStoryForm((f) => ({
+                              ...f,
+                              brand: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g. Kahaani Beats"
+                          className="admin-settings-input"
+                        />
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Tagline</label>
+                        <input
+                          type="text"
+                          value={storyForm.tagline}
+                          onChange={(e) =>
+                            setStoryForm((f) => ({
+                              ...f,
+                              tagline: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g. There is Always a Story Behind a Great Song"
+                          className="admin-settings-input"
+                        />
+                      </div>
+                    </div>
+                    <div className="admin-form-section">
+                      <h3>Banner Image</h3>
+                      <div className="admin-form-group">
+                        <label>Current banner</label>
+                        {(storyForm.bannerImageUrl || storyBannerFile) ? (
+                          <div className="admin-story-banner-preview">
+                            {storyBannerFile && !storyBannerPreviewUrl ? (
+                              <p className="admin-story-preview-hint">
+                                Loading preview...
+                              </p>
+                            ) : (
+                              <img
+                                src={
+                                  storyBannerFile
+                                    ? storyBannerPreviewUrl
+                                    : storyForm.bannerImageUrl
+                                }
+                                alt="Banner preview"
+                                className="admin-story-banner-img"
+                              />
+                            )}
+                            <button
+                              type="button"
+                              className="admin-story-change-btn"
+                              onClick={() => storyBannerInputRef.current?.click()}
+                            >
+                              Change image
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="admin-story-banner-empty">
+                            <p className="admin-story-preview-hint">
+                              No image yet. Upload one below.
+                            </p>
+                            <button
+                              type="button"
+                              className="admin-story-change-btn"
+                              onClick={() => storyBannerInputRef.current?.click()}
+                            >
+                              Upload image
+                            </button>
+                          </div>
+                        )}
+                        <input
+                          ref={storyBannerInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) =>
+                            setStoryBannerFile(e.target.files?.[0] || null)
+                          }
+                          className="admin-file-input"
+                          style={{ display: "none" }}
+                        />
+                      </div>
+                    </div>
+                    <div className="admin-form-section">
+                      <h3>Story Content</h3>
+                      <div className="admin-form-group">
+                        <label>Song Title</label>
+                        <input
+                          type="text"
+                          value={storyForm.songTitle}
+                          onChange={(e) =>
+                            setStoryForm((f) => ({
+                              ...f,
+                              songTitle: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g. Itna na na mujh se tu pyar badha (Film: Chhaaya)"
+                          className="admin-settings-input"
+                        />
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Story Description</label>
+                        <textarea
+                          value={storyForm.songDescription}
+                          onChange={(e) =>
+                            setStoryForm((f) => ({
+                              ...f,
+                              songDescription: e.target.value,
+                            }))
+                          }
+                          placeholder="The story behind the song..."
+                          className="admin-settings-input"
+                          rows={5}
+                          style={{ resize: "vertical" }}
+                        />
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Featured Track UUID</label>
+                        <input
+                          type="text"
+                          value={storyForm.featuredTrackUuid}
+                          onChange={(e) =>
+                            setStoryForm((f) => ({
+                              ...f,
+                              featuredTrackUuid: e.target.value,
+                            }))
+                          }
+                          placeholder="UUID of the track to show in the play card"
+                          className="admin-settings-input"
+                        />
+                        <p className="admin-story-preview-hint">
+                          Find UUID in Manage Tracks or Bulk tab
+                        </p>
+                      </div>
+                    </div>
+                    {storyError && (
+                      <p className="admin-settings-error">{storyError}</p>
+                    )}
+                    {storySuccess && (
+                      <p className="admin-settings-success">{storySuccess}</p>
+                    )}
+                    <button
+                      type="submit"
+                      className="admin-settings-submit"
+                      disabled={storySaving}
+                    >
+                      {storySaving ? "Saving..." : "Save Story Config"}
+                    </button>
+                  </form>
                 </div>
               )}
             </div>

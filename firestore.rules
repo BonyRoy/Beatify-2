@@ -64,5 +64,11 @@ service cloud.firestore {
       allow create, update, delete: if true;
     }
 
+    // Featured story overlay (Kahaani Beats - floating button)
+    match /featuredStory/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
   }
 }
