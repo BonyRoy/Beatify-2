@@ -147,7 +147,7 @@ body:has(.footer--player) .home__moods-grid {
   border-bottom: 1px solid var(--nav-border, #333);
   background-color: transparent;
   transition: background-color 0.2s;
-  min-height: 80px;
+  min-height: 88px;
 }
 
 .track-row {
@@ -172,15 +172,15 @@ body:has(.footer--player) .home__moods-grid {
   align-self: center;
   position: relative;
   padding: 3px;
-  border-radius: 50%;
+  border-radius: 0;
   transition: box-shadow 0.3s ease;
 }
 
 .track-row__art {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: 64px;
+  height: 64px;
+  border-radius: 0;
   object-fit: cover;
   background: transparent;
 }
@@ -191,14 +191,14 @@ body:has(.footer--player) .home__moods-grid {
   justify-content: center;
   background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
   color: white;
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
+  border-radius: 0;
+  width: 64px;
+  height: 64px;
 }
 
 .track-row__art--placeholder svg {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .track-row__info {
@@ -207,7 +207,7 @@ body:has(.footer--player) .home__moods-grid {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.15rem;
+  gap: 0.01rem;
   max-width: 100%;
   overflow: hidden;
 }
@@ -218,6 +218,10 @@ body:has(.footer--player) .home__moods-grid {
   position: relative;
   white-space: nowrap;
   width: 100%;
+}
+
+.track-row__info .track-row__plays {
+  margin-top: 0;
 }
 
 .track-row__title-inner,
@@ -276,23 +280,6 @@ body:has(.footer--player) .home__moods-grid {
   animation-play-state: paused;
 }
 
-.track-row__right {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 0.3rem;
-}
-
-.track-row__meta {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-}
-
 .track-row__plays {
   flex-shrink: 0;
   font-size: 0.75rem;
@@ -300,15 +287,16 @@ body:has(.footer--player) .home__moods-grid {
   margin: 0;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  text-align: center;
+  text-align: left;
   opacity: 0.85;
 }
 
 .track-row__actions {
+  flex-shrink: 0;
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 0.25rem;
-  flex-shrink: 0;
 }
 
 .track-row__icon-btn {
@@ -781,7 +769,7 @@ body:has(.footer--player) .home__moods-grid {
   }
 
   .track-row {
-    min-height: 80px;
+    min-height: 84px;
     padding: 1rem;
   }
 }
@@ -804,12 +792,12 @@ body:has(.footer--player) .home__moods-grid {
 
   .track-row__art,
   .track-row__art--placeholder {
-    width: 40px;
-    height: 40px;
+    width: 56px;
+    height: 56px;
   }
 
   .track-row__art--placeholder svg {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
   }
 }

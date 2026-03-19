@@ -251,12 +251,23 @@ const allArtists = [
 const Navbar = () => {
   const { isDark, toggleTheme } = useTheme();
   const { playlistImages } = usePlaylist();
-  const { openCreateAccount, isLoggedIn, userName, userEmail, accountId, logout } =
-    useCreateAccount();
+  const {
+    openCreateAccount,
+    isLoggedIn,
+    userName,
+    userEmail,
+    accountId,
+    logout,
+  } = useCreateAccount();
   const { openRequestSong } = useRequestSong();
   const { openFeedback } = useFeedback();
-  const { unreadCount, notifications, markAsRead, removeNotification, clearAll } =
-    useNotifications();
+  const {
+    unreadCount,
+    notifications,
+    markAsRead,
+    removeNotification,
+    clearAll,
+  } = useNotifications();
   const { getTopArtists } = useListeningHistory();
   const [menuOpen, setMenuOpen] = useState(false);
   const [topArtistsModalOpen, setTopArtistsModalOpen] = useState(false);
@@ -520,7 +531,13 @@ const Navbar = () => {
           type="button"
           className={`navbar__hamburger ${isLoggedIn ? "navbar__hamburger--profile" : ""} ${isLoggedIn && userAvatar ? "navbar__hamburger--avatar" : ""}`}
           onClick={() => setMenuOpen((prev) => !prev)}
-          aria-label={menuOpen ? "Close menu" : isLoggedIn ? "Profile / Menu" : "Open menu"}
+          aria-label={
+            menuOpen
+              ? "Close menu"
+              : isLoggedIn
+                ? "Profile / Menu"
+                : "Open menu"
+          }
           aria-expanded={menuOpen}
         >
           {isLoggedIn ? (
@@ -626,7 +643,12 @@ const Navbar = () => {
       </nav>
       {isMobile && view === "moods" ? (
         <div className="moods-header-mobile">
-          <Sparkles size={22} strokeWidth={2} className="moods-header-mobile__icon" aria-hidden />
+          <Sparkles
+            size={22}
+            strokeWidth={2}
+            className="moods-header-mobile__icon"
+            aria-hidden
+          />
           <span className="moods-header-mobile__label">Moods</span>
         </div>
       ) : isMobile && selectedPlaylist && view === "track" ? (

@@ -14,6 +14,7 @@ import { NotificationsProvider } from './context/NotificationsContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import PromotionalModal from './components/PromotionalModal'
+import FloatingButton from './components/FloatingButton'
 import BeatifyLoadingScreen from './components/BeatifyLoadingScreen'
 import ListeningHistoryTracker from './components/ListeningHistoryTracker'
 import ListeningStatsSync from './components/ListeningStatsSync'
@@ -37,6 +38,7 @@ const AppContent = () => {
           </Routes>
         </main>
         {!isAdminPage && <Footer />}
+        {!isAdminPage && <FloatingButton onClick={() => {}} ariaLabel="Quick action" />}
         {!isAdminPage && <PromotionalModal />}
     </>
   )

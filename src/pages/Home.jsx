@@ -323,34 +323,30 @@ const MusicTrack = ({
             )}
           </div>
         </div>
+        <p className="track-row__plays">
+          {getPlayCount(trackIdentifier)}{" "}
+          {getPlayCount(trackIdentifier) === 1 ? "play" : "plays"} this week
+        </p>
       </div>
-      <div className="track-row__right">
-        <div className="track-row__actions">
-          <button
-            type="button"
-            className="track-row__icon-btn"
-            onClick={() => onDownloadClick(track)}
-            aria-label={isDownloaded ? "Remove download" : "Download"}
-          >
-            <DownloadIcon filled={isDownloaded} />
-          </button>
-          <button
-            type="button"
-            className={`track-row__icon-btn track-row__icon-btn--fav ${isFavorite ? "track-row__icon-btn--active" : ""}`}
-            onClick={() => onFavoriteToggle(trackIdentifier)}
-            aria-label={
-              isFavorite ? "Remove from favorites" : "Add to favorites"
-            }
-          >
-            <FavoriteIcon filled={isFavorite} />
-          </button>
-        </div>
-        <div className="track-row__meta">
-          <p className="track-row__plays">
-            {getPlayCount(trackIdentifier)}{" "}
-            {getPlayCount(trackIdentifier) === 1 ? "play" : "plays"} this week
-          </p>
-        </div>
+      <div className="track-row__actions">
+        <button
+          type="button"
+          className="track-row__icon-btn"
+          onClick={() => onDownloadClick(track)}
+          aria-label={isDownloaded ? "Remove download" : "Download"}
+        >
+          <DownloadIcon filled={isDownloaded} />
+        </button>
+        <button
+          type="button"
+          className={`track-row__icon-btn track-row__icon-btn--fav ${isFavorite ? "track-row__icon-btn--active" : ""}`}
+          onClick={() => onFavoriteToggle(trackIdentifier)}
+          aria-label={
+            isFavorite ? "Remove from favorites" : "Add to favorites"
+          }
+        >
+          <FavoriteIcon filled={isFavorite} />
+        </button>
       </div>
     </div>
   );
