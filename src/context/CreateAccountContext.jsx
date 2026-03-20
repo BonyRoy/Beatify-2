@@ -95,7 +95,7 @@ export function CreateAccountProvider({ children }) {
         onClose={closeCreateAccount}
         onAccountCreated={login}
       />
-      <NativeBridgeHandler login={login} isLoggedIn={isLoggedIn} />
+      <NativeBridgeHandler />
     </CreateAccountContext.Provider>
   );
 }
