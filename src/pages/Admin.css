@@ -557,6 +557,31 @@
   margin-top: 0.5rem;
 }
 
+.admin-story-submissions-section {
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--nav-border);
+}
+
+.admin-story-submissions-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: var(--text-primary);
+}
+
+.admin-story-preview {
+  max-width: 280px;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-bulk-td-story {
+  max-width: 300px;
+}
+
 .admin-playlist-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--nav-border);

@@ -41,7 +41,7 @@
   }
 }
 
-/* Full-screen mode - background can be overridden by inline style for dynamic gradient */
+/* Full-screen mode - use dark bg until gradient loads (keeps white text visible in light mode) */
 .footer--fullscreen {
   position: fixed;
   top: 0 !important;
@@ -50,7 +50,7 @@
   bottom: 0 !important;
   height: 100vh !important;
   width: 100vw !important;
-  background: var(--bg, #0a0a0a);
+  background: #0a0a0a; /* Dark fallback until album-art gradient loads; overridden by inline style */
   transition: background 0.5s ease;
   border: none !important;
   z-index: 9999 !important;
@@ -398,8 +398,14 @@ body.footer-fullscreen-active {
   overflow: hidden !important;
 }
 
-/* Fullscreen player: time display always white */
-.footer--fullscreen .player__time {
+/* Fullscreen player: all text and icons white (before gradient loads + after) */
+.footer--fullscreen .player__time,
+.footer--fullscreen .player__fullscreen-title,
+.footer--fullscreen .player__fullscreen-artist,
+.footer--fullscreen .player__fullscreen-artist--duplicate,
+.footer--fullscreen .player__control-btn--fullscreen,
+.footer--fullscreen .player__fullscreen-volume svg,
+.footer--fullscreen .player__speed-btn {
   color: white;
 }
 

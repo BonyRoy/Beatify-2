@@ -70,5 +70,11 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // User story submissions (from Kahaani Beats overlay - logged-in users)
+    match /userStorySubmissions/{document} {
+      allow read, create: if true;
+      allow update, delete: if true;
+    }
+
   }
 }

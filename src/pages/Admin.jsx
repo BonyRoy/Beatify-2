@@ -85,6 +85,10 @@ import {
   fetchFeaturedStory,
   updateFeaturedStory,
 } from "../services/featuredStoryService";
+import {
+  fetchUserStorySubmissions,
+  deleteUserStorySubmission,
+} from "../services/userStorySubmissionsService";
 import "./Admin.css";
 
 const SunIcon = () => (
@@ -307,8 +311,14 @@ const Admin = () => {
   const [storySaving, setStorySaving] = useState(false);
   const [storyError, setStoryError] = useState("");
   const [storySuccess, setStorySuccess] = useState("");
+  const [userStorySubmissions, setUserStorySubmissions] = useState([]);
+  const [loadingUserStorySubmissions, setLoadingUserStorySubmissions] =
+    useState(false);
+  const [userStorySubmissionsPage, setUserStorySubmissionsPage] = useState(1);
+  const [deletingUserStoryId, setDeletingUserStoryId] = useState(null);
 
   const REQUEST_RECORDS_PER_PAGE = 10;
+  const USER_STORY_SUBMISSIONS_PER_PAGE = 10;
   const FEEDBACK_RECORDS_PER_PAGE = 10;
   const ACCOUNTS_RECORDS_PER_PAGE = 10;
   const LISTENING_STATS_RECORDS_PER_PAGE = 10;
@@ -460,6 +470,24 @@ const Admin = () => {
           }),
         )
         .finally(() => setStoryLoading(false));
+    }
+  }, [activeTab, isAuthenticated]);
+
+  useEffect(() => {
+    if (activeTab === "story" && isAuthenticated) {
+      const loadSubmissions = async () => {
+        setLoadingUserStorySubmissions(true);
+        try {
+          const data = await fetchUserStorySubmissions();
+          setUserStorySubmissions(data);
+          setUserStorySubmissionsPage(1);
+        } catch (err) {
+          console.error("Error loading user story submissions:", err);
+        } finally {
+          setLoadingUserStorySubmissions(false);
+        }
+      };
+      loadSubmissions();
     }
   }, [activeTab, isAuthenticated]);
 
@@ -4044,6 +4072,173 @@ const Admin = () => {
                   </form>
                 </div>
               )}
+              <div className="admin-story-submissions-section">
+                <h3 className="admin-story-submissions-title">
+                  User Story Submissions
+                </h3>
+                <p className="admin-bulk-subtitle">
+                  Stories submitted by logged-in users from the Kahaani Beats
+                  overlay.
+                </p>
+                {loadingUserStorySubmissions ? (
+                  <p className="admin-playlist-loading">
+                    Loading submissions...
+                  </p>
+                ) : userStorySubmissions.length === 0 ? (
+                  <p className="admin-empty-requests">No story submissions yet.</p>
+                ) : (
+                  <>
+                    <div className="admin-bulk-table-wrapper">
+                      <table className="admin-bulk-table admin-request-table">
+                        <thead>
+                          <tr>
+                            <th className="admin-bulk-th admin-bulk-th-num">
+                              #
+                            </th>
+                            <th className="admin-bulk-th">Title</th>
+                            <th className="admin-bulk-th">Story</th>
+                            <th className="admin-bulk-th">Submitted By</th>
+                            <th className="admin-bulk-th">Date</th>
+                            <th className="admin-bulk-th admin-bulk-th-action"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(() => {
+                            const start =
+                              (userStorySubmissionsPage - 1) *
+                              USER_STORY_SUBMISSIONS_PER_PAGE;
+                            const paginated = userStorySubmissions.slice(
+                              start,
+                              start + USER_STORY_SUBMISSIONS_PER_PAGE,
+                            );
+                            return paginated.map((sub, idx) => {
+                              const rowNum = start + idx + 1;
+                              const createdAt = sub.createdAt;
+                              let dateStr = "—";
+                              if (createdAt) {
+                                dateStr =
+                                  typeof createdAt === "string"
+                                    ? new Date(createdAt).toLocaleString()
+                                    : String(createdAt);
+                              }
+                              return (
+                                <tr key={sub.id} className="admin-bulk-tr">
+                                  <td className="admin-bulk-td admin-bulk-td-num">
+                                    {rowNum}
+                                  </td>
+                                  <td className="admin-bulk-td">
+                                    {sub.title || "—"}
+                                  </td>
+                                  <td className="admin-bulk-td admin-bulk-td-story">
+                                    <span
+                                      className="admin-story-preview"
+                                      title={sub.story}
+                                    >
+                                      {(sub.story || "—").slice(0, 80)}
+                                      {(sub.story || "").length > 80
+                                        ? "…"
+                                        : ""}
+                                    </span>
+                                  </td>
+                                  <td className="admin-bulk-td">
+                                    {sub.userName || sub.userEmail || "—"}
+                                  </td>
+                                  <td className="admin-bulk-td admin-bulk-td-date">
+                                    {dateStr}
+                                  </td>
+                                  <td className="admin-bulk-td admin-bulk-td-action">
+                                    <button
+                                      type="button"
+                                      className="admin-request-clear-btn"
+                                      onClick={async () => {
+                                        if (
+                                          !window.confirm(
+                                            "Delete this story submission?",
+                                          )
+                                        )
+                                          return;
+                                        setDeletingUserStoryId(sub.id);
+                                        try {
+                                          await deleteUserStorySubmission(
+                                            sub.id,
+                                          );
+                                          setUserStorySubmissions((prev) =>
+                                            prev.filter((p) => p.id !== sub.id),
+                                          );
+                                        } catch (err) {
+                                          console.error(err);
+                                        } finally {
+                                          setDeletingUserStoryId(null);
+                                        }
+                                      }}
+                                      disabled={
+                                        deletingUserStoryId === sub.id
+                                      }
+                                      title="Delete submission"
+                                      aria-label="Delete submission"
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                    {userStorySubmissions.length >
+                      USER_STORY_SUBMISSIONS_PER_PAGE && (
+                      <div className="admin-bulk-pagination">
+                        <button
+                          type="button"
+                          className="admin-bulk-page-btn"
+                          onClick={() =>
+                            setUserStorySubmissionsPage((p) =>
+                              Math.max(1, p - 1),
+                            )
+                          }
+                          disabled={userStorySubmissionsPage <= 1}
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                        <span className="admin-bulk-page-info">
+                          Page {userStorySubmissionsPage} of{" "}
+                          {Math.ceil(
+                            userStorySubmissions.length /
+                              USER_STORY_SUBMISSIONS_PER_PAGE,
+                          )}{" "}
+                          ({userStorySubmissions.length} total)
+                        </span>
+                        <button
+                          type="button"
+                          className="admin-bulk-page-btn"
+                          onClick={() =>
+                            setUserStorySubmissionsPage((p) =>
+                              Math.min(
+                                Math.ceil(
+                                  userStorySubmissions.length /
+                                    USER_STORY_SUBMISSIONS_PER_PAGE,
+                                ),
+                                p + 1,
+                              ),
+                            )
+                          }
+                          disabled={
+                            userStorySubmissionsPage >=
+                            Math.ceil(
+                              userStorySubmissions.length /
+                                USER_STORY_SUBMISSIONS_PER_PAGE,
+                            )
+                          }
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           )}
           {activeTab === "settings" && (

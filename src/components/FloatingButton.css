@@ -264,6 +264,189 @@ body:has(.footer--player) .floating-button {
   text-overflow: ellipsis;
 }
 
+/* Submit story button - only for logged-in users */
+.floating-button-overlay__submit-story {
+  width: 360px;
+  max-width: 100%;
+  margin-top: 0.5rem;
+}
+
+.floating-button-overlay__submit-story-btn {
+  width: 100%;
+  padding: 0.9rem 1.25rem;
+  background: linear-gradient(
+    135deg,
+    #1a1a1a 0%,
+    #2d2d2d 50%,
+    #0d0d0d 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.floating-button-overlay__submit-story-btn:hover {
+  background: linear-gradient(
+    135deg,
+    #252525 0%,
+    #3a3a3a 50%,
+    #1a1a1a 100%
+  );
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  transform: translateY(-1px);
+}
+
+.floating-button-overlay__submit-story-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Story form modal */
+.floating-button-overlay__form-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+}
+
+.floating-button-overlay__form-modal {
+  width: 100%;
+  max-width: 400px;
+  background: linear-gradient(
+    135deg,
+    rgba(15, 23, 42, 0.98) 0%,
+    rgba(30, 27, 75, 0.98) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+.floating-button-overlay__form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.floating-button-overlay__form-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: white;
+}
+
+.floating-button-overlay__form-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.floating-button-overlay__form-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.floating-button-overlay__form-group {
+  margin-bottom: 1rem;
+}
+
+.floating-button-overlay__form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 0.4rem;
+}
+
+.floating-button-overlay__form-input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: white;
+  font-size: 0.95rem;
+}
+
+.floating-button-overlay__form-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.floating-button-overlay__form-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.floating-button-overlay__form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.floating-button-overlay__form-input[type="text"] {
+  resize: none;
+}
+
+.floating-button-overlay__form-input[rows] {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.floating-button-overlay__form-submit {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.floating-button-overlay__form-submit:hover:not(:disabled) {
+  opacity: 0.95;
+}
+
+.floating-button-overlay__form-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.floating-button-overlay__form-success {
+  padding: 1rem 0;
+}
+
+.floating-button-overlay__form-success p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+}
+
 @media (max-width: 768px) {
   .floating-button {
     bottom: 1rem;
@@ -289,10 +472,15 @@ body:has(.footer--player) .floating-button {
   .floating-button-overlay__header,
   .floating-button-overlay__banner,
   .floating-button-overlay__story,
-  .floating-button-overlay__card {
+  .floating-button-overlay__card,
+  .floating-button-overlay__submit-story {
     width: 100%;
     max-width: 320px;
     margin-top: 30px !important;
+  }
+
+  .floating-button-overlay__submit-story {
+    margin-top: 0.5rem !important;
   }
 
   .floating-button-overlay__banner {

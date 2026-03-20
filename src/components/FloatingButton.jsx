@@ -1,8 +1,10 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { fetchMusicList } from "../services/musicService";
 import { fetchFeaturedStory } from "../services/featuredStoryService";
+import { submitUserStory } from "../services/userStorySubmissionsService";
 import { useAlbumArt } from "../context/AlbumArtContext";
 import { usePlayer } from "../context/PlayerContext";
+import { useCreateAccount } from "../context/CreateAccountContext";
 import "./FloatingButton.css";
 
 const STORAGE_KEY = "beatify-floating-button-position";
@@ -83,12 +85,18 @@ const FloatingButton = ({
 }) => {
   const { getAlbumArt, fetchAlbumArt } = useAlbumArt();
   const { selectTrack } = usePlayer();
+  const { isLoggedIn, accountId, userName, userEmail } = useCreateAccount();
   const [position, setPosition] = useState(loadStoredPosition);
   const [showOverlay, setShowOverlay] = useState(false);
   const [storyConfig, setStoryConfig] = useState(null);
   const [featuredTrack, setFeaturedTrack] = useState(null);
   const [bannerError, setBannerError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showStoryForm, setShowStoryForm] = useState(false);
+  const [storyFormTitle, setStoryFormTitle] = useState("");
+  const [storyFormStory, setStoryFormStory] = useState("");
+  const [storySubmitting, setStorySubmitting] = useState(false);
+  const [storySubmitSuccess, setStorySubmitSuccess] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
   const hasMovedRef = useRef(false);
   const lastPositionRef = useRef(null);
@@ -360,7 +368,123 @@ const FloatingButton = ({
             ) : (
               <div className="floating-button-overlay__loading">Loading...</div>
             )}
+            {isLoggedIn && (
+              <div className="floating-button-overlay__submit-story">
+                <button
+                  type="button"
+                  className="floating-button-overlay__submit-story-btn"
+                  onClick={() => setShowStoryForm(true)}
+                >
+                  Submit a story if you have any, if we find it interesting we
+                  will share here
+                </button>
+              </div>
+            )}
           </div>
+          {showStoryForm && (
+            <div
+              className="floating-button-overlay__form-backdrop"
+              onClick={() => {
+                if (!storySubmitting) {
+                  setShowStoryForm(false);
+                  setStoryFormTitle("");
+                  setStoryFormStory("");
+                  setStorySubmitSuccess(false);
+                }
+              }}
+            >
+              <div
+                className="floating-button-overlay__form-modal"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="floating-button-overlay__form-header">
+                  <h3>Submit Your Story</h3>
+                  <button
+                    type="button"
+                    className="floating-button-overlay__form-close"
+                    onClick={() => {
+                      if (!storySubmitting) {
+                        setShowStoryForm(false);
+                        setStoryFormTitle("");
+                        setStoryFormStory("");
+                        setStorySubmitSuccess(false);
+                      }
+                    }}
+                    aria-label="Close"
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+                {storySubmitSuccess ? (
+                  <div className="floating-button-overlay__form-success">
+                    <p>Thank you! Your story has been submitted. We&apos;ll
+                      review it and share it here if we find it interesting.</p>
+                  </div>
+                ) : (
+                  <form
+                    className="floating-button-overlay__form"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const title = storyFormTitle.trim();
+                      const story = storyFormStory.trim();
+                      if (!title || !story) return;
+                      setStorySubmitting(true);
+                      try {
+                        await submitUserStory({
+                          title,
+                          story,
+                          accountId,
+                          userName,
+                          userEmail,
+                        });
+                        setStorySubmitSuccess(true);
+                        setStoryFormTitle("");
+                        setStoryFormStory("");
+                      } catch (err) {
+                        console.error("Failed to submit story:", err);
+                      } finally {
+                        setStorySubmitting(false);
+                      }
+                    }}
+                  >
+                    <div className="floating-button-overlay__form-group">
+                      <label htmlFor="story-title">Title</label>
+                      <input
+                        id="story-title"
+                        type="text"
+                        value={storyFormTitle}
+                        onChange={(e) => setStoryFormTitle(e.target.value)}
+                        placeholder="Story title"
+                        required
+                        disabled={storySubmitting}
+                        className="floating-button-overlay__form-input"
+                      />
+                    </div>
+                    <div className="floating-button-overlay__form-group">
+                      <label htmlFor="story-content">Story</label>
+                      <textarea
+                        id="story-content"
+                        value={storyFormStory}
+                        onChange={(e) => setStoryFormStory(e.target.value)}
+                        placeholder="Share your story..."
+                        required
+                        disabled={storySubmitting}
+                        rows={5}
+                        className="floating-button-overlay__form-input"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="floating-button-overlay__form-submit"
+                      disabled={storySubmitting}
+                    >
+                      {storySubmitting ? "Submitting..." : "Submit"}
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
           <button
             className="floating-button-overlay__close"
             onClick={(e) => {
