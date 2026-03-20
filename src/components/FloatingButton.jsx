@@ -61,6 +61,21 @@ const CloseIcon = () => (
   </svg>
 );
 
+const ChevronDownIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
 const MusicPlaceholderIcon = () => (
   <svg
     width="64"
@@ -88,6 +103,8 @@ const FloatingButton = ({
   const { isLoggedIn, accountId, userName, userEmail } = useCreateAccount();
   const [position, setPosition] = useState(loadStoredPosition);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [isClosingOverlay, setIsClosingOverlay] = useState(false);
+  const [overlayEntered, setOverlayEntered] = useState(false);
   const [storyConfig, setStoryConfig] = useState(null);
   const [featuredTrack, setFeaturedTrack] = useState(null);
   const [bannerError, setBannerError] = useState(false);
@@ -183,10 +200,15 @@ const FloatingButton = ({
     return () => window.removeEventListener("resize", onResize);
   }, [position, clampPosition]);
 
+  const handleCloseOverlay = useCallback(() => {
+    if (isClosingOverlay) return;
+    setIsClosingOverlay(true);
+  }, [isClosingOverlay]);
+
   useEffect(() => {
     if (!showOverlay) return;
     const onEscape = (e) => {
-      if (e.key === "Escape") setShowOverlay(false);
+      if (e.key === "Escape") handleCloseOverlay();
     };
     document.addEventListener("keydown", onEscape);
     document.body.style.overflow = "hidden";
@@ -194,7 +216,7 @@ const FloatingButton = ({
       document.removeEventListener("keydown", onEscape);
       document.body.style.overflow = "";
     };
-  }, [showOverlay]);
+  }, [showOverlay, handleCloseOverlay]);
 
   useEffect(() => {
     let cancelled = false;
@@ -260,6 +282,15 @@ const FloatingButton = ({
     }
   }, []);
 
+  const handleOverlayTransitionEnd = useCallback(
+    (e) => {
+      if (e.propertyName === "transform" && isClosingOverlay) {
+        setShowOverlay(false);
+      }
+    },
+    [isClosingOverlay],
+  );
+
   const handleOverlayTouchEnd = useCallback(
     (e) => {
       const startY = swipeStartRef.current;
@@ -268,11 +299,27 @@ const FloatingButton = ({
       const endY = e.changedTouches?.[0]?.clientY ?? 0;
       const deltaY = endY - startY;
       if (deltaY > SWIPE_CLOSE_THRESHOLD) {
-        setShowOverlay(false);
+        handleCloseOverlay();
       }
     },
-    [],
+    [handleCloseOverlay],
   );
+
+  useEffect(() => {
+    if (!showOverlay) {
+      setIsClosingOverlay(false);
+      setOverlayEntered(false);
+    }
+  }, [showOverlay]);
+
+  useEffect(() => {
+    if (showOverlay && !isClosingOverlay) {
+      const id = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setOverlayEntered(true));
+      });
+      return () => cancelAnimationFrame(id);
+    }
+  }, [showOverlay, isClosingOverlay]);
 
   if (storyConfig === null) {
     return null;
@@ -282,10 +329,11 @@ const FloatingButton = ({
     <>
       {showOverlay && (
         <div
-          className="floating-button-overlay"
-          onClick={() => setShowOverlay(false)}
+          className={`floating-button-overlay ${overlayEntered && !isClosingOverlay ? "floating-button-overlay--open" : ""} ${isClosingOverlay ? "floating-button-overlay--closing" : ""}`}
+          onClick={handleCloseOverlay}
           onTouchStart={handleOverlayTouchStart}
           onTouchEnd={handleOverlayTouchEnd}
+          onTransitionEnd={handleOverlayTransitionEnd}
           role="dialog"
           aria-modal="true"
           aria-label="AI gradient overlay"
@@ -326,7 +374,7 @@ const FloatingButton = ({
                 className="floating-button-overlay__card"
                 onClick={() => {
                   selectTrack(featuredTrack, [featuredTrack]);
-                  setShowOverlay(false);
+                  handleCloseOverlay();
                 }}
                 role="button"
                 tabIndex={0}
@@ -334,7 +382,7 @@ const FloatingButton = ({
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     selectTrack(featuredTrack, [featuredTrack]);
-                    setShowOverlay(false);
+                    handleCloseOverlay();
                   }
                 }}
                 aria-label={`Play ${featuredTrack.name || "track"}`}
@@ -489,11 +537,11 @@ const FloatingButton = ({
             className="floating-button-overlay__close"
             onClick={(e) => {
               e.stopPropagation();
-              setShowOverlay(false);
+              handleCloseOverlay();
             }}
             aria-label="Close"
           >
-            <CloseIcon />
+            <ChevronDownIcon />
           </button>
         </div>
       )}

@@ -88,7 +88,7 @@ const MusicIcon = () => (
   </svg>
 );
 
-const CloseIcon = () => (
+const ChevronDownIcon = () => (
   <svg
     width="24"
     height="24"
@@ -99,8 +99,7 @@ const CloseIcon = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
+    <polyline points="6 9 12 15 18 9" />
   </svg>
 );
 
@@ -167,6 +166,8 @@ const Footer = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [dynamicBgGradient, setDynamicBgGradient] = useState(null);
+  const [isClosingFullscreen, setIsClosingFullscreen] = useState(false);
+  const [fullscreenEntered, setFullscreenEntered] = useState(false);
   const pausedForCallRef = useRef(false);
   const pausedForMediaRef = useRef(false);
   const timeBeforeCallRef = useRef(0);
@@ -237,7 +238,41 @@ const Footer = () => {
       }
       swipeStartYRef.current = e.touches[0].clientY;
     },
-    [isFullScreen, isMobile]
+    [isFullScreen, isMobile],
+  );
+
+  // Close fullscreen with bottom sheet roll-down animation
+  const handleCloseFullscreen = useCallback(() => {
+    if (isClosingFullscreen) return;
+    setIsClosingFullscreen(true);
+  }, [isClosingFullscreen]);
+
+  // Reset closing state when fullscreen is closed
+  useEffect(() => {
+    if (!isFullScreen) {
+      setIsClosingFullscreen(false);
+      setFullscreenEntered(false);
+    }
+  }, [isFullScreen]);
+
+  // Trigger enter animation (roll up) after first paint
+  useEffect(() => {
+    if (isFullScreen && !isClosingFullscreen) {
+      const id = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setFullscreenEntered(true));
+      });
+      return () => cancelAnimationFrame(id);
+    }
+  }, [isFullScreen, isClosingFullscreen]);
+
+  // When closing animation completes, actually close fullscreen
+  const handleFullscreenTransitionEnd = useCallback(
+    (e) => {
+      if (e.propertyName === "transform" && isClosingFullscreen) {
+        setIsFullScreen(false);
+      }
+    },
+    [isClosingFullscreen],
   );
 
   const handleFullscreenTouchEnd = useCallback(
@@ -247,11 +282,11 @@ const Footer = () => {
       const deltaY = endY - swipeStartYRef.current;
       const threshold = Math.min(80, window.innerHeight * 0.15);
       if (deltaY > threshold) {
-        setIsFullScreen(false);
+        handleCloseFullscreen();
       }
       swipeStartYRef.current = null;
     },
-    []
+    [handleCloseFullscreen],
   );
 
   // Handle footer click to toggle full-screen player (mobile only)
@@ -1995,27 +2030,28 @@ const Footer = () => {
     <>
       <footer
         ref={footerRef}
-        className={`footer footer--player ${isFullScreen ? "footer--fullscreen" : ""}`}
+        className={`footer footer--player ${isFullScreen ? "footer--fullscreen" : ""} ${isFullScreen && fullscreenEntered && !isClosingFullscreen ? "footer--fullscreen--open" : ""} ${isClosingFullscreen ? "footer--fullscreen--closing" : ""}`}
         onClick={!isFullScreen ? handleFooterClick : handleFooterClick}
         onTouchStart={isFullScreen ? handleFullscreenTouchStart : undefined}
         onTouchEnd={isFullScreen ? handleFullscreenTouchEnd : undefined}
+        onTransitionEnd={isFullScreen ? handleFullscreenTransitionEnd : undefined}
         style={
           isFullScreen && dynamicBgGradient
             ? { background: dynamicBgGradient }
             : undefined
         }
       >
-        {/* Close Button - positioned on footer */}
+        {/* Chevron down - close/minimize fullscreen */}
         {isFullScreen && (
           <button
             className="player__fullscreen-close"
             onClick={(e) => {
               e.stopPropagation();
-              setIsFullScreen(false);
+              handleCloseFullscreen();
             }}
             aria-label="Close full-screen player"
           >
-            <CloseIcon />
+            <ChevronDownIcon />
           </button>
         )}
         <div className={`player ${isFullScreen ? "player--fullscreen" : ""}`}>
