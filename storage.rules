@@ -1,9 +1,21 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // Music files - public read for playback, write for admin upload
+    match /music/{allPaths=**} {
+      allow read, write: if true;
+    }
+
+    // Album art / covers - public read for display, write for admin upload
+    match /covers/{allPaths=**} {
+      allow read, write: if true;
+    }
+
     // Story banner images (floating button overlay) - public read for display, write for admin upload
     match /story/{allPaths=**} {
       allow read, write: if true;
     }
+
   }
 }
