@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "correct-tracks": "node scripts/correct-tracks-taxonomy.js"
+    "correct-tracks": "node scripts/correct-tracks-taxonomy.js",
+    "generate-pwa-icons": "node scripts/generate-pwa-icons-from-svg.mjs"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
