@@ -173,7 +173,17 @@ const ClockIcon = () => (
   </svg>
 );
 
-const ERA_ORDER = ["70s", "80s", "90s", "2000s", "2010s", "2020s"];
+const ERA_ORDER = [
+  "40s",
+  "50s",
+  "60s",
+  "70s",
+  "80s",
+  "90s",
+  "2000s",
+  "2010s",
+  "2020s",
+];
 
 const Sidebar = ({
   isOpen,

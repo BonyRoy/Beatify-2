@@ -265,6 +265,18 @@
   filter: brightness(1.15);
 }
 
+.sidebar__era-badge--40s {
+  background: linear-gradient(135deg, #422006 0%, #92400e 50%, #d97706 100%);
+}
+
+.sidebar__era-badge--50s {
+  background: linear-gradient(135deg, #1e3a5f 0%, #3b82a6 50%, #93c5fd 100%);
+}
+
+.sidebar__era-badge--60s {
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #2dd4bf 100%);
+}
+
 .sidebar__era-badge--70s {
   background: linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #f59e0b 100%);
 }

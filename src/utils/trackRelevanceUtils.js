@@ -14,6 +14,9 @@ const getYearFromReleaseDate = (releaseDate) => {
 
 const getEraFromYear = (year) => {
   if (!year) return null;
+  if (year >= 1940 && year <= 1949) return "40s";
+  if (year >= 1950 && year <= 1959) return "50s";
+  if (year >= 1960 && year <= 1969) return "60s";
   if (year >= 1970 && year <= 1979) return "70s";
   if (year >= 1980 && year <= 1989) return "80s";
   if (year >= 1990 && year <= 1999) return "90s";

@@ -151,6 +151,9 @@ const formatReleaseDateForDisplay = (releaseDate) => {
 // Map year to era label
 const getEraFromYear = (year) => {
   if (!year) return null;
+  if (year >= 1940 && year <= 1949) return "40s";
+  if (year >= 1950 && year <= 1959) return "50s";
+  if (year >= 1960 && year <= 1969) return "60s";
   if (year >= 1970 && year <= 1979) return "70s";
   if (year >= 1980 && year <= 1989) return "80s";
   if (year >= 1990 && year <= 1999) return "90s";
@@ -161,7 +164,17 @@ const getEraFromYear = (year) => {
 };
 
 // Era (years) display order
-const ERA_ORDER = ["70s", "80s", "90s", "2000s", "2010s", "2020s"];
+const ERA_ORDER = [
+  "40s",
+  "50s",
+  "60s",
+  "70s",
+  "80s",
+  "90s",
+  "2000s",
+  "2010s",
+  "2020s",
+];
 
 /** Firestore Timestamp, seconds, or millis — for sorting newest upload first */
 const getUploadedAtMs = (track) => {
