@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Beatify",
   "short_name": "Beatify",
   "description": "Music player with background playback support",
