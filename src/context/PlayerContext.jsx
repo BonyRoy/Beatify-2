@@ -79,6 +79,9 @@ export const PlayerProvider = ({ children }) => {
   const [volume, setVolume] = useState(0.7);
   const [playlist, setPlaylist] = useState([]);
   const [fullMusicList, setFullMusicList] = useState([]);
+  /** When false (curated playlist from Home), next track never pulls from the full catalog. */
+  const [allowCatalogRecommendations, setAllowCatalogRecommendations] =
+    useState(true);
 
   const selectTrack = (track, tracksList = null) => {
     // Same track already playing: don't reload, don't update, don't count
@@ -142,6 +145,8 @@ export const PlayerProvider = ({ children }) => {
     if (currentIndex >= 0 && playlist.length > 0) {
       const afterCurrent = playlist.slice(currentIndex + 1);
       candidates = afterCurrent.length > 0 ? afterCurrent : playlist;
+    } else if (!allowCatalogRecommendations && playlist.length > 0) {
+      candidates = playlist;
     } else {
       candidates = fullMusicList.length > 0 ? fullMusicList : playlist;
     }
@@ -152,6 +157,9 @@ export const PlayerProvider = ({ children }) => {
     let nextTrack;
     if (notPlayed.length > 0) {
       nextTrack = notPlayed[0];
+    } else if (!allowCatalogRecommendations && playlist.length > 0) {
+      // Curated playlist: loop within the list only (no catalog recommendations)
+      nextTrack = playlist[0];
     } else {
       // Recommendations exhausted: randomly pick from full catalog, excluding session played
       const pool = fullMusicList.length > 0 ? fullMusicList : candidates;
@@ -236,6 +244,8 @@ export const PlayerProvider = ({ children }) => {
         playPreviousTrack,
         setPlaylist,
         setFullMusicList,
+        allowCatalogRecommendations,
+        setAllowCatalogRecommendations,
       }}
     >
       {children}

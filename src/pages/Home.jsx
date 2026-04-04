@@ -398,6 +398,7 @@ const Home = () => {
     currentTrack,
     setPlaylist,
     setFullMusicList,
+    setAllowCatalogRecommendations,
     isPlaying,
   } = usePlayer();
   const { openRequestSong } = useRequestSong();
@@ -739,6 +740,11 @@ const Home = () => {
     window.addEventListener("playArtist", handlePlayArtist);
     return () => window.removeEventListener("playArtist", handlePlayArtist);
   }, [sortedMusicList, selectTrack]);
+
+  // Curated playlist URL: do not continue into random catalog tracks after the queue
+  useEffect(() => {
+    setAllowCatalogRecommendations(!selectedPlaylist);
+  }, [selectedPlaylist, setAllowCatalogRecommendations]);
 
   // Update playlist when filtered list changes (use sorted for logged-in)
   useEffect(() => {
