@@ -147,6 +147,16 @@ const getEraFromYear = (year) => {
 // Era (years) display order
 const ERA_ORDER = ["70s", "80s", "90s", "2000s", "2010s", "2020s"];
 
+/** Firestore Timestamp, seconds, or millis — for sorting newest upload first */
+const getUploadedAtMs = (track) => {
+  const ts = track?.uploadedAt;
+  if (!ts) return 0;
+  if (typeof ts?.toMillis === "function") return ts.toMillis();
+  if (typeof ts?.seconds === "number") return ts.seconds * 1000;
+  if (typeof ts === "number") return ts;
+  return 0;
+};
+
 const MusicTrack = ({
   track,
   onDownloadClick,
@@ -418,6 +428,7 @@ const Home = () => {
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [visibleCount, setVisibleCount] = useState(15);
+  const [latestUploadsFirst, setLatestUploadsFirst] = useState(false);
   const sidebarContentRef = useRef(null);
   const preloadedRef = useRef(false);
 
@@ -585,7 +596,12 @@ const Home = () => {
     selectedArtist,
     selectedPlaylist,
     selectedEra,
+    latestUploadsFirst,
   ]);
+
+  useEffect(() => {
+    if (selectedPlaylist) setLatestUploadsFirst(false);
+  }, [selectedPlaylist]);
 
   // Extract available eras from music list (eras that have at least one track)
   const availableEras = useMemo(() => {
@@ -713,8 +729,13 @@ const Home = () => {
     playlistTrackIds,
   ]);
 
-  // For logged-in users: sort by relevance (top artists, last listened). Otherwise keep order.
+  // Optional: newest upload first (no curated playlist). Else relevance for logged-in users.
   const sortedMusicList = useMemo(() => {
+    if (latestUploadsFirst && !selectedPlaylist) {
+      return [...filteredMusicList].sort(
+        (a, b) => getUploadedAtMs(b) - getUploadedAtMs(a),
+      );
+    }
     if (!isLoggedIn) return filteredMusicList;
     const topArtists = getTopArtists(3);
     const recentSongs = getLastSongs();
@@ -724,7 +745,15 @@ const Home = () => {
       recentSongs,
       musicList,
     );
-  }, [isLoggedIn, filteredMusicList, musicList, lastSongs, artistCounts]);
+  }, [
+    latestUploadsFirst,
+    selectedPlaylist,
+    isLoggedIn,
+    filteredMusicList,
+    musicList,
+    lastSongs,
+    artistCounts,
+  ]);
 
   const handleTrackClick = (track) => {
     selectTrack(track, sortedMusicList);
@@ -881,31 +910,50 @@ const Home = () => {
             <div className="home__sidebar-header home__sidebar-header--tracks">
               <h3 className="home__sidebar-title home__sidebar-title--tracks">
                 <MusicIconGradient />
-                {selectedPlaylist
-                  ? selectedPlaylist === "Top 10 of the Week"
-                    ? "Top 10 Songs of the Week on Beatify"
-                    : `Tracks for "${selectedPlaylist}" playlist`
-                  : selectedEra
-                    ? `Tracks from ${selectedEra}`
-                    : selectedTheme
-                      ? `Tracks with theme: ${selectedTheme}`
-                      : "Tracks"}
-                {(selectedPlaylist || selectedEra || selectedTheme) && (
-                  <button
-                    type="button"
-                    className="home__clear-filter-btn"
-                    onClick={() => {
-                      const p = new URLSearchParams(searchParams);
-                      p.delete("playlist");
-                      p.delete("era");
-                      p.delete("theme");
-                      setSearchParams(p);
-                    }}
-                    aria-label="Clear filter"
-                  >
-                    <ClearIcon />
-                  </button>
-                )}
+                <span className="home__tracks-heading-text">
+                  {selectedPlaylist
+                    ? selectedPlaylist === "Top 10 of the Week"
+                      ? "Top 10 Songs of the Week on Beatify"
+                      : `Tracks for "${selectedPlaylist}" playlist`
+                    : selectedEra
+                      ? `Tracks from ${selectedEra}`
+                      : selectedTheme
+                        ? `Tracks with theme: ${selectedTheme}`
+                        : "Tracks"}
+                </span>
+                <span className="home__tracks-heading-actions">
+                  {!selectedPlaylist && (
+                    <button
+                      type="button"
+                      className={`home__latest-uploads-btn ${latestUploadsFirst ? "home__latest-uploads-btn--active" : ""}`}
+                      onClick={() => setLatestUploadsFirst((v) => !v)}
+                      aria-pressed={latestUploadsFirst}
+                      title={
+                        latestUploadsFirst
+                          ? "Restore default order"
+                          : "Show newest uploads first"
+                      }
+                    >
+                      Latest uploads
+                    </button>
+                  )}
+                  {(selectedPlaylist || selectedEra || selectedTheme) && (
+                    <button
+                      type="button"
+                      className="home__clear-filter-btn"
+                      onClick={() => {
+                        const p = new URLSearchParams(searchParams);
+                        p.delete("playlist");
+                        p.delete("era");
+                        p.delete("theme");
+                        setSearchParams(p);
+                      }}
+                      aria-label="Clear filter"
+                    >
+                      <ClearIcon />
+                    </button>
+                  )}
+                </span>
               </h3>
             </div>
           )}

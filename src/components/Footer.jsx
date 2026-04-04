@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useCallback, useState } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useCallback,
+  useState,
+  useMemo,
+} from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useAlbumArt } from "../context/AlbumArtContext";
 import { useTrackPlayCounts } from "../context/TrackPlayCountsContext";
@@ -6,6 +12,11 @@ import {
   extractDominantColors,
   toDarkGradientColors,
 } from "../utils/colorExtractor";
+import {
+  resolvePlayUrl,
+  recordPersonalListen,
+  cacheBlobFromNetworkIfTop,
+} from "../services/trackAudioCacheService";
 import "./Footer.css";
 
 const PlayIcon = () => (
@@ -139,11 +150,24 @@ const Footer = () => {
     playPreviousTrack,
   } = usePlayer();
 
+  /** Stable id|url — avoids re-running audio load when context re-renders (e.g. every currentTime tick). */
+  const audioTrackLoadKey = useMemo(() => {
+    if (!currentTrack) return null;
+    const url = currentTrack.fileUrl || currentTrack.url;
+    if (!url) return null;
+    const id = currentTrack.uuid ?? currentTrack.id;
+    if (id == null) return null;
+    return `${String(id)}|${url}`;
+  }, [currentTrack]);
+
   const audioRef = useRef(null);
   const progressBarRef = useRef(null);
   const volumeBarRef = useRef(null);
   const shouldAutoResumeRef = useRef(false);
   const currentSrcRef = useRef(null);
+  const blobUrlRevokeRef = useRef(null);
+  const playingTrackIdRef = useRef(null);
+  const lastLoadedTrackKeyRef = useRef(null);
   const isSourceChangingRef = useRef(false);
   const titleRef = useRef(null);
   const artistRef = useRef(null);
@@ -319,90 +343,130 @@ const Footer = () => {
     }
   };
 
-  // Update audio source when track changes
+  // Update audio source when track changes (prefer IndexedDB blob for top-100 listens)
   useEffect(() => {
     if (currentTrack && audioRef.current) {
-      const audioUrl = currentTrack.fileUrl || currentTrack.url;
-      if (audioUrl && audioUrl !== currentSrcRef.current) {
-        const isIOS =
-          /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const expectedTrackId = String(currentTrack.uuid || currentTrack.id);
+      const networkUrl = currentTrack.fileUrl || currentTrack.url;
+      if (!networkUrl) return;
+
+      const loadKey = `${expectedTrackId}|${networkUrl}`;
+      let cancelled = false;
+
+      const run = async () => {
+        const resolved = await resolvePlayUrl(currentTrack);
+        if (cancelled) {
+          if (resolved.revoke) resolved.revoke();
+          return;
+        }
+
+        if (lastLoadedTrackKeyRef.current === loadKey) {
+          if (resolved.revoke) resolved.revoke();
+          return;
+        }
+
+        if (blobUrlRevokeRef.current) {
+          blobUrlRevokeRef.current();
+          blobUrlRevokeRef.current = null;
+        }
+        if (resolved.isBlob && resolved.revoke) {
+          blobUrlRevokeRef.current = resolved.revoke;
+        }
+
+        const audioUrl = resolved.url;
+        if (!audioUrl) return;
+
+        const audio = audioRef.current;
+        if (!audio || cancelled) return;
 
         isSourceChangingRef.current = true;
         isChangingTrackRef.current = true;
         lastTrackChangeTimeRef.current = Date.now();
+        playingTrackIdRef.current = expectedTrackId;
         currentSrcRef.current = audioUrl;
-        const audio = audioRef.current;
+        lastLoadedTrackKeyRef.current = loadKey;
+
         audio.pause();
         audio.src = audioUrl;
         audio.load();
         updateTime(0);
 
-        // CRITICAL: Auto-play when track is ready
-        // Store the audio URL to verify we're still on the same track
-        const trackAudioUrl = audioUrl;
+        if (!resolved.isBlob) {
+          cacheBlobFromNetworkIfTop(currentTrack).catch(() => {});
+        }
 
         const tryStartPlayback = () => {
           const currentAudio = audioRef.current;
-          if (!currentAudio || currentAudio.src !== trackAudioUrl) return;
+          if (!currentAudio || cancelled) return;
+          if (playingTrackIdRef.current !== expectedTrackId) return;
 
-          // Clear the flag first so play/pause effect can also work
           isSourceChangingRef.current = false;
 
-          // If audio is paused, try to play it (regardless of isPlaying state)
-          // The play/pause effect will sync the state
           if (currentAudio.paused) {
             currentAudio
               .play()
               .then(() => {
-                // Success - ensure playing state is set
                 setPlaying(true);
               })
               .catch((error) => {
                 console.error("Error playing audio after load:", error);
-                // Don't set playing to false here - let play/pause effect handle it
               });
           }
         };
 
-        // Play as load: use earliest events (loadeddata, canplay) - NOT canplaythrough
-        // so we start playback as soon as enough data is buffered, not when full file loads
         audio.addEventListener("canplay", tryStartPlayback, { once: true });
         audio.addEventListener("loadeddata", tryStartPlayback, { once: true });
 
-        // Try play immediately - browser will buffer and start when ready
         audio.play().catch(() => {});
 
-        // Also try immediately if already ready
         if (audio.readyState >= 2) {
           setTimeout(tryStartPlayback, 100);
         }
 
-        // Fallback: try after delays to ensure playback starts
         setTimeout(tryStartPlayback, 300);
         setTimeout(tryStartPlayback, 800);
 
-        // Final fallback - clear flag after 1.5s so play/pause effect can handle it
         setTimeout(() => {
           if (isSourceChangingRef.current) {
             isSourceChangingRef.current = false;
           }
         }, 1500);
 
-        // Keep isChangingTrackRef for a bit longer to prevent rapid skipping
         setTimeout(() => {
           isChangingTrackRef.current = false;
         }, 1500);
-      }
+      };
+
+      void run();
+
+      return () => {
+        cancelled = true;
+      };
     } else if (!currentTrack) {
+      playingTrackIdRef.current = null;
+      lastLoadedTrackKeyRef.current = null;
       currentSrcRef.current = null;
+      if (blobUrlRevokeRef.current) {
+        blobUrlRevokeRef.current();
+        blobUrlRevokeRef.current = null;
+      }
       setIsLoading(false);
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";
       }
     }
-  }, [currentTrack, updateTime, isPlaying, setPlaying]);
+  }, [audioTrackLoadKey]);
+
+  // Warm IndexedDB cache for tracks already in personal top 100 (e.g. returning visit)
+  useEffect(() => {
+    if (!currentTrack) return;
+    const t = currentTrack;
+    const h = setTimeout(() => {
+      cacheBlobFromNetworkIfTop(t).catch(() => {});
+    }, 2000);
+    return () => clearTimeout(h);
+  }, [currentTrack]);
 
   // Fetch embedded album art for current track (uses shared AlbumArtContext cache)
   useEffect(() => {
@@ -567,6 +631,7 @@ const Footer = () => {
       ) {
         playCountIncrementedRef.current = true;
         incrementPlayCount(currentTrack);
+        recordPersonalListen(currentTrack).catch(() => {});
       }
 
       const audioDuration = audioRef.current.duration;
