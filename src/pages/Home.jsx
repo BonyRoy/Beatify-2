@@ -132,6 +132,22 @@ const getYearFromReleaseDate = (releaseDate) => {
   return !isNaN(year) && year >= 1900 && year <= 2100 ? year : null;
 };
 
+const formatReleaseDateForDisplay = (releaseDate) => {
+  if (!releaseDate) return "—";
+  const str = String(releaseDate).trim();
+  if (!str) return "—";
+  if (/^\d{4}$/.test(str)) return str;
+  const d = new Date(str);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+  return str;
+};
+
 // Map year to era label
 const getEraFromYear = (year) => {
   if (!year) return null;
@@ -887,11 +903,13 @@ const Home = () => {
         size: selectedTrack.fileSize
           ? `${(selectedTrack.fileSize / (1024 * 1024)).toFixed(1)} MB`
           : "Unknown size",
+        releaseDate: formatReleaseDateForDisplay(selectedTrack.releaseDate),
       }
     : {
         name: "",
         artist: "",
         size: "",
+        releaseDate: "",
       };
 
   return (
@@ -1154,6 +1172,7 @@ const Home = () => {
         songName={selectedTrackData.name}
         artistName={selectedTrackData.artist}
         fileSize={selectedTrackData.size}
+        releaseDate={selectedTrackData.releaseDate}
         onDownload={handleDownload}
       />
     </div>

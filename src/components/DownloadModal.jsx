@@ -8,7 +8,15 @@ const CloseIcon = () => (
   </svg>
 )
 
-const DownloadModal = ({ isOpen, onClose, songName, artistName, fileSize, onDownload }) => {
+const DownloadModal = ({
+  isOpen,
+  onClose,
+  songName,
+  artistName,
+  fileSize,
+  releaseDate,
+  onDownload,
+}) => {
   if (!isOpen) return null
 
   return (
@@ -38,6 +46,10 @@ const DownloadModal = ({ isOpen, onClose, songName, artistName, fileSize, onDown
             <div className="modal__info-row">
               <span className="modal__label">Size:</span>
               <span className="modal__value">{fileSize}</span>
+            </div>
+            <div className="modal__info-row">
+              <span className="modal__label">Release date:</span>
+              <span className="modal__value">{releaseDate || "—"}</span>
             </div>
           </div>
 
