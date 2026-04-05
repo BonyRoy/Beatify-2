@@ -1,8 +1,16 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { Trash2 } from "lucide-react";
 import { fuzzyMatches } from "../utils/searchUtils";
 import { usePlaylist } from "../context/PlaylistContext";
+import { deleteUserPlaylistById } from "../utils/userPlaylistsStorage";
+import CreatePlaylistModal from "./CreatePlaylistModal";
+import { useUserPlaylistCoverUrl } from "../hooks/useUserPlaylistCoverUrl";
+import "./DownloadModal.css";
 import "./Playlist.css";
+
+const RESERVED_PLAYLIST_NAMES = ["My Favorites", "Top 10 of the Week"];
 
 const PlaylistIconGradient = () => (
   <svg
@@ -105,9 +113,92 @@ const PlaylistMusicPlaceholder = () => (
   </div>
 );
 
-const PlaylistImageItem = ({ playlist, isSelected, onClick }) => {
+const CloseIcon = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const DeletePlaylistConfirmModal = ({ target, onClose, onConfirm }) => {
+  if (!target) return null;
+  return (
+    <>
+      <div
+        className="modal-overlay"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        className="modal playlist-delete-modal"
+        role="alertdialog"
+        aria-labelledby="playlist-delete-title"
+        aria-modal="true"
+      >
+        <button
+          type="button"
+          className="modal__close-btn"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <CloseIcon />
+        </button>
+        <div className="modal__content">
+          <h3 id="playlist-delete-title" className="modal__title">
+            Delete playlist?
+          </h3>
+          <p className="playlist-delete-modal__text">
+            &quot;{target.label}&quot; will be removed from this device. This
+            cannot be undone.
+          </p>
+          <div className="playlist-delete-modal__actions">
+            <button
+              type="button"
+              className="modal__btn playlist-delete-modal__btn-cancel"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="modal__btn playlist-delete-modal__btn-delete"
+              onClick={onConfirm}
+            >
+              <Trash2 size={18} aria-hidden />
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+const PlaylistImageItem = ({
+  playlist,
+  isSelected,
+  onClick,
+  onDeleteClick,
+}) => {
   const [loaded, setLoaded] = useState(false);
   const [triedFallback, setTriedFallback] = useState(false);
+
+  const userCoverUrl = useUserPlaylistCoverUrl(
+    playlist.isUserPlaylist ? playlist.id : null,
+  );
+  const isUser = playlist.isUserPlaylist === true;
+  const noArt = isUser && !userCoverUrl;
+  const showDelete = isUser && playlist.id;
 
   const handleLoad = () => setLoaded(true);
   const handleError = (e) => {
@@ -122,15 +213,39 @@ const PlaylistImageItem = ({ playlist, isSelected, onClick }) => {
       className={`playlist__item ${isSelected ? "playlist__item--selected" : ""}`}
       onClick={() => onClick(playlist.label)}
     >
-      <div className="playlist__image-wrapper">
+      <div
+        className={`playlist__image-wrapper ${noArt ? "playlist__image-wrapper--no-art" : ""}`}
+      >
+        {showDelete && (
+          <button
+            type="button"
+            className="playlist__delete-btn"
+            aria-label={`Delete playlist ${playlist.label}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteClick({ id: playlist.id, label: playlist.label });
+            }}
+          >
+            <Trash2 size={16} strokeWidth={2} aria-hidden />
+          </button>
+        )}
         <PlaylistMusicPlaceholder />
-        <img
-          src={`/playlistbg/${playlist.image || "thar.png"}`}
-          alt={playlist.label}
-          className={`playlist__image ${loaded ? "playlist__image--loaded" : ""}`}
-          onLoad={handleLoad}
-          onError={handleError}
-        />
+        {isUser && userCoverUrl && (
+          <img
+            src={userCoverUrl}
+            alt=""
+            className="playlist__image playlist__image--loaded"
+          />
+        )}
+        {!isUser && (
+          <img
+            src={`/playlistbg/${playlist.image || "thar.png"}`}
+            alt={playlist.label}
+            className={`playlist__image ${loaded ? "playlist__image--loaded" : ""}`}
+            onLoad={handleLoad}
+            onError={handleError}
+          />
+        )}
         <div className="playlist__label">{playlist.label}</div>
       </div>
     </div>
@@ -147,6 +262,13 @@ const Playlist = ({ hasFavorites = false }) => {
   const selectedPlaylist = searchParams.get("playlist") || "";
   const showFavorites = searchParams.get("favorites") === "true";
   const [isMobile, setIsMobile] = useState(false);
+  const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const reservedPlaylistNames = useMemo(
+    () => [...RESERVED_PLAYLIST_NAMES, ...playlistImages.map((p) => p.label)],
+    [playlistImages],
+  );
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -231,13 +353,54 @@ const Playlist = ({ hasFavorites = false }) => {
     }
   };
 
+  const handleConfirmDeleteUserPlaylist = () => {
+    if (!deleteConfirm?.id) {
+      setDeleteConfirm(null);
+      return;
+    }
+    const removed = deleteUserPlaylistById(deleteConfirm.id);
+    if (removed) {
+      toast.success(`Playlist "${deleteConfirm.label}" deleted.`);
+      if (selectedPlaylist === deleteConfirm.label) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("playlist");
+        if (isMobile) {
+          next.set("view", "track");
+          navigate(`/?${next.toString()}`);
+        } else {
+          setSearchParams(next);
+        }
+      }
+    } else {
+      toast.error("Could not delete playlist.");
+    }
+    setDeleteConfirm(null);
+  };
+
   return (
     <div className="playlist">
-      <div className="playlist__header">
+      <DeletePlaylistConfirmModal
+        target={deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleConfirmDeleteUserPlaylist}
+      />
+      <CreatePlaylistModal
+        isOpen={createPlaylistOpen}
+        onClose={() => setCreatePlaylistOpen(false)}
+        reservedNames={reservedPlaylistNames}
+      />
+      <div className="playlist__header playlist__header--with-action">
         <h4 className="playlist__title">
           <PlaylistIconGradient />
           Playlist
         </h4>
+        <button
+          type="button"
+          className="playlist__create-btn"
+          onClick={() => setCreatePlaylistOpen(true)}
+        >
+          Create playlist
+        </button>
       </div>
       <div className="playlist__grid">
         {!showFavoritesCard && filteredPlaylists.length === 0 ? (
@@ -250,7 +413,8 @@ const Playlist = ({ hasFavorites = false }) => {
             {!searchQuery && (
               <>
                 <p className="playlist__empty-hint">
-                  Go to Admin → Playlist and click &quot;Add playlist&quot; to create playlists.
+                  Create your own with &quot;Create playlist&quot;, or an admin can add
+                  playlists in Admin → Playlist.
                 </p>
                 <button
                   type="button"
@@ -275,12 +439,13 @@ const Playlist = ({ hasFavorites = false }) => {
                 </div>
               </div>
             )}
-            {filteredPlaylists.map((playlist, index) => (
+            {filteredPlaylists.map((playlist) => (
               <PlaylistImageItem
-                key={index}
+                key={playlist.id || playlist.label}
                 playlist={playlist}
                 isSelected={selectedPlaylist === playlist.label}
                 onClick={handlePlaylistClick}
+                onDeleteClick={setDeleteConfirm}
               />
             ))}
           </>

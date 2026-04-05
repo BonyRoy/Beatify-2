@@ -11,6 +11,38 @@
   flex-shrink: 0;
 }
 
+.playlist__header--with-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.playlist__header--with-action .playlist__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.playlist__create-btn {
+  flex-shrink: 0;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: white;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.playlist__create-btn:hover {
+  opacity: 0.92;
+}
+
 .playlist__header::after {
   content: "";
   position: absolute;
@@ -85,6 +117,15 @@ body:has(.footer--player) .playlist__grid {
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+}
+
+/* User-created playlists: gradient + icon only (no /playlistbg/ image) */
+.playlist__image-wrapper--no-art .playlist__placeholder {
+  z-index: 0;
+}
+
+.playlist__image-wrapper--no-art .playlist__label {
+  z-index: 1;
 }
 
 .playlist__placeholder-icon {
@@ -210,10 +251,101 @@ body:has(.footer--player) .playlist__grid {
   }
 }
 
+/* User playlist: delete (trash) — does not trigger card selection */
+.playlist__delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.playlist__delete-btn:hover {
+  background: rgba(220, 38, 38, 0.9);
+}
+
+.playlist__delete-btn:focus-visible {
+  outline: 2px solid var(--text-hover, #a78bfa);
+  outline-offset: 2px;
+}
+
+.playlist-delete-modal {
+  max-width: 400px;
+}
+
+.playlist-delete-modal__text {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin: -0.35rem 0 1.25rem;
+  text-align: center;
+  line-height: 1.45;
+}
+
+.playlist-delete-modal__actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.playlist-delete-modal__actions .modal__btn {
+  flex: 1;
+  min-width: 110px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.playlist-delete-modal__btn-cancel {
+  background-color: var(--track-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--nav-border, #333);
+}
+
+.playlist-delete-modal__btn-cancel:hover {
+  background-color: var(--track-bg-hover);
+}
+
+.playlist-delete-modal__btn-delete {
+  background: #dc2626;
+  color: #fff;
+  border: 1px solid #dc2626;
+}
+
+.playlist-delete-modal__btn-delete:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
 @media (max-width: 480px) {
   .playlist__grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 0.75rem;
+  }
+
+  .playlist__delete-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .playlist__delete-btn svg {
+    width: 14px;
+    height: 14px;
   }
 
   /* Smaller footer on phone - use 80px for overlay padding */

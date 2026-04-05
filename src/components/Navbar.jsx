@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { UserPlus, User, MessageSquare, Sparkles } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
@@ -17,6 +17,7 @@ import NotificationsModal from "./NotificationsModal";
 import { getStoredAvatar, setStoredAvatar } from "./ProfileModal";
 import { getAccountById } from "../services/accountService";
 import { usePlaylist } from "../context/PlaylistContext";
+import { useUserPlaylistCoverUrl } from "../hooks/useUserPlaylistCoverUrl";
 import { fuzzyMatches } from "../utils/searchUtils";
 import "./Navbar.css";
 
@@ -247,6 +248,57 @@ const allArtists = [
   { id: 37, name: "Kishore Kumar", image: "KishoreKumar" },
   { id: 38, name: "Lata Mangeshkar", image: "lata" },
 ];
+
+const MobilePlaylistHeaderStrip = ({ selectedPlaylist, playlistImages }) => {
+  const plMeta = useMemo(
+    () => playlistImages.find((p) => p.label === selectedPlaylist),
+    [playlistImages, selectedPlaylist],
+  );
+  const userCoverUrl = useUserPlaylistCoverUrl(
+    plMeta?.isUserPlaylist ? plMeta.id : null,
+  );
+  const coverUrl = useMemo(() => {
+    if (!plMeta) return "/playlistbg/thar.png";
+    if (plMeta.isUserPlaylist) return userCoverUrl;
+    return `/playlistbg/${plMeta.image?.trim() || "thar.png"}`;
+  }, [plMeta, userCoverUrl]);
+
+  return (
+    <div
+      className={`playlist-header-mobile ${coverUrl ? "" : "playlist-header-mobile--no-art"}`}
+      style={
+        coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined
+      }
+    >
+      {coverUrl ? (
+        <img
+          src={coverUrl}
+          alt={selectedPlaylist}
+          className="playlist-header-mobile__image"
+          onError={(e) => {
+            const fallback = playlistImages.find(
+              (p) => p.label === selectedPlaylist,
+            );
+            if (fallback?.isUserPlaylist) {
+              e.target.removeAttribute("src");
+              e.target.parentElement.classList.add(
+                "playlist-header-mobile--no-art",
+              );
+              e.target.parentElement.style.backgroundImage = "";
+              return;
+            }
+            const fallbackSrc = fallback
+              ? `/playlistbg/${fallback.image || "thar.png"}`
+              : "/playlistbg/thar.png";
+            e.target.src = fallbackSrc;
+            e.target.parentElement.style.backgroundImage = `url(${fallbackSrc})`;
+          }}
+        />
+      ) : null}
+      <div className="playlist-header-mobile__label">{selectedPlaylist}</div>
+    </div>
+  );
+};
 
 const Navbar = () => {
   const { isDark, toggleTheme } = useTheme();
@@ -652,31 +704,10 @@ const Navbar = () => {
           <span className="moods-header-mobile__label">Moods</span>
         </div>
       ) : isMobile && selectedPlaylist && view === "track" ? (
-        <div
-          className="playlist-header-mobile"
-          style={{
-            backgroundImage: `url(${`/playlistbg/${playlistImages.find((p) => p.label === selectedPlaylist)?.image || "thar.png"}`})`,
-          }}
-        >
-          <img
-            src={`/playlistbg/${playlistImages.find((p) => p.label === selectedPlaylist)?.image || "thar.png"}`}
-            alt={selectedPlaylist}
-            className="playlist-header-mobile__image"
-            onError={(e) => {
-              const fallback = playlistImages.find(
-                (p) => p.label === selectedPlaylist,
-              );
-              const fallbackSrc = fallback
-                ? `/playlistbg/${fallback.image || "thar.png"}`
-                : "/playlistbg/thar.png";
-              e.target.src = fallbackSrc;
-              e.target.parentElement.style.backgroundImage = `url(${fallbackSrc})`;
-            }}
-          />
-          <div className="playlist-header-mobile__label">
-            {selectedPlaylist}
-          </div>
-        </div>
+        <MobilePlaylistHeaderStrip
+          selectedPlaylist={selectedPlaylist}
+          playlistImages={playlistImages}
+        />
       ) : (
         <Artists
           artists={allArtists}

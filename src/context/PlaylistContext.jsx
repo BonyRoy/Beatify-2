@@ -1,10 +1,22 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
 import { fetchPlaylists } from "../services/playlistService";
+import {
+  getUserPlaylists,
+  USER_PLAYLISTS_KEY,
+  USER_PLAYLISTS_CHANGED,
+} from "../utils/userPlaylistsStorage";
 
 const PlaylistContext = createContext(null);
 
 export function PlaylistProvider({ children }) {
   const [playlists, setPlaylists] = useState([]);
+  const [userPlaylistsTick, setUserPlaylistsTick] = useState(0);
 
   useEffect(() => {
     const load = () =>
@@ -17,21 +29,61 @@ export function PlaylistProvider({ children }) {
     load();
   }, []);
 
-  const playlistTrackIds = {};
-  playlists.forEach((p) => {
-    playlistTrackIds[p.name] = p.trackIds || [];
-  });
+  useEffect(() => {
+    const bump = () => setUserPlaylistsTick((t) => t + 1);
+    window.addEventListener(USER_PLAYLISTS_CHANGED, bump);
+    const onStorage = (e) => {
+      if (e.key === USER_PLAYLISTS_KEY) bump();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(USER_PLAYLISTS_CHANGED, bump);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
-  const playlistImages = playlists.map((p) => ({
-    image: p.image,
-    label: p.name,
-  }));
+  const mergedPlaylists = useMemo(() => {
+    const server = [...playlists].sort(
+      (a, b) => (a.order ?? 0) - (b.order ?? 0),
+    );
+    const user = getUserPlaylists()
+      .slice()
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const userRows = user.map((u) => ({
+      id: u.id,
+      name: u.name,
+      image: "",
+      trackIds: Array.isArray(u.trackIds) ? u.trackIds : [],
+      order: 0,
+      isUserPlaylist: true,
+    }));
+    return [...server, ...userRows];
+  }, [playlists, userPlaylistsTick]);
+
+  const playlistTrackIds = useMemo(() => {
+    const map = {};
+    mergedPlaylists.forEach((p) => {
+      map[p.name] = p.trackIds || [];
+    });
+    return map;
+  }, [mergedPlaylists]);
+
+  const playlistImages = useMemo(
+    () =>
+      mergedPlaylists.map((p) => ({
+        image: p.image,
+        label: p.name,
+        isUserPlaylist: Boolean(p.isUserPlaylist),
+        id: p.isUserPlaylist ? p.id : undefined,
+      })),
+    [mergedPlaylists],
+  );
 
   const getPlaylistByLabel = (label) =>
-    playlists.find((p) => p.name === label) || null;
+    mergedPlaylists.find((p) => p.name === label) || null;
 
   const value = {
-    playlists,
+    playlists: mergedPlaylists,
     playlistTrackIds,
     playlistImages,
     getPlaylistByLabel,
