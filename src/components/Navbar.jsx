@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { toast } from "react-toastify";
 import { UserPlus, User, MessageSquare, Sparkles } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useListeningHistory } from "../context/ListeningHistoryContext";
@@ -19,6 +20,11 @@ import { getAccountById } from "../services/accountService";
 import { usePlaylist } from "../context/PlaylistContext";
 import { useUserPlaylistCoverUrl } from "../hooks/useUserPlaylistCoverUrl";
 import { fuzzyMatches } from "../utils/searchUtils";
+import {
+  isGuestModUnlocked,
+  unlockGuestMod,
+  lockGuestMod,
+} from "../utils/guestPlayLimit";
 import "./Navbar.css";
 
 const SunIcon = () => (
@@ -337,12 +343,22 @@ const Navbar = () => {
   const selectedPlaylist = searchParams.get("playlist") || "";
   const view = searchParams.get("view") || (isMobile ? "track" : "playlist");
   const searchQuery = searchParams.get("search") || "";
+  const brandModTapCountRef = useRef(0);
+  const brandModResetTimerRef = useRef(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (brandModResetTimerRef.current) {
+        clearTimeout(brandModResetTimerRef.current);
+      }
+    };
   }, []);
 
   // Sync avatar from Firebase when logged in (for cross-device persistence)
@@ -423,6 +439,39 @@ const Navbar = () => {
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.set("view", view === "track" ? "playlist" : "track");
       setSearchParams(newSearchParams);
+    }
+
+    if (isLoggedIn) return;
+
+    if (brandModResetTimerRef.current) {
+      clearTimeout(brandModResetTimerRef.current);
+      brandModResetTimerRef.current = null;
+    }
+    brandModTapCountRef.current += 1;
+    if (brandModTapCountRef.current >= 10) {
+      brandModTapCountRef.current = 0;
+      if (isGuestModUnlocked()) {
+        lockGuestMod();
+        toast.info(
+          <div>
+            <div>MOD off — guest limits are back.</div>
+            <div>Tap Beatify ×10 to unlock again.</div>
+          </div>,
+        );
+      } else {
+        unlockGuestMod();
+        toast.success(
+          <div>
+            <div>MOD unlocked — unlimited listening.</div>
+            <div>Keep it on the down-low.</div>
+          </div>,
+        );
+      }
+    } else {
+      brandModResetTimerRef.current = setTimeout(() => {
+        brandModTapCountRef.current = 0;
+        brandModResetTimerRef.current = null;
+      }, 4500);
     }
   };
 

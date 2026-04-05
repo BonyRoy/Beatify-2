@@ -1,8 +1,166 @@
 {
-  "hash": "454b764c",
+  "hash": "b6ced02c",
   "configHash": "eb754e74",
-  "lockfileHash": "e3b0c442",
-  "browserHash": "99e718a5",
-  "optimized": {},
-  "chunks": {}
+  "lockfileHash": "6e09a3a4",
+  "browserHash": "20ad4790",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "8068736d",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "ec1e4466",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "9c279b13",
+      "needsInterop": false
+    },
+    "react-toastify": {
+      "src": "../../node_modules/react-toastify/dist/index.mjs",
+      "file": "react-toastify.js",
+      "fileHash": "232cd871",
+      "needsInterop": false
+    },
+    "music-metadata": {
+      "src": "../../node_modules/music-metadata/lib/core.js",
+      "file": "music-metadata.js",
+      "fileHash": "8cc55207",
+      "needsInterop": false
+    },
+    "lucide-react": {
+      "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "0d9e29f5",
+      "needsInterop": false
+    },
+    "firebase/firestore": {
+      "src": "../../node_modules/firebase/firestore/dist/esm/index.esm.js",
+      "file": "firebase_firestore.js",
+      "fileHash": "7c1f688e",
+      "needsInterop": false
+    },
+    "firebase/storage": {
+      "src": "../../node_modules/firebase/storage/dist/esm/index.esm.js",
+      "file": "firebase_storage.js",
+      "fileHash": "3bd20a77",
+      "needsInterop": false
+    },
+    "xlsx": {
+      "src": "../../node_modules/xlsx/xlsx.mjs",
+      "file": "xlsx.js",
+      "fileHash": "8f12dd09",
+      "needsInterop": false
+    },
+    "firebase/auth": {
+      "src": "../../node_modules/firebase/auth/dist/esm/index.esm.js",
+      "file": "firebase_auth.js",
+      "fileHash": "7aa0be3c",
+      "needsInterop": false
+    },
+    "firebase/app": {
+      "src": "../../node_modules/firebase/app/dist/esm/index.esm.js",
+      "file": "firebase_app.js",
+      "fileHash": "00d5e65c",
+      "needsInterop": false
+    },
+    "@emailjs/browser": {
+      "src": "../../node_modules/@emailjs/browser/es/index.js",
+      "file": "@emailjs_browser.js",
+      "fileHash": "ae75d9aa",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "WaveParser-VRXAXKV3": {
+      "file": "WaveParser-VRXAXKV3.js"
+    },
+    "AiffParser-Y3Q3M523": {
+      "file": "AiffParser-Y3Q3M523.js"
+    },
+    "DsfParser-X5OYGBPI": {
+      "file": "DsfParser-X5OYGBPI.js"
+    },
+    "FlacParser-T5HYNUXO": {
+      "file": "FlacParser-T5HYNUXO.js"
+    },
+    "MatroskaParser-4UIXPOV7": {
+      "file": "MatroskaParser-4UIXPOV7.js"
+    },
+    "MP4Parser-OIO3JXHL": {
+      "file": "MP4Parser-OIO3JXHL.js"
+    },
+    "MusepackParser-RUGWBRS6": {
+      "file": "MusepackParser-RUGWBRS6.js"
+    },
+    "OggParser-FF2H3MBA": {
+      "file": "OggParser-FF2H3MBA.js"
+    },
+    "chunk-BGEPPW4M": {
+      "file": "chunk-BGEPPW4M.js"
+    },
+    "WavPackParser-L7M7LYLN": {
+      "file": "WavPackParser-L7M7LYLN.js"
+    },
+    "APEv2Parser-BIWOUCYU": {
+      "file": "APEv2Parser-BIWOUCYU.js"
+    },
+    "MpegParser-YGJSMXKP": {
+      "file": "MpegParser-YGJSMXKP.js"
+    },
+    "chunk-HAZHHOHQ": {
+      "file": "chunk-HAZHHOHQ.js"
+    },
+    "AsfParser-T24WIJK7": {
+      "file": "AsfParser-T24WIJK7.js"
+    },
+    "DsdiffParser-KTGDIFTT": {
+      "file": "DsdiffParser-KTGDIFTT.js"
+    },
+    "chunk-GTJAWHOI": {
+      "file": "chunk-GTJAWHOI.js"
+    },
+    "chunk-AU2MKR2E": {
+      "file": "chunk-AU2MKR2E.js"
+    },
+    "chunk-HZHTRIIS": {
+      "file": "chunk-HZHTRIIS.js"
+    },
+    "chunk-BQXQ36HT": {
+      "file": "chunk-BQXQ36HT.js"
+    },
+    "chunk-WW7Y3M7O": {
+      "file": "chunk-WW7Y3M7O.js"
+    },
+    "chunk-36D5JBTY": {
+      "file": "chunk-36D5JBTY.js"
+    },
+    "chunk-FGCBX2IC": {
+      "file": "chunk-FGCBX2IC.js"
+    },
+    "chunk-ZEQY5BQQ": {
+      "file": "chunk-ZEQY5BQQ.js"
+    },
+    "chunk-QZLSCXLO": {
+      "file": "chunk-QZLSCXLO.js"
+    },
+    "chunk-HU6V2TLZ": {
+      "file": "chunk-HU6V2TLZ.js"
+    },
+    "chunk-VX2H6PUQ": {
+      "file": "chunk-VX2H6PUQ.js"
+    },
+    "chunk-74LLMCNX": {
+      "file": "chunk-74LLMCNX.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
+    }
+  }
 }

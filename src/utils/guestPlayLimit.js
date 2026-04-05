@@ -4,8 +4,34 @@
  */
 
 const GUEST_PLAYS_KEY = "beatify_guest_plays";
+const GUEST_MOD_KEY = "beatify_guest_mod_unlock";
 const GUEST_PLAYS_MAX = 4;
 const GUEST_RENEW_MS = 24 * 60 * 60 * 1000; // 1 day
+
+/** Easter egg: 10× Beatify logo taps unlock unlimited guest listening (local only). */
+export function isGuestModUnlocked() {
+  try {
+    return localStorage.getItem(GUEST_MOD_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function unlockGuestMod() {
+  try {
+    localStorage.setItem(GUEST_MOD_KEY, "1");
+  } catch (e) {
+    console.warn("Failed to save guest mod:", e);
+  }
+}
+
+export function lockGuestMod() {
+  try {
+    localStorage.removeItem(GUEST_MOD_KEY);
+  } catch (e) {
+    console.warn("Failed to clear guest mod:", e);
+  }
+}
 
 /**
  * Get guest plays from localStorage. If older than 24h, clear and return renewed state.
@@ -36,6 +62,7 @@ export function getGuestPlays() {
  * @param {string} uuid - Track uuid or id
  */
 export function addGuestPlay(uuid) {
+  if (isGuestModUnlocked()) return;
   if (!uuid) return;
   const sid = String(uuid).trim();
   if (!sid) return;
@@ -57,6 +84,9 @@ export function addGuestPlay(uuid) {
  * @returns {{ canPlay: boolean, count: number, renewed: boolean }}
  */
 export function checkGuestCanPlay() {
+  if (isGuestModUnlocked()) {
+    return { canPlay: true, count: 0, renewed: false };
+  }
   const { uuids, renewed } = getGuestPlays();
   const count = uuids.length;
   const canPlay = count < GUEST_PLAYS_MAX;
