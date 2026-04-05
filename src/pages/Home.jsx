@@ -632,6 +632,10 @@ const Home = () => {
     if (selectedPlaylist) setLatestUploadsFirst(false);
   }, [selectedPlaylist]);
 
+  useEffect(() => {
+    if (!isLoggedIn) setLatestUploadsFirst(false);
+  }, [isLoggedIn]);
+
   // Extract available eras from music list (eras that have at least one track)
   const availableEras = useMemo(() => {
     const eraSet = new Set();
@@ -953,7 +957,7 @@ const Home = () => {
                         : "Tracks"}
                 </span>
                 <span className="home__tracks-heading-actions">
-                  {!selectedPlaylist && (
+                  {isLoggedIn && !selectedPlaylist && (
                     <button
                       type="button"
                       className={`home__latest-uploads-btn ${latestUploadsFirst ? "home__latest-uploads-btn--active" : ""}`}
