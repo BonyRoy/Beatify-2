@@ -187,6 +187,8 @@ const Footer = () => {
   const fullscreenArtWrapperRef = useRef(null);
   const fullscreenVideoBgCanvasRef = useRef(null);
   const fullscreenVideoCanvasRef = useRef(null);
+  /** Muted decode-only video synced to `audio` while fullscreen MP4 — `<audio>` plays in background on iOS/Android; `<video>` alone is often suspended when backgrounded. */
+  const fullscreenMirrorVideoRef = useRef(null);
   const fullscreenVideoFgReportedRef = useRef(false);
   const isDraggingProgressRef = useRef(false);
   const isDraggingVolumeRef = useRef(false);
@@ -675,23 +677,13 @@ const Footer = () => {
         const nextUrl = nextTrack.fileUrl || nextTrack.url;
         if (nextUrl) {
           preloadStartedRef.current = true;
-          const needVideo = trackUsesVideoPlayback(nextTrack);
           const existing = preloadAudioRef.current;
-          if (
-            existing &&
-            ((needVideo && existing.tagName !== "VIDEO") ||
-              (!needVideo && existing.tagName !== "AUDIO"))
-          ) {
+          if (existing && existing.tagName !== "AUDIO") {
             existing.src = "";
             preloadAudioRef.current = null;
           }
           if (!preloadAudioRef.current) {
-            preloadAudioRef.current = needVideo
-              ? Object.assign(document.createElement("video"), {
-                  preload: "auto",
-                  playsInline: true,
-                })
-              : new Audio();
+            preloadAudioRef.current = new Audio();
           }
           preloadAudioRef.current.src = nextUrl;
           preloadAudioRef.current.load();
@@ -2117,6 +2109,64 @@ const Footer = () => {
     setFullscreenVideoHasFrame(false);
   }, [audioTrackLoadKey]);
 
+  /** Fullscreen MP4: wire muted <video> to same URL as <audio> for canvas frames; audio is playback (background-capable). */
+  useEffect(() => {
+    if (!isFullScreen || !isVideoTrack) return;
+    const v = fullscreenMirrorVideoRef.current;
+    const a = audioRef.current;
+    if (!v || !a) return;
+
+    v.muted = true;
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "");
+
+    const syncMirrorToAudio = () => {
+      if (!fullscreenMirrorVideoRef.current || !audioRef.current) return;
+      const video = fullscreenMirrorVideoRef.current;
+      const audio = audioRef.current;
+      video.currentTime = audio.currentTime;
+      video.playbackRate = audio.playbackRate;
+      if (!audio.paused) video.play().catch(() => {});
+      else video.pause();
+    };
+
+    const tryWire = () => {
+      const src = a.currentSrc || a.src;
+      if (!src) return false;
+      if (v.src !== src) {
+        v.src = src;
+        v.load();
+      }
+      v.addEventListener("canplay", syncMirrorToAudio, { once: true });
+      if (v.readyState >= 2) syncMirrorToAudio();
+      return true;
+    };
+
+    let cancelled = false;
+    if (!tryWire()) {
+      const onAudioCanPlay = () => {
+        if (cancelled) return;
+        tryWire();
+        a.removeEventListener("canplay", onAudioCanPlay);
+      };
+      a.addEventListener("canplay", onAudioCanPlay);
+      return () => {
+        cancelled = true;
+        a.removeEventListener("canplay", onAudioCanPlay);
+        v.pause();
+        v.removeAttribute("src");
+        v.load();
+      };
+    }
+
+    return () => {
+      cancelled = true;
+      v.pause();
+      v.removeAttribute("src");
+      v.load();
+    };
+  }, [isFullScreen, isVideoTrack, audioTrackLoadKey]);
+
   useEffect(() => {
     if (!isFullScreen || !isVideoTrack) {
       fullscreenVideoFgReportedRef.current = false;
@@ -2158,7 +2208,23 @@ const Footer = () => {
 
     const tick = () => {
       if (cancelled) return;
-      const video = audioRef.current;
+      const audio = audioRef.current;
+      const mirror = fullscreenMirrorVideoRef.current;
+      if (mirror && audio) {
+        if (Math.abs(mirror.currentTime - audio.currentTime) > 0.25) {
+          mirror.currentTime = audio.currentTime;
+        }
+        if (!audio.paused && mirror.paused) {
+          mirror.play().catch(() => {});
+        }
+        if (audio.paused && !mirror.paused) {
+          mirror.pause();
+        }
+        if (mirror.playbackRate !== audio.playbackRate) {
+          mirror.playbackRate = audio.playbackRate;
+        }
+      }
+      const video = mirror;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
 
       const bgCtx = bgCanvas.getContext("2d");
@@ -2696,33 +2762,27 @@ const Footer = () => {
             </>
           )}
         </div>
-        {isVideoTrack ? (
+        <audio
+          ref={audioRef}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onLoadStart={handleLoadStart}
+          onCanPlay={handleCanPlay}
+          onEnded={handleEnded}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          preload="auto"
+          playsInline
+          aria-hidden={isVideoTrack ? true : undefined}
+        />
+        {isFullScreen && isVideoTrack && (
           <video
-            ref={audioRef}
+            ref={fullscreenMirrorVideoRef}
             className="player__media-audio-only"
-            onTimeUpdate={handleTimeUpdate}
-            onLoadedMetadata={handleLoadedMetadata}
-            onLoadStart={handleLoadStart}
-            onCanPlay={handleCanPlay}
-            onEnded={handleEnded}
-            onPlay={handlePlay}
-            onPause={handlePause}
-            preload="auto"
+            muted
             playsInline
+            preload="auto"
             aria-hidden="true"
-          />
-        ) : (
-          <audio
-            ref={audioRef}
-            onTimeUpdate={handleTimeUpdate}
-            onLoadedMetadata={handleLoadedMetadata}
-            onLoadStart={handleLoadStart}
-            onCanPlay={handleCanPlay}
-            onEnded={handleEnded}
-            onPlay={handlePlay}
-            onPause={handlePause}
-            preload="auto"
-            playsInline
           />
         )}
       </footer>

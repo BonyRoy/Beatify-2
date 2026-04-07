@@ -16,7 +16,7 @@ export function isAllowedMusicUploadFile(file) {
   return VIDEO_EXT_RE.test(file.name || "");
 }
 
-/** Use `<video>` for these containers (audio-only UX; `<audio>` often fails). */
+/** True for video containers (MP4 etc.): UI uses video artwork; playback uses `<audio>` + fullscreen mirror `<video>` for frames. */
 export function trackUsesVideoPlayback(track) {
   if (!track) return false;
   const name = (track.originalFileName || track.fileName || "").toLowerCase();
