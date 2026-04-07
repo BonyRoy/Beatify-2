@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { parseBlob, selectCover } from "music-metadata";
+import { isAllowedMusicUploadFile } from "../utils/trackMediaKind";
 import { storage, db } from "../firebase/config";
 import {
   ref,
@@ -913,20 +914,13 @@ const Admin = () => {
     );
   };
 
-  const isMusicUploadFile = (file) => {
-    if (!file) return false;
-    if (file.type.startsWith("audio/")) return true;
-    if (file.type === "video/mp4" || file.type === "application/mp4") return true;
-    return file.name.toLowerCase().endsWith(".mp4");
-  };
-
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file && isMusicUploadFile(file)) {
+    if (file && isAllowedMusicUploadFile(file)) {
       setMusicFile(file);
       setTrackUUID(generateUUID());
     } else {
-      alert("Please select a valid audio or MP4 file");
+      alert("Please select a valid audio or video file");
       e.target.value = "";
     }
   };
@@ -1679,7 +1673,7 @@ const Admin = () => {
                     <input
                       type="file"
                       id="musicFile"
-                      accept="audio/*,.mp4,video/mp4"
+                      accept="audio/*,video/*"
                       onChange={handleFileChange}
                       className="admin-file-input"
                       required={!editingTrackId}

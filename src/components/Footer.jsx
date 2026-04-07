@@ -17,16 +17,8 @@ import {
   recordPersonalListen,
   cacheBlobFromNetworkIfTop,
 } from "../services/trackAudioCacheService";
+import { trackUsesVideoPlayback } from "../utils/trackMediaKind";
 import "./Footer.css";
-
-/** MP4 is a video container; playback uses a hidden `<video>` (audio-only UX). */
-function trackIsMp4Container(track) {
-  if (!track) return false;
-  const name = (track.originalFileName || track.fileName || "").toLowerCase();
-  if (name.endsWith(".mp4")) return true;
-  const url = (track.fileUrl || track.url || "").toLowerCase();
-  return /\.mp4(\?|$)/.test(url);
-}
 
 const PlayIcon = () => (
   <svg
@@ -169,8 +161,8 @@ const Footer = () => {
     return `${String(id)}|${url}`;
   }, [currentTrack]);
 
-  const isCurrentTrackMp4 = useMemo(
-    () => trackIsMp4Container(currentTrack),
+  const isVideoTrack = useMemo(
+    () => trackUsesVideoPlayback(currentTrack),
     [currentTrack],
   );
 
@@ -673,7 +665,7 @@ const Footer = () => {
         const nextUrl = nextTrack.fileUrl || nextTrack.url;
         if (nextUrl) {
           preloadStartedRef.current = true;
-          const needVideo = trackIsMp4Container(nextTrack);
+          const needVideo = trackUsesVideoPlayback(nextTrack);
           const existing = preloadAudioRef.current;
           if (
             existing &&
@@ -2518,7 +2510,7 @@ const Footer = () => {
             </>
           )}
         </div>
-        {isCurrentTrackMp4 ? (
+        {isVideoTrack ? (
           <video
             ref={audioRef}
             className="player__media-audio-only"

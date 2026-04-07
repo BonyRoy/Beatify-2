@@ -1008,7 +1008,7 @@ body.footer-fullscreen-active {
   }
 }
 
-/* Hidden video used for MP4 playback (audio only; no visible frame). */
+/* Hidden `<video>` for video-container tracks (audio-only UX; no visible frame). */
 .player__media-audio-only {
   position: absolute;
   width: 0;
