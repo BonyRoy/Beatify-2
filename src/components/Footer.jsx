@@ -2134,8 +2134,7 @@ const Footer = () => {
 
     const syncBgCanvasSize = () => {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const vw =
-        document.documentElement.clientWidth || window.innerWidth;
+      const vw = document.documentElement.clientWidth || window.innerWidth;
       const vh = window.innerHeight;
       const w = Math.ceil(vw * FULLSCREEN_VIDEO_BG_BLEED);
       const h = Math.ceil(vh * FULLSCREEN_VIDEO_BG_BLEED);
@@ -2267,7 +2266,9 @@ const Footer = () => {
         onClick={!isFullScreen ? handleFooterClick : handleFooterClick}
         onTouchStart={isFullScreen ? handleFullscreenTouchStart : undefined}
         onTouchEnd={isFullScreen ? handleFullscreenTouchEnd : undefined}
-        onTransitionEnd={isFullScreen ? handleFullscreenTransitionEnd : undefined}
+        onTransitionEnd={
+          isFullScreen ? handleFullscreenTransitionEnd : undefined
+        }
         style={
           isFullScreen && dynamicBgGradient && !isVideoTrack
             ? { background: dynamicBgGradient }
@@ -2323,153 +2324,161 @@ const Footer = () => {
                     </div>
                   </div>
                 ) : (
-                <div className="player__fullscreen-art-wrapper">
-                  {albumArtUrl ? (
-                    <img
-                      className={`player__fullscreen-art ${isPlaying ? "player__fullscreen-art--playing" : ""}`}
-                      src={albumArtUrl}
-                      alt={`${currentTrack.name} album art`}
-                    />
-                  ) : (
-                    <div
-                      className={`player__fullscreen-art player__fullscreen-art--placeholder ${isPlaying ? "player__fullscreen-art--playing" : ""}`}
-                    >
-                      <MusicIcon />
-                    </div>
-                  )}
-                </div>
-                )}
-
-                {/* Song Info */}
-                <div className="player__fullscreen-info">
-                  <h3 className="player__fullscreen-title">
-                    {currentTrack.name || "Unknown Track"}
-                  </h3>
-                  <div className="player__fullscreen-artist-wrapper">
-                    <div
-                      className={`player__fullscreen-artist-inner ${shouldScrollFullscreenArtist ? "player__fullscreen-artist--scroll" : ""}`}
-                      style={
-                        shouldScrollFullscreenArtist
-                          ? {
-                              "--scroll-duration": `${fullscreenArtistDuration}s`,
-                            }
-                          : {}
-                      }
-                    >
-                      <p
-                        ref={fullscreenArtistRef}
-                        className="player__fullscreen-artist"
-                      >
-                        {currentTrack.artist || "Unknown Artist"}
-                      </p>
-                      {shouldScrollFullscreenArtist && (
-                        <p className="player__fullscreen-artist player__fullscreen-artist--duplicate">
-                          {currentTrack.artist || "Unknown Artist"}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="player__fullscreen-progress">
-                  <span className="player__time">
-                    {formatTime(currentTime)}
-                  </span>
-                  <div
-                    className="player__progress-bar"
-                    ref={progressBarRef}
-                    onClick={handleProgressClick}
-                    onMouseDown={handleProgressStart}
-                    onTouchStart={handleProgressStart}
-                    style={{ touchAction: "none" }}
-                  >
-                    <div
-                      className="player__progress-fill"
-                      style={{ width: `${progressPercentage}%` }}
-                    />
-                    <div
-                      className="player__progress-handle"
-                      style={{ left: `${progressPercentage}%` }}
-                    />
-                  </div>
-                  <span className="player__time">
-                    -{formatTime(duration - currentTime)}
-                  </span>
-                </div>
-
-                {/* Playback Controls */}
-                <div className="player__fullscreen-controls">
-                  <button
-                    className="player__control-btn player__control-btn--fullscreen"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      playPreviousTrack();
-                    }}
-                    aria-label="Previous track"
-                  >
-                    <PreviousIcon />
-                  </button>
-                  <button
-                    className="player__control-btn player__control-btn--play player__control-btn--fullscreen-play"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      hasUserInteractedRef.current = true;
-                      togglePlayPause();
-                    }}
-                    disabled={isLoading}
-                    aria-label={
-                      isLoading ? "Loading" : isPlaying ? "Pause" : "Play"
-                    }
-                  >
-                    {isLoading ? (
-                      <SpinnerIcon />
-                    ) : isPlaying ? (
-                      <PauseIcon />
+                  <div className="player__fullscreen-art-wrapper">
+                    {albumArtUrl ? (
+                      <img
+                        className={`player__fullscreen-art ${isPlaying ? "player__fullscreen-art--playing" : ""}`}
+                        src={albumArtUrl}
+                        alt={`${currentTrack.name} album art`}
+                      />
                     ) : (
-                      <PlayIcon />
-                    )}
-                  </button>
-                  <button
-                    className="player__control-btn player__control-btn--fullscreen"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      playNextTrack();
-                    }}
-                    aria-label="Next track"
-                  >
-                    <NextIcon />
-                  </button>
-                </div>
-
-                {/* Speed Control */}
-                <div className="player__fullscreen-extra-controls">
-                  <div className="player__fullscreen-speed">
-                    <button
-                      className="player__speed-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowSpeedMenu(!showSpeedMenu);
-                      }}
-                    >
-                      {playbackSpeed}x
-                    </button>
-                    {showSpeedMenu && (
                       <div
-                        className="player__speed-menu"
-                        onClick={(e) => e.stopPropagation()}
+                        className={`player__fullscreen-art player__fullscreen-art--placeholder ${isPlaying ? "player__fullscreen-art--playing" : ""}`}
                       >
-                        {speedOptions.map((speed) => (
-                          <button
-                            key={speed}
-                            className={`player__speed-option ${playbackSpeed === speed ? "player__speed-option--active" : ""}`}
-                            onClick={() => handleSpeedChange(speed)}
-                          >
-                            {speed}x
-                          </button>
-                        ))}
+                        <MusicIcon />
                       </div>
                     )}
+                  </div>
+                )}
+
+                <div
+                  className={
+                    isVideoTrack
+                      ? "player__fullscreen-controls-dock player__fullscreen-controls-dock--mp4"
+                      : "player__fullscreen-controls-dock player__fullscreen-controls-dock--plain"
+                  }
+                >
+                  {/* Song Info (inside smoked dock for MP4; plain dock uses display:contents) */}
+                  <div className="player__fullscreen-info">
+                    <h3 className="player__fullscreen-title">
+                      {currentTrack.name || "Unknown Track"}
+                    </h3>
+                    <div className="player__fullscreen-artist-wrapper">
+                      <div
+                        className={`player__fullscreen-artist-inner ${shouldScrollFullscreenArtist ? "player__fullscreen-artist--scroll" : ""}`}
+                        style={
+                          shouldScrollFullscreenArtist
+                            ? {
+                                "--scroll-duration": `${fullscreenArtistDuration}s`,
+                              }
+                            : {}
+                        }
+                      >
+                        <p
+                          ref={fullscreenArtistRef}
+                          className="player__fullscreen-artist"
+                        >
+                          {currentTrack.artist || "Unknown Artist"}
+                        </p>
+                        {shouldScrollFullscreenArtist && (
+                          <p className="player__fullscreen-artist player__fullscreen-artist--duplicate">
+                            {currentTrack.artist || "Unknown Artist"}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="player__fullscreen-progress">
+                    <span className="player__time">
+                      {formatTime(currentTime)}
+                    </span>
+                    <div
+                      className="player__progress-bar"
+                      ref={progressBarRef}
+                      onClick={handleProgressClick}
+                      onMouseDown={handleProgressStart}
+                      onTouchStart={handleProgressStart}
+                      style={{ touchAction: "none" }}
+                    >
+                      <div
+                        className="player__progress-fill"
+                        style={{ width: `${progressPercentage}%` }}
+                      />
+                      <div
+                        className="player__progress-handle"
+                        style={{ left: `${progressPercentage}%` }}
+                      />
+                    </div>
+                    <span className="player__time">
+                      -{formatTime(duration - currentTime)}
+                    </span>
+                  </div>
+
+                  {/* Playback Controls */}
+                  <div className="player__fullscreen-controls">
+                    <button
+                      className="player__control-btn player__control-btn--fullscreen"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playPreviousTrack();
+                      }}
+                      aria-label="Previous track"
+                    >
+                      <PreviousIcon />
+                    </button>
+                    <button
+                      className="player__control-btn player__control-btn--play player__control-btn--fullscreen-play"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        hasUserInteractedRef.current = true;
+                        togglePlayPause();
+                      }}
+                      disabled={isLoading}
+                      aria-label={
+                        isLoading ? "Loading" : isPlaying ? "Pause" : "Play"
+                      }
+                    >
+                      {isLoading ? (
+                        <SpinnerIcon />
+                      ) : isPlaying ? (
+                        <PauseIcon />
+                      ) : (
+                        <PlayIcon />
+                      )}
+                    </button>
+                    <button
+                      className="player__control-btn player__control-btn--fullscreen"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playNextTrack();
+                      }}
+                      aria-label="Next track"
+                    >
+                      <NextIcon />
+                    </button>
+                  </div>
+
+                  {/* Speed Control */}
+                  <div className="player__fullscreen-extra-controls">
+                    <div className="player__fullscreen-speed">
+                      <button
+                        className="player__speed-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowSpeedMenu(!showSpeedMenu);
+                        }}
+                      >
+                        {playbackSpeed}x
+                      </button>
+                      {showSpeedMenu && (
+                        <div
+                          className="player__speed-menu"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {speedOptions.map((speed) => (
+                            <button
+                              key={speed}
+                              className={`player__speed-option ${playbackSpeed === speed ? "player__speed-option--active" : ""}`}
+                              onClick={() => handleSpeedChange(speed)}
+                            >
+                              {speed}x
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

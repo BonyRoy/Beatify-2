@@ -76,7 +76,7 @@
   background: transparent;
 }
 
-/* Full-viewport live video (canvas) behind UI; dimmed / slightly grayed vs foreground.
+/* Full-viewport live video (canvas) behind UI; full color (no dim filter).
    Canvas bitmap is ~7% larger than viewport (JS) and centered so edges bleed past the screen. */
 .player__fullscreen-video-bg-canvas {
   position: fixed;
@@ -86,7 +86,6 @@
   z-index: 0;
   pointer-events: none;
   display: block;
-  filter: brightness(0.48) saturate(0.7);
 }
 
 .footer--fullscreen--video-fullbleed .player--fullscreen {
@@ -102,20 +101,6 @@
   padding-right: max(0px, env(safe-area-inset-right, 0px));
   /* overflow:hidden was clipping the video row; left edge looked like empty margin */
   overflow: visible;
-}
-
-.footer--fullscreen--video-fullbleed .player--fullscreen::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.92) 0%,
-    rgba(0, 0, 0, 0.38) 42%,
-    transparent 70%
-  );
-  pointer-events: none;
-  z-index: 0;
 }
 
 .footer--fullscreen--video-fullbleed .player__fullscreen-content {
@@ -165,17 +150,55 @@
 
 .footer--fullscreen.footer--fullscreen--video-fullbleed
   .player__fullscreen-content.player__fullscreen-content--video-bg
-  > .player__fullscreen-info,
-.footer--fullscreen.footer--fullscreen--video-fullbleed
-  .player__fullscreen-content.player__fullscreen-content--video-bg
-  > .player__fullscreen-progress,
-.footer--fullscreen.footer--fullscreen--video-fullbleed
-  .player__fullscreen-content.player__fullscreen-content--video-bg
-  > .player__fullscreen-controls,
-.footer--fullscreen.footer--fullscreen--video-fullbleed
-  .player__fullscreen-content.player__fullscreen-content--video-bg
-  > .player__fullscreen-extra-controls {
+  > .player__fullscreen-controls-dock--mp4 {
   flex-shrink: 0;
+}
+
+/* MP4 fullscreen: title + scrubber + transport + speed in one smoked panel; non-MP4 uses display:contents */
+.player__fullscreen-controls-dock--plain {
+  display: contents;
+}
+
+.player__fullscreen-controls-dock--mp4 {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  margin: 0;
+  margin-top: 0.25rem;
+  padding: 0.5rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  border-radius: 0;
+  background: rgba(8, 8, 8, 0.58);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  box-shadow:
+    0 -12px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  z-index: 2;
+}
+
+.player__fullscreen-controls-dock--mp4 .player__fullscreen-info {
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.player__fullscreen-controls-dock--mp4 .player__fullscreen-progress {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.player__fullscreen-controls-dock--mp4 .player__fullscreen-extra-controls {
+  padding-left: 0;
+  padding-right: 0;
+  margin-top: 0;
 }
 
 .footer--fullscreen.footer--fullscreen--video-fullbleed
