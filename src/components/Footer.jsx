@@ -19,6 +19,15 @@ import {
 } from "../services/trackAudioCacheService";
 import "./Footer.css";
 
+/** MP4 is a video container; playback uses a hidden `<video>` (audio-only UX). */
+function trackIsMp4Container(track) {
+  if (!track) return false;
+  const name = (track.originalFileName || track.fileName || "").toLowerCase();
+  if (name.endsWith(".mp4")) return true;
+  const url = (track.fileUrl || track.url || "").toLowerCase();
+  return /\.mp4(\?|$)/.test(url);
+}
+
 const PlayIcon = () => (
   <svg
     width="20"
@@ -159,6 +168,11 @@ const Footer = () => {
     if (id == null) return null;
     return `${String(id)}|${url}`;
   }, [currentTrack]);
+
+  const isCurrentTrackMp4 = useMemo(
+    () => trackIsMp4Container(currentTrack),
+    [currentTrack],
+  );
 
   const audioRef = useRef(null);
   const progressBarRef = useRef(null);
@@ -612,6 +626,7 @@ const Footer = () => {
     playCountIncrementedRef.current = false;
     if (preloadAudioRef.current) {
       preloadAudioRef.current.src = "";
+      preloadAudioRef.current = null;
     }
   }, [currentTrack]);
 
@@ -658,8 +673,23 @@ const Footer = () => {
         const nextUrl = nextTrack.fileUrl || nextTrack.url;
         if (nextUrl) {
           preloadStartedRef.current = true;
+          const needVideo = trackIsMp4Container(nextTrack);
+          const existing = preloadAudioRef.current;
+          if (
+            existing &&
+            ((needVideo && existing.tagName !== "VIDEO") ||
+              (!needVideo && existing.tagName !== "AUDIO"))
+          ) {
+            existing.src = "";
+            preloadAudioRef.current = null;
+          }
           if (!preloadAudioRef.current) {
-            preloadAudioRef.current = new Audio();
+            preloadAudioRef.current = needVideo
+              ? Object.assign(document.createElement("video"), {
+                  preload: "auto",
+                  playsInline: true,
+                })
+              : new Audio();
           }
           preloadAudioRef.current.src = nextUrl;
           preloadAudioRef.current.load();
@@ -2488,18 +2518,35 @@ const Footer = () => {
             </>
           )}
         </div>
-        <audio
-          ref={audioRef}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onLoadStart={handleLoadStart}
-          onCanPlay={handleCanPlay}
-          onEnded={handleEnded}
-          onPlay={handlePlay}
-          onPause={handlePause}
-          preload="auto"
-          playsInline
-        />
+        {isCurrentTrackMp4 ? (
+          <video
+            ref={audioRef}
+            className="player__media-audio-only"
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onLoadStart={handleLoadStart}
+            onCanPlay={handleCanPlay}
+            onEnded={handleEnded}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            preload="auto"
+            playsInline
+            aria-hidden="true"
+          />
+        ) : (
+          <audio
+            ref={audioRef}
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onLoadStart={handleLoadStart}
+            onCanPlay={handleCanPlay}
+            onEnded={handleEnded}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            preload="auto"
+            playsInline
+          />
+        )}
       </footer>
     </>
   );
