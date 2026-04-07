@@ -22,6 +22,8 @@ import "./Footer.css";
 
 /** Source-frame crop (px) from top & bottom when painting fullscreen video to canvas. */
 const FULLSCREEN_VIDEO_EDGE_CROP_PX = 20;
+/** Background canvas is slightly larger than the viewport so the dimmed layer bleeds past screen edges. */
+const FULLSCREEN_VIDEO_BG_BLEED = 1.07;
 
 const PlayIcon = () => (
   <svg
@@ -2132,9 +2134,11 @@ const Footer = () => {
 
     const syncBgCanvasSize = () => {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const w =
+      const vw =
         document.documentElement.clientWidth || window.innerWidth;
-      const h = window.innerHeight;
+      const vh = window.innerHeight;
+      const w = Math.ceil(vw * FULLSCREEN_VIDEO_BG_BLEED);
+      const h = Math.ceil(vh * FULLSCREEN_VIDEO_BG_BLEED);
       bgCanvas.width = Math.floor(w * dpr);
       bgCanvas.height = Math.floor(h * dpr);
       bgCanvas.style.width = `${w}px`;

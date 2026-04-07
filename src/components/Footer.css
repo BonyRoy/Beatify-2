@@ -76,16 +76,17 @@
   background: transparent;
 }
 
-/* Full-viewport live video (canvas) behind UI; dimmed / slightly grayed vs foreground. */
+/* Full-viewport live video (canvas) behind UI; dimmed / slightly grayed vs foreground.
+   Canvas bitmap is ~7% larger than viewport (JS) and centered so edges bleed past the screen. */
 .player__fullscreen-video-bg-canvas {
   position: fixed;
-  inset: 0;
-  width: auto;
-  height: auto;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 0;
   pointer-events: none;
   display: block;
-  filter: brightness(0.58) saturate(0.78);
+  filter: brightness(0.48) saturate(0.7);
 }
 
 .footer--fullscreen--video-fullbleed .player--fullscreen {
