@@ -20,6 +20,9 @@ import {
 import { trackUsesVideoPlayback } from "../utils/trackMediaKind";
 import "./Footer.css";
 
+/** Source-frame crop (px) from top & bottom when painting fullscreen video to canvas. */
+const FULLSCREEN_VIDEO_EDGE_CROP_PX = 20;
+
 const PlayIcon = () => (
   <svg
     width="20"
@@ -179,6 +182,10 @@ const Footer = () => {
   const artistRef = useRef(null);
   const albumRef = useRef(null);
   const fullscreenArtistRef = useRef(null);
+  const fullscreenArtWrapperRef = useRef(null);
+  const fullscreenVideoBgCanvasRef = useRef(null);
+  const fullscreenVideoCanvasRef = useRef(null);
+  const fullscreenVideoFgReportedRef = useRef(false);
   const isDraggingProgressRef = useRef(false);
   const isDraggingVolumeRef = useRef(false);
   const [shouldScrollTitle, setShouldScrollTitle] = useState(false);
@@ -198,6 +205,7 @@ const Footer = () => {
   const [dynamicBgGradient, setDynamicBgGradient] = useState(null);
   const [isClosingFullscreen, setIsClosingFullscreen] = useState(false);
   const [fullscreenEntered, setFullscreenEntered] = useState(false);
+  const [fullscreenVideoHasFrame, setFullscreenVideoHasFrame] = useState(false);
   const pausedForCallRef = useRef(false);
   const pausedForMediaRef = useRef(false);
   const timeBeforeCallRef = useRef(0);
@@ -2102,6 +2110,140 @@ const Footer = () => {
     };
   }, [currentTrack, isFullScreen]);
 
+  useEffect(() => {
+    fullscreenVideoFgReportedRef.current = false;
+    setFullscreenVideoHasFrame(false);
+  }, [audioTrackLoadKey]);
+
+  useEffect(() => {
+    if (!isFullScreen || !isVideoTrack) {
+      fullscreenVideoFgReportedRef.current = false;
+      setFullscreenVideoHasFrame(false);
+      return;
+    }
+
+    const bgCanvas = fullscreenVideoBgCanvasRef.current;
+    const fgCanvas = fullscreenVideoCanvasRef.current;
+    const wrap = fullscreenArtWrapperRef.current;
+    if (!bgCanvas) return;
+
+    let rafId = 0;
+    let cancelled = false;
+
+    const syncBgCanvasSize = () => {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const w =
+        document.documentElement.clientWidth || window.innerWidth;
+      const h = window.innerHeight;
+      bgCanvas.width = Math.floor(w * dpr);
+      bgCanvas.height = Math.floor(h * dpr);
+      bgCanvas.style.width = `${w}px`;
+      bgCanvas.style.height = `${h}px`;
+    };
+
+    syncBgCanvasSize();
+    const onWindowResize = () => syncBgCanvasSize();
+    window.addEventListener("resize", onWindowResize);
+
+    const ro =
+      wrap && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => {
+            /* foreground size updated on next frame */
+          })
+        : null;
+    if (ro && wrap) ro.observe(wrap);
+
+    const tick = () => {
+      if (cancelled) return;
+      const video = audioRef.current;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+
+      const bgCtx = bgCanvas.getContext("2d");
+      if (bgCtx) {
+        const w = bgCanvas.width / dpr;
+        const h = bgCanvas.height / dpr;
+        bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (video instanceof HTMLVideoElement && video.videoWidth > 0) {
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+          const crop = FULLSCREEN_VIDEO_EDGE_CROP_PX;
+          let sx = 0;
+          let sy = 0;
+          let sw = vw;
+          let sh = vh;
+          if (vh > crop * 2) {
+            sy = crop;
+            sh = vh - crop * 2;
+          }
+          const scale = Math.max(w / sw, h / sh);
+          const tw = sw * scale;
+          const th = sh * scale;
+          const ox = (w - tw) / 2;
+          const oy = (h - th) / 2;
+          bgCtx.fillStyle = "#000";
+          bgCtx.fillRect(0, 0, w, h);
+          bgCtx.drawImage(video, sx, sy, sw, sh, ox, oy, tw, th);
+        } else {
+          bgCtx.fillStyle = "#0a0a0a";
+          bgCtx.fillRect(0, 0, w, h);
+        }
+      }
+
+      if (
+        fgCanvas &&
+        wrap &&
+        video instanceof HTMLVideoElement &&
+        video.videoWidth > 0
+      ) {
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        const crop = FULLSCREEN_VIDEO_EDGE_CROP_PX;
+        let sx = 0;
+        let sy = 0;
+        let sw = vw;
+        let sh = vh;
+        if (vh > crop * 2) {
+          sy = crop;
+          sh = vh - crop * 2;
+        }
+        const fw = wrap.clientWidth;
+        if (fw > 0) {
+          const fh = (sh / sw) * fw;
+          const iw = Math.floor(fw * dpr);
+          const ih = Math.floor(fh * dpr);
+          if (fgCanvas.width !== iw || fgCanvas.height !== ih) {
+            fgCanvas.width = iw;
+            fgCanvas.height = ih;
+            fgCanvas.style.width = `${fw}px`;
+            fgCanvas.style.height = `${fh}px`;
+          }
+          const fgCtx = fgCanvas.getContext("2d");
+          if (fgCtx) {
+            if (!fullscreenVideoFgReportedRef.current) {
+              fullscreenVideoFgReportedRef.current = true;
+              setFullscreenVideoHasFrame(true);
+            }
+            fgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            fgCtx.drawImage(video, sx, sy, sw, sh, 0, 0, fw, fh);
+          }
+        }
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", onWindowResize);
+      if (ro) ro.disconnect();
+      fullscreenVideoFgReportedRef.current = false;
+      setFullscreenVideoHasFrame(false);
+    };
+  }, [isFullScreen, isVideoTrack, audioTrackLoadKey]);
+
   // Get album art URL - stored URLs or cached extracted from MP3 (AlbumArtContext)
   const albumArtUrl = currentTrack ? getAlbumArt(currentTrack) : null;
 
@@ -2117,17 +2259,24 @@ const Footer = () => {
     <>
       <footer
         ref={footerRef}
-        className={`footer footer--player ${isFullScreen ? "footer--fullscreen" : ""} ${isFullScreen && fullscreenEntered && !isClosingFullscreen ? "footer--fullscreen--open" : ""} ${isClosingFullscreen ? "footer--fullscreen--closing" : ""}`}
+        className={`footer footer--player ${isFullScreen ? "footer--fullscreen" : ""} ${isFullScreen && isVideoTrack ? "footer--fullscreen--video-fullbleed" : ""} ${isFullScreen && fullscreenEntered && !isClosingFullscreen ? "footer--fullscreen--open" : ""} ${isClosingFullscreen ? "footer--fullscreen--closing" : ""}`}
         onClick={!isFullScreen ? handleFooterClick : handleFooterClick}
         onTouchStart={isFullScreen ? handleFullscreenTouchStart : undefined}
         onTouchEnd={isFullScreen ? handleFullscreenTouchEnd : undefined}
         onTransitionEnd={isFullScreen ? handleFullscreenTransitionEnd : undefined}
         style={
-          isFullScreen && dynamicBgGradient
+          isFullScreen && dynamicBgGradient && !isVideoTrack
             ? { background: dynamicBgGradient }
             : undefined
         }
       >
+        {isFullScreen && isVideoTrack && (
+          <canvas
+            ref={fullscreenVideoBgCanvasRef}
+            className="player__fullscreen-video-bg-canvas"
+            aria-hidden="true"
+          />
+        )}
         {/* Chevron down - close/minimize fullscreen */}
         {isFullScreen && (
           <button
@@ -2145,8 +2294,31 @@ const Footer = () => {
           {isFullScreen ? (
             <>
               {/* Full-screen layout */}
-              <div className="player__fullscreen-content">
-                {/* Album Art */}
+              <div
+                className={`player__fullscreen-content ${isVideoTrack ? "player__fullscreen-content--video-bg" : ""}`}
+              >
+                {/* MP4: dimmed full-viewport bg canvas + full-width foreground canvas */}
+                {isVideoTrack ? (
+                  <div
+                    ref={fullscreenArtWrapperRef}
+                    className="player__fullscreen-art-wrapper player__fullscreen-art-wrapper--video-fullwidth"
+                  >
+                    <div className="player__fullscreen-video-stack">
+                      {!fullscreenVideoHasFrame && (
+                        <div
+                          className={`player__fullscreen-art player__fullscreen-art--placeholder ${isPlaying ? "player__fullscreen-art--playing" : ""}`}
+                        >
+                          <MusicIcon />
+                        </div>
+                      )}
+                      <canvas
+                        ref={fullscreenVideoCanvasRef}
+                        className={`player__fullscreen-video-canvas ${fullscreenVideoHasFrame ? "player__fullscreen-video-canvas--visible" : ""}`}
+                        aria-hidden="true"
+                      />
+                    </div>
+                  </div>
+                ) : (
                 <div className="player__fullscreen-art-wrapper">
                   {albumArtUrl ? (
                     <img
@@ -2162,6 +2334,7 @@ const Footer = () => {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Song Info */}
                 <div className="player__fullscreen-info">

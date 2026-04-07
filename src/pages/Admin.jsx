@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { parseBlob, selectCover } from "music-metadata";
-import { isAllowedMusicUploadFile } from "../utils/trackMediaKind";
+import {
+  getTrackFormatTag,
+  isAllowedMusicUploadFile,
+} from "../utils/trackMediaKind";
+import { extractCoverFromMediaFile } from "../utils/extractCoverFromMediaFile";
 import { storage, db } from "../firebase/config";
 import {
   ref,
@@ -925,22 +928,6 @@ const Admin = () => {
     }
   };
 
-  // Extract embedded album art from MP3/audio file
-  const extractCoverFromFile = async (file) => {
-    try {
-      const metadata = await parseBlob(file);
-      if (!metadata?.common?.picture?.length) return null;
-      const cover = selectCover(metadata.common.picture);
-      if (!cover || !cover.data) return null;
-      const mime = cover.format || "image/jpeg";
-      const ext = mime === "image/png" ? "png" : "jpg";
-      const blob = new Blob([cover.data], { type: mime });
-      return { blob, ext, mime };
-    } catch {
-      return null;
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -996,7 +983,7 @@ const Admin = () => {
           fileSize = musicFile.size;
 
           // Extract and upload embedded album art from MP3
-          const coverData = await extractCoverFromFile(musicFile);
+          const coverData = await extractCoverFromMediaFile(musicFile);
           if (coverData) {
             const coverFileName = `covers/${timestamp}_${editingTrackId}.${coverData.ext}`;
             const coverRef = ref(storage, coverFileName);
@@ -1044,7 +1031,7 @@ const Admin = () => {
         fileSize = musicFile.size;
 
         // Extract and upload embedded album art from MP3
-        const coverData = await extractCoverFromFile(musicFile);
+        const coverData = await extractCoverFromMediaFile(musicFile);
         if (coverData) {
           const coverFileName = `covers/${timestamp}_${trackUUID}.${coverData.ext}`;
           const coverRef = ref(storage, coverFileName);
@@ -1929,7 +1916,9 @@ const Admin = () => {
                     ) : (
                       <div className="admin-tracks-list-container">
                         <div className="admin-tracks-list">
-                          {sortedFilteredTracks.map((track) => (
+                          {sortedFilteredTracks.map((track) => {
+                            const formatTag = getTrackFormatTag(track);
+                            return (
                             <div key={track.id} className="admin-track-item">
                               <div className="admin-track-item-info">
                                 <h3>{track.name}</h3>
@@ -1945,6 +1934,14 @@ const Admin = () => {
                                 </p>
                               </div>
                               <div className="admin-track-item-actions">
+                                {formatTag && (
+                                  <span
+                                    className="admin-track-format-tag"
+                                    aria-hidden="true"
+                                  >
+                                    {formatTag}
+                                  </span>
+                                )}
                                 <button
                                   className="admin-edit-button"
                                   onClick={() => handleEdit(track)}
@@ -1969,7 +1966,8 @@ const Admin = () => {
                                 </button>
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}

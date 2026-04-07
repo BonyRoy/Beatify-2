@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { parseBlob, selectCover } from "music-metadata";
+import { extractCoverDataUrlFromBlob } from "../utils/extractCoverFromMediaFile";
 
 const AlbumArtContext = createContext();
 
@@ -28,19 +28,7 @@ const extractFromUrl = async (url) => {
   const response = await fetch(fetchUrl);
   if (!response.ok) return null;
   const blob = await response.blob();
-  const metadata = await parseBlob(blob);
-  if (!metadata?.common?.picture?.length) return null;
-  const cover = selectCover(metadata.common.picture);
-  if (!cover || !cover.data) return null;
-
-  const bytes = new Uint8Array(cover.data);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  const base64 = btoa(binary);
-  const mime = cover.format || "image/jpeg";
-  return `data:${mime};base64,${base64}`;
+  return extractCoverDataUrlFromBlob(blob, url);
 };
 
 export const AlbumArtProvider = ({ children }) => {

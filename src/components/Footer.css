@@ -49,7 +49,9 @@
   right: 0 !important;
   bottom: 0 !important;
   height: 100vh !important;
-  width: 100vw !important;
+  height: 100dvh !important;
+  width: 100% !important;
+  max-width: 100%;
   background: #0a0a0a; /* Dark fallback until album-art gradient loads; overridden by inline style */
   transition:
     background 0.5s ease,
@@ -63,6 +65,135 @@
   margin: 0 !important;
   transform: translateY(100%);
   will-change: transform;
+}
+
+/* Edge-to-edge video: drop horizontal inset; stretch player to full viewport width. */
+.footer--fullscreen.footer--fullscreen--video-fullbleed {
+  padding-left: 0;
+  padding-right: 0;
+  align-items: stretch;
+  justify-content: flex-start;
+  background: transparent;
+}
+
+/* Full-viewport live video (canvas) behind UI; dimmed / slightly grayed vs foreground. */
+.player__fullscreen-video-bg-canvas {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+  filter: brightness(0.58) saturate(0.78);
+}
+
+.footer--fullscreen--video-fullbleed .player--fullscreen {
+  flex: 1 1 auto;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  position: relative;
+  z-index: 1;
+  /* Override .player horizontal padding (was shifting the column off-center on mobile). */
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
+  /* overflow:hidden was clipping the video row; left edge looked like empty margin */
+  overflow: visible;
+}
+
+.footer--fullscreen--video-fullbleed .player--fullscreen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.38) 42%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.footer--fullscreen--video-fullbleed .player__fullscreen-content {
+  align-items: stretch;
+  width: 100%;
+  max-width: none;
+  position: relative;
+  z-index: 1;
+}
+
+/* Direct column for MP4: beats generic .player__fullscreen-content { align-items: center } */
+.footer--fullscreen.footer--fullscreen--video-fullbleed
+  .player__fullscreen-content.player__fullscreen-content--video-bg {
+  align-self: stretch;
+  align-items: stretch;
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  padding-inline: 0;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+  justify-content: flex-start;
+  gap: clamp(0.5rem, 2vmin, 1rem);
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+/* Only the video row grows; video is vertically centered inside this region */
+.footer--fullscreen.footer--fullscreen--video-fullbleed
+  .player__fullscreen-content.player__fullscreen-content--video-bg
+  > .player__fullscreen-art-wrapper--video-fullwidth {
+  align-self: stretch;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin-inline: 0;
+  padding-inline: max(0px, env(safe-area-inset-left, 0px))
+    max(0px, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  justify-content: center;
+}
+
+.footer--fullscreen.footer--fullscreen--video-fullbleed
+  .player__fullscreen-content.player__fullscreen-content--video-bg
+  > .player__fullscreen-info,
+.footer--fullscreen.footer--fullscreen--video-fullbleed
+  .player__fullscreen-content.player__fullscreen-content--video-bg
+  > .player__fullscreen-progress,
+.footer--fullscreen.footer--fullscreen--video-fullbleed
+  .player__fullscreen-content.player__fullscreen-content--video-bg
+  > .player__fullscreen-controls,
+.footer--fullscreen.footer--fullscreen--video-fullbleed
+  .player__fullscreen-content.player__fullscreen-content--video-bg
+  > .player__fullscreen-extra-controls {
+  flex-shrink: 0;
+}
+
+.footer--fullscreen.footer--fullscreen--video-fullbleed
+  .player__fullscreen-content--video-bg
+  .player__fullscreen-video-stack {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  align-self: stretch;
+}
+
+.footer--fullscreen.footer--fullscreen--video-fullbleed
+  .player__fullscreen-content--video-bg
+  .player__fullscreen-video-canvas {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  display: block;
+  box-sizing: border-box;
 }
 
 /* Roll up - sheet slides into view */
@@ -138,6 +269,50 @@
   max-width: 100%;
   padding: 1rem 0;
   min-height: 0;
+}
+
+.player__fullscreen-art-wrapper--video-fullwidth {
+  align-self: stretch;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  padding: 1rem 0;
+  box-sizing: border-box;
+  justify-content: flex-start;
+  align-items: stretch;
+  flex-direction: column;
+}
+
+/* Foreground: full row width; same crop as background; sits above dimmed bg */
+.player__fullscreen-video-stack {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  flex-shrink: 0;
+  align-self: stretch;
+  z-index: 2;
+}
+
+.player__fullscreen-video-stack .player__fullscreen-art--placeholder {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+
+.player__fullscreen-video-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player__fullscreen-video-canvas--visible {
+  opacity: 1;
 }
 
 .player__fullscreen-art {
@@ -758,11 +933,27 @@ body.footer-fullscreen-active {
     justify-content: center;
   }
 
+  /* MP4: stretch row; video vertically centered in flex region; no extra horizontal inset */
+  .footer--fullscreen.footer--fullscreen--video-fullbleed
+    .player__fullscreen-art-wrapper.player__fullscreen-art-wrapper--video-fullwidth {
+    align-items: stretch;
+    justify-content: center;
+    padding-left: max(0px, env(safe-area-inset-left, 0px));
+    padding-right: max(0px, env(safe-area-inset-right, 0px));
+  }
+
   .footer--fullscreen .player__fullscreen-art,
   .footer--fullscreen .player__fullscreen-art--placeholder {
     width: min(90vw, calc(100vh - 320px));
     max-width: none;
     border-radius: 8px;
+  }
+
+  .footer--fullscreen
+    .player__fullscreen-video-stack
+    .player__fullscreen-art--placeholder {
+    width: 100%;
+    max-width: 100%;
   }
 }
 
@@ -1008,11 +1199,14 @@ body.footer-fullscreen-active {
   }
 }
 
-/* Hidden `<video>` for video-container tracks (audio-only UX; no visible frame). */
+/* Hidden `<video>` for video-container tracks; keep tiny non-zero size so decode/canvas mirror works. */
 .player__media-audio-only {
   position: absolute;
-  width: 0;
-  height: 0;
+  left: -9999px;
+  top: 0;
+  width: 4px;
+  height: 4px;
   opacity: 0;
   pointer-events: none;
+  overflow: hidden;
 }

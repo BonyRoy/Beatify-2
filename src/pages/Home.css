@@ -269,6 +269,26 @@ body:has(.footer--player) .home__moods-grid {
   width: 100%;
 }
 
+/* Same cell as icon buttons: 28×28 square, shared column (.track-row__actions) */
+.track-row__format-tag {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+  border: 1px solid var(--nav-border, #333);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
 .track-row__info .track-row__plays {
   margin-top: 0;
 }

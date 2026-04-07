@@ -19,6 +19,7 @@ import { fuzzyMatchesAny } from "../utils/searchUtils";
 import { sortTracksByRelevance } from "../utils/trackRelevanceUtils";
 import { THEME_OPTIONS } from "../utils/themeOptions";
 import { MOODS_IMAGES } from "../utils/moodsImages";
+import { getTrackFormatTag } from "../utils/trackMediaKind";
 import "./Home.css";
 
 const DownloadIcon = ({ filled }) => (
@@ -215,6 +216,7 @@ const MusicTrack = ({
 
   // Get album art - stored URL or cached extracted
   const albumArtUrl = getAlbumArt(track);
+  const formatTag = getTrackFormatTag(track);
 
   // Lazy load embedded album art when track scrolls into view
   useEffect(() => {
@@ -368,6 +370,11 @@ const MusicTrack = ({
         </p>
       </div>
       <div className="track-row__actions">
+        {formatTag && (
+          <span className="track-row__format-tag" aria-hidden="true">
+            {formatTag}
+          </span>
+        )}
         <button
           type="button"
           className="track-row__icon-btn"
