@@ -26,6 +26,41 @@ const FULLSCREEN_VIDEO_EDGE_CROP_PX = 20;
 const FULLSCREEN_VIDEO_BG_BLEED = 1.07;
 /** Max allowed gap between muted mirror `<video>` and `<audio>` (seconds). Larger values look like lag. */
 const FULLSCREEN_MIRROR_MAX_DRIFT_SEC = 0.05;
+/**
+ * Cap devicePixelRatio for fullscreen video canvases only. Retina 2× doubles every drawImage pixel;
+ * video already scales from source — 1× is usually enough for smooth UI.
+ */
+const FULLSCREEN_VIDEO_CANVAS_MAX_DPR = 1;
+/**
+ * Cap longest edge of canvas backing-store (device pixels). Reduces GPU compositing; CSS size unchanged.
+ * Does not reduce video decode cost (same file still decodes at full resolution). 0 = no cap.
+ */
+const FULLSCREEN_VIDEO_MAX_BACKING_LONG_EDGE = 1920;
+
+function getFullscreenVideoCanvasDpr() {
+  return Math.min(
+    FULLSCREEN_VIDEO_CANVAS_MAX_DPR,
+    window.devicePixelRatio || 1,
+  );
+}
+
+function capVideoCanvasBacking(bw, bh) {
+  if (
+    !FULLSCREEN_VIDEO_MAX_BACKING_LONG_EDGE ||
+    FULLSCREEN_VIDEO_MAX_BACKING_LONG_EDGE <= 0
+  ) {
+    return { bw, bh };
+  }
+  const maxEdge = Math.max(bw, bh);
+  if (maxEdge <= FULLSCREEN_VIDEO_MAX_BACKING_LONG_EDGE) {
+    return { bw, bh };
+  }
+  const scale = FULLSCREEN_VIDEO_MAX_BACKING_LONG_EDGE / maxEdge;
+  return {
+    bw: Math.max(1, Math.floor(bw * scale)),
+    bh: Math.max(1, Math.floor(bh * scale)),
+  };
+}
 
 const PlayIcon = () => (
   <svg
@@ -2192,13 +2227,18 @@ const Footer = () => {
     let fgCtxCached = null;
 
     const syncBgCanvasSize = () => {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const dpr = getFullscreenVideoCanvasDpr();
       const vw = document.documentElement.clientWidth || window.innerWidth;
       const vh = window.innerHeight;
       const w = Math.ceil(vw * FULLSCREEN_VIDEO_BG_BLEED);
       const h = Math.ceil(vh * FULLSCREEN_VIDEO_BG_BLEED);
-      bgCanvas.width = Math.floor(w * dpr);
-      bgCanvas.height = Math.floor(h * dpr);
+      let bw = Math.floor(w * dpr);
+      let bh = Math.floor(h * dpr);
+      const capped = capVideoCanvasBacking(bw, bh);
+      bw = capped.bw;
+      bh = capped.bh;
+      bgCanvas.width = bw;
+      bgCanvas.height = bh;
       bgCanvas.style.width = `${w}px`;
       bgCanvas.style.height = `${h}px`;
     };
@@ -2237,12 +2277,15 @@ const Footer = () => {
         }
       }
       const video = mirror;
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
 
       if (bgCtx) {
-        const w = bgCanvas.width / dpr;
-        const h = bgCanvas.height / dpr;
-        bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const logicalW = parseFloat(bgCanvas.style.width) || bgCanvas.clientWidth || 1;
+        const logicalH = parseFloat(bgCanvas.style.height) || bgCanvas.clientHeight || 1;
+        const w = logicalW;
+        const h = logicalH;
+        const scaleX = bgCanvas.width / logicalW;
+        const scaleY = bgCanvas.height / logicalH;
+        bgCtx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
         if (video instanceof HTMLVideoElement && video.videoWidth > 0) {
           const vw = video.videoWidth;
           const vh = video.videoHeight;
@@ -2289,13 +2332,18 @@ const Footer = () => {
         const fw = wrap.clientWidth;
         if (fw > 0) {
           const fh = (sh / sw) * fw;
-          const iw = Math.floor(fw * dpr);
-          const ih = Math.floor(fh * dpr);
+          const canvasDpr = getFullscreenVideoCanvasDpr();
+          let iw = Math.floor(fw * canvasDpr);
+          let ih = Math.floor(fh * canvasDpr);
+          const fgCapped = capVideoCanvasBacking(iw, ih);
+          iw = fgCapped.bw;
+          ih = fgCapped.bh;
           if (fgCanvas.width !== iw || fgCanvas.height !== ih) {
             fgCanvas.width = iw;
             fgCanvas.height = ih;
             fgCanvas.style.width = `${fw}px`;
             fgCanvas.style.height = `${fh}px`;
+            fgCtxCached = null;
           }
           if (!fgCtxCached && fgCanvas) {
             fgCtxCached = fgCanvas.getContext("2d");
@@ -2306,7 +2354,9 @@ const Footer = () => {
               fullscreenVideoFgReportedRef.current = true;
               setFullscreenVideoHasFrame(true);
             }
-            fgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            const fsx = iw / fw;
+            const fsy = ih / fh;
+            fgCtx.setTransform(fsx, 0, 0, fsy, 0, 0);
             fgCtx.drawImage(video, sx, sy, sw, sh, 0, 0, fw, fh);
           }
         }
