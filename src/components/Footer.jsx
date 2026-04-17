@@ -24,8 +24,13 @@ import "./Footer.css";
 const FULLSCREEN_VIDEO_EDGE_CROP_PX = 20;
 /** Background canvas is slightly larger than the viewport so the dimmed layer bleeds past screen edges. */
 const FULLSCREEN_VIDEO_BG_BLEED = 1.07;
-/** Max allowed gap between muted mirror `<video>` and `<audio>` (seconds). Larger values look like lag. */
-const FULLSCREEN_MIRROR_MAX_DRIFT_SEC = 0.05;
+/**
+ * Mirror `<video>` vs `<audio>` sync (separate decoders drift).
+ * Hard seek when drift exceeds this (seconds).
+ */
+const FULLSCREEN_MIRROR_HARD_SEEK_SEC = 0.12;
+/** Below hard seek: nudge mirror `playbackRate` to catch up without constant seeks (smoother). */
+const FULLSCREEN_MIRROR_SOFT_DRIFT_SEC = 0.03;
 /**
  * Cap devicePixelRatio for fullscreen video canvases only. Retina 2× doubles every drawImage pixel;
  * video already scales from source — 1× is usually enough for smooth UI.
@@ -2221,7 +2226,6 @@ const Footer = () => {
     if (!bgCanvas) return;
 
     let rafId = 0;
-    let vfcHandle = null;
     let cancelled = false;
     const bgCtx = bgCanvas.getContext("2d");
     let fgCtxCached = null;
@@ -2261,18 +2265,30 @@ const Footer = () => {
       const audio = audioRef.current;
       const mirror = fullscreenMirrorVideoRef.current;
       if (mirror && audio) {
-        const at = audio.currentTime;
-        const mt = mirror.currentTime;
-        if (Math.abs(mt - at) > FULLSCREEN_MIRROR_MAX_DRIFT_SEC) {
-          mirror.currentTime = at;
-        }
         if (!audio.paused && mirror.paused) {
           mirror.play().catch(() => {});
         }
         if (audio.paused && !mirror.paused) {
           mirror.pause();
         }
-        if (mirror.playbackRate !== audio.playbackRate) {
+        if (!audio.paused) {
+          const at = audio.currentTime;
+          const mt = mirror.currentTime;
+          const drift = at - mt;
+          const ap = audio.playbackRate;
+          if (Math.abs(drift) > FULLSCREEN_MIRROR_HARD_SEEK_SEC) {
+            mirror.currentTime = at;
+            mirror.playbackRate = ap;
+          } else if (Math.abs(drift) > FULLSCREEN_MIRROR_SOFT_DRIFT_SEC) {
+            if (drift > 0) {
+              mirror.playbackRate = Math.min(ap * 1.08, 2);
+            } else {
+              mirror.playbackRate = Math.max(ap * 0.92, 0.25);
+            }
+          } else {
+            mirror.playbackRate = ap;
+          }
+        } else {
           mirror.playbackRate = audio.playbackRate;
         }
       }
@@ -2362,21 +2378,9 @@ const Footer = () => {
         }
       }
 
-      const mirrorEl = fullscreenMirrorVideoRef.current;
-      const audioEl = audioRef.current;
-      const useVfc =
-        mirrorEl &&
-        typeof mirrorEl.requestVideoFrameCallback === "function" &&
-        audioEl &&
-        !audioEl.paused;
-
-      if (useVfc) {
-        vfcHandle = mirrorEl.requestVideoFrameCallback(() => {
-          if (!cancelled) scheduleLoop();
-        });
-      } else {
-        rafId = requestAnimationFrame(scheduleLoop);
-      }
+      /* rAF every frame: sync runs at display rate. requestVideoFrameCallback only fired on video
+         frames (~30fps) so audio could outpace the mirror when the video decoder stalled. */
+      rafId = requestAnimationFrame(scheduleLoop);
     };
 
     scheduleLoop = () => {
@@ -2388,14 +2392,6 @@ const Footer = () => {
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafId);
-      const mirrorEl = fullscreenMirrorVideoRef.current;
-      if (
-        mirrorEl &&
-        vfcHandle != null &&
-        typeof mirrorEl.cancelVideoFrameCallback === "function"
-      ) {
-        mirrorEl.cancelVideoFrameCallback(vfcHandle);
-      }
       window.removeEventListener("resize", onWindowResize);
       if (ro) ro.disconnect();
       fullscreenVideoFgReportedRef.current = false;
