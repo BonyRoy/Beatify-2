@@ -24,6 +24,8 @@ import "./Footer.css";
 const FULLSCREEN_VIDEO_EDGE_CROP_PX = 20;
 /** Background canvas is slightly larger than the viewport so the dimmed layer bleeds past screen edges. */
 const FULLSCREEN_VIDEO_BG_BLEED = 1.07;
+/** Max allowed gap between muted mirror `<video>` and `<audio>` (seconds). Larger values look like lag. */
+const FULLSCREEN_MIRROR_MAX_DRIFT_SEC = 0.05;
 
 const PlayIcon = () => (
   <svg
@@ -2130,6 +2132,8 @@ const Footer = () => {
       else video.pause();
     };
 
+    a.addEventListener("seeked", syncMirrorToAudio);
+
     const tryWire = () => {
       const src = a.currentSrc || a.src;
       if (!src) return false;
@@ -2153,6 +2157,7 @@ const Footer = () => {
       return () => {
         cancelled = true;
         a.removeEventListener("canplay", onAudioCanPlay);
+        a.removeEventListener("seeked", syncMirrorToAudio);
         v.pause();
         v.removeAttribute("src");
         v.load();
@@ -2161,6 +2166,7 @@ const Footer = () => {
 
     return () => {
       cancelled = true;
+      a.removeEventListener("seeked", syncMirrorToAudio);
       v.pause();
       v.removeAttribute("src");
       v.load();
@@ -2180,7 +2186,10 @@ const Footer = () => {
     if (!bgCanvas) return;
 
     let rafId = 0;
+    let vfcHandle = null;
     let cancelled = false;
+    const bgCtx = bgCanvas.getContext("2d");
+    let fgCtxCached = null;
 
     const syncBgCanvasSize = () => {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -2206,13 +2215,16 @@ const Footer = () => {
         : null;
     if (ro && wrap) ro.observe(wrap);
 
+    let scheduleLoop;
     const tick = () => {
       if (cancelled) return;
       const audio = audioRef.current;
       const mirror = fullscreenMirrorVideoRef.current;
       if (mirror && audio) {
-        if (Math.abs(mirror.currentTime - audio.currentTime) > 0.25) {
-          mirror.currentTime = audio.currentTime;
+        const at = audio.currentTime;
+        const mt = mirror.currentTime;
+        if (Math.abs(mt - at) > FULLSCREEN_MIRROR_MAX_DRIFT_SEC) {
+          mirror.currentTime = at;
         }
         if (!audio.paused && mirror.paused) {
           mirror.play().catch(() => {});
@@ -2227,7 +2239,6 @@ const Footer = () => {
       const video = mirror;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
 
-      const bgCtx = bgCanvas.getContext("2d");
       if (bgCtx) {
         const w = bgCanvas.width / dpr;
         const h = bgCanvas.height / dpr;
@@ -2286,7 +2297,10 @@ const Footer = () => {
             fgCanvas.style.width = `${fw}px`;
             fgCanvas.style.height = `${fh}px`;
           }
-          const fgCtx = fgCanvas.getContext("2d");
+          if (!fgCtxCached && fgCanvas) {
+            fgCtxCached = fgCanvas.getContext("2d");
+          }
+          const fgCtx = fgCtxCached;
           if (fgCtx) {
             if (!fullscreenVideoFgReportedRef.current) {
               fullscreenVideoFgReportedRef.current = true;
@@ -2298,14 +2312,40 @@ const Footer = () => {
         }
       }
 
-      rafId = requestAnimationFrame(tick);
+      const mirrorEl = fullscreenMirrorVideoRef.current;
+      const audioEl = audioRef.current;
+      const useVfc =
+        mirrorEl &&
+        typeof mirrorEl.requestVideoFrameCallback === "function" &&
+        audioEl &&
+        !audioEl.paused;
+
+      if (useVfc) {
+        vfcHandle = mirrorEl.requestVideoFrameCallback(() => {
+          if (!cancelled) scheduleLoop();
+        });
+      } else {
+        rafId = requestAnimationFrame(scheduleLoop);
+      }
     };
 
-    rafId = requestAnimationFrame(tick);
+    scheduleLoop = () => {
+      tick();
+    };
+
+    scheduleLoop();
 
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafId);
+      const mirrorEl = fullscreenMirrorVideoRef.current;
+      if (
+        mirrorEl &&
+        vfcHandle != null &&
+        typeof mirrorEl.cancelVideoFrameCallback === "function"
+      ) {
+        mirrorEl.cancelVideoFrameCallback(vfcHandle);
+      }
       window.removeEventListener("resize", onWindowResize);
       if (ro) ro.disconnect();
       fullscreenVideoFgReportedRef.current = false;
