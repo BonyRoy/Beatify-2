@@ -8,13 +8,18 @@ import React, {
 import { toast } from "react-toastify";
 import { fetchMusicList } from "../services/musicService";
 import { fuzzyMatchesAny } from "../utils/searchUtils";
-import { addUserPlaylist } from "../utils/userPlaylistsStorage";
+import {
+  addUserPlaylist,
+  updateUserPlaylistById,
+} from "../utils/userPlaylistsStorage";
 import {
   saveUserPlaylistCoverBlob,
   compressImageFileForPlaylistCover,
+  deleteUserPlaylistCover,
 } from "../utils/userPlaylistCoverIdb";
 import { X } from "lucide-react";
 import { useAlbumArt } from "../context/AlbumArtContext";
+import { useUserPlaylistCoverUrl } from "../hooks/useUserPlaylistCoverUrl";
 import "./DownloadModal.css";
 import "./CreatePlaylistModal.css";
 
@@ -140,6 +145,9 @@ const CreatePlaylistModal = ({
   isOpen,
   onClose,
   reservedNames = [],
+  /** When set, modal edits this user playlist: { id, name, trackIds } */
+  editPlaylist = null,
+  onPlaylistRenamed,
 }) => {
   const [name, setName] = useState("");
   const [search, setSearch] = useState("");
@@ -150,7 +158,12 @@ const CreatePlaylistModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState(null);
+  const [coverRemoved, setCoverRemoved] = useState(false);
   const coverInputRef = useRef(null);
+
+  const existingCoverUrl = useUserPlaylistCoverUrl(
+    editPlaylist?.id ?? null,
+  );
 
   const reservedLower = useMemo(
     () => new Set(reservedNames.map((n) => String(n).trim().toLowerCase())),
@@ -159,11 +172,17 @@ const CreatePlaylistModal = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setName("");
+    if (editPlaylist?.id) {
+      setName(editPlaylist.name);
+      setSelectedOrder([...editPlaylist.trackIds]);
+    } else {
+      setName("");
+      setSelectedOrder([]);
+    }
     setSearch("");
     setSort("title_az");
-    setSelectedOrder([]);
     setCoverFile(null);
+    setCoverRemoved(false);
     setCoverPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
@@ -177,7 +196,7 @@ const CreatePlaylistModal = ({
         setTracks([]);
       })
       .finally(() => setLoading(false));
-  }, [isOpen]);
+  }, [isOpen, editPlaylist?.id]);
 
   const sortedTracks = useMemo(() => {
     const list = [...tracks];
@@ -239,6 +258,7 @@ const CreatePlaylistModal = ({
       toast.error("Please choose an image file.");
       return;
     }
+    setCoverRemoved(false);
     setCoverFile(f);
     setCoverPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -252,8 +272,12 @@ const CreatePlaylistModal = ({
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
+    if (editPlaylist?.id) setCoverRemoved(true);
     if (coverInputRef.current) coverInputRef.current.value = "";
   };
+
+  const coverDisplayUrl =
+    coverPreviewUrl || (!coverRemoved && existingCoverUrl ? existingCoverUrl : null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -272,22 +296,46 @@ const CreatePlaylistModal = ({
     }
     setSubmitting(true);
     try {
-      const playlistId = addUserPlaylist({
-        name: trimmed,
-        trackIds: selectedOrder,
-      });
-      if (coverFile) {
-        try {
-          const blob = await compressImageFileForPlaylistCover(coverFile);
-          await saveUserPlaylistCoverBlob(playlistId, blob);
-        } catch (imgErr) {
-          console.warn(imgErr);
-          toast.warning(
-            "Playlist saved, but the cover image could not be processed.",
-          );
+      if (editPlaylist?.id) {
+        updateUserPlaylistById(editPlaylist.id, {
+          name: trimmed,
+          trackIds: selectedOrder,
+        });
+        if (coverFile) {
+          try {
+            const blob = await compressImageFileForPlaylistCover(coverFile);
+            await saveUserPlaylistCoverBlob(editPlaylist.id, blob);
+          } catch (imgErr) {
+            console.warn(imgErr);
+            toast.warning(
+              "Playlist updated, but the cover image could not be processed.",
+            );
+          }
+        } else if (coverRemoved) {
+          await deleteUserPlaylistCover(editPlaylist.id);
         }
+        if (trimmed !== editPlaylist.name) {
+          onPlaylistRenamed?.(editPlaylist.name, trimmed);
+        }
+        toast.success(`Playlist "${trimmed}" updated.`);
+      } else {
+        const playlistId = addUserPlaylist({
+          name: trimmed,
+          trackIds: selectedOrder,
+        });
+        if (coverFile) {
+          try {
+            const blob = await compressImageFileForPlaylistCover(coverFile);
+            await saveUserPlaylistCoverBlob(playlistId, blob);
+          } catch (imgErr) {
+            console.warn(imgErr);
+            toast.warning(
+              "Playlist saved, but the cover image could not be processed.",
+            );
+          }
+        }
+        toast.success(`Playlist "${trimmed}" saved.`);
       }
-      toast.success(`Playlist "${trimmed}" saved.`);
       onClose();
     } catch (err) {
       toast.error(err?.message || "Could not save playlist.");
@@ -321,7 +369,7 @@ const CreatePlaylistModal = ({
         </button>
         <div className="modal__content create-playlist-modal__content">
           <h2 id="create-playlist-title" className="modal__title">
-            Create playlist
+            {editPlaylist?.id ? "Edit playlist" : "Create playlist"}
           </h2>
           <form onSubmit={handleSubmit} className="create-playlist-form">
             <label className="create-playlist-form__label" htmlFor="pl-name">
@@ -360,11 +408,11 @@ const CreatePlaylistModal = ({
                       className="create-playlist-form__cover-drop"
                     >
                       <div
-                        className={`create-playlist-form__cover-preview ${coverPreviewUrl ? "create-playlist-form__cover-preview--has-image" : ""}`}
+                        className={`create-playlist-form__cover-preview ${coverDisplayUrl ? "create-playlist-form__cover-preview--has-image" : ""}`}
                       >
-                        {coverPreviewUrl ? (
+                        {coverDisplayUrl ? (
                           <img
-                            src={coverPreviewUrl}
+                            src={coverDisplayUrl}
                             alt=""
                             className="create-playlist-form__cover-preview-img"
                           />
@@ -375,7 +423,7 @@ const CreatePlaylistModal = ({
                         )}
                       </div>
                     </label>
-                    {coverPreviewUrl && (
+                    {coverDisplayUrl && (
                       <button
                         type="button"
                         className="create-playlist-form__cover-clear"
@@ -483,7 +531,11 @@ const CreatePlaylistModal = ({
                 className="create-playlist-modal__btn create-playlist-modal__btn--primary"
                 disabled={submitting || loading}
               >
-                {submitting ? "Saving…" : "Save playlist"}
+                {submitting
+                  ? "Saving…"
+                  : editPlaylist?.id
+                    ? "Save changes"
+                    : "Save playlist"}
               </button>
             </div>
           </form>

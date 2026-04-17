@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { fuzzyMatches } from "../utils/searchUtils";
 import { usePlaylist } from "../context/PlaylistContext";
 import { deleteUserPlaylistById } from "../utils/userPlaylistsStorage";
@@ -188,6 +188,7 @@ const PlaylistImageItem = ({
   playlist,
   isSelected,
   onClick,
+  onEditClick,
   onDeleteClick,
 }) => {
   const [loaded, setLoaded] = useState(false);
@@ -217,17 +218,30 @@ const PlaylistImageItem = ({
         className={`playlist__image-wrapper ${noArt ? "playlist__image-wrapper--no-art" : ""}`}
       >
         {showDelete && (
-          <button
-            type="button"
-            className="playlist__delete-btn"
-            aria-label={`Delete playlist ${playlist.label}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteClick({ id: playlist.id, label: playlist.label });
-            }}
-          >
-            <Trash2 size={16} strokeWidth={2} aria-hidden />
-          </button>
+          <div className="playlist__user-actions">
+            <button
+              type="button"
+              className="playlist__edit-btn"
+              aria-label={`Edit playlist ${playlist.label}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditClick(playlist);
+              }}
+            >
+              <Pencil size={16} strokeWidth={2} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className="playlist__delete-btn"
+              aria-label={`Delete playlist ${playlist.label}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteClick({ id: playlist.id, label: playlist.label });
+              }}
+            >
+              <Trash2 size={16} strokeWidth={2} aria-hidden />
+            </button>
+          </div>
         )}
         <PlaylistMusicPlaceholder />
         {isUser && userCoverUrl && (
@@ -255,7 +269,7 @@ const PlaylistImageItem = ({
 const FAVORITES_LABEL = "My Favorites";
 
 const Playlist = ({ hasFavorites = false }) => {
-  const { playlistImages, refreshPlaylists } = usePlaylist();
+  const { playlistImages, refreshPlaylists, getPlaylistByLabel } = usePlaylist();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const searchQuery = searchParams.get("search") || "";
@@ -263,12 +277,17 @@ const Playlist = ({ hasFavorites = false }) => {
   const showFavorites = searchParams.get("favorites") === "true";
   const [isMobile, setIsMobile] = useState(false);
   const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false);
+  const [editingPlaylist, setEditingPlaylist] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  const reservedPlaylistNames = useMemo(
-    () => [...RESERVED_PLAYLIST_NAMES, ...playlistImages.map((p) => p.label)],
-    [playlistImages],
-  );
+  const reservedNamesForModal = useMemo(() => {
+    const labels = playlistImages.map((p) => p.label);
+    const all = [...RESERVED_PLAYLIST_NAMES, ...labels];
+    if (editingPlaylist) {
+      return all.filter((n) => n !== editingPlaylist.name);
+    }
+    return all;
+  }, [playlistImages, editingPlaylist]);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -377,6 +396,33 @@ const Playlist = ({ hasFavorites = false }) => {
     setDeleteConfirm(null);
   };
 
+  const handleClosePlaylistModal = () => {
+    setCreatePlaylistOpen(false);
+    setEditingPlaylist(null);
+  };
+
+  const handleEditUserPlaylist = (playlist) => {
+    const full = getPlaylistByLabel(playlist.label);
+    if (!full?.id || !full.isUserPlaylist) return;
+    setEditingPlaylist({
+      id: full.id,
+      name: full.name,
+      trackIds: Array.isArray(full.trackIds) ? [...full.trackIds] : [],
+    });
+    setCreatePlaylistOpen(true);
+  };
+
+  const handlePlaylistRenamed = (oldName, newName) => {
+    if (selectedPlaylist !== oldName) return;
+    const next = new URLSearchParams(searchParams);
+    next.set("playlist", newName);
+    if (isMobile) {
+      navigate(`/?${next.toString()}`);
+    } else {
+      setSearchParams(next);
+    }
+  };
+
   return (
     <div className="playlist">
       <DeletePlaylistConfirmModal
@@ -386,8 +432,10 @@ const Playlist = ({ hasFavorites = false }) => {
       />
       <CreatePlaylistModal
         isOpen={createPlaylistOpen}
-        onClose={() => setCreatePlaylistOpen(false)}
-        reservedNames={reservedPlaylistNames}
+        onClose={handleClosePlaylistModal}
+        reservedNames={reservedNamesForModal}
+        editPlaylist={editingPlaylist}
+        onPlaylistRenamed={handlePlaylistRenamed}
       />
       <div className="playlist__header playlist__header--with-action">
         <h4 className="playlist__title">
@@ -397,7 +445,10 @@ const Playlist = ({ hasFavorites = false }) => {
         <button
           type="button"
           className="playlist__create-btn"
-          onClick={() => setCreatePlaylistOpen(true)}
+          onClick={() => {
+            setEditingPlaylist(null);
+            setCreatePlaylistOpen(true);
+          }}
         >
           Create playlist
         </button>
@@ -445,6 +496,7 @@ const Playlist = ({ hasFavorites = false }) => {
                 playlist={playlist}
                 isSelected={selectedPlaylist === playlist.label}
                 onClick={handlePlaylistClick}
+                onEditClick={handleEditUserPlaylist}
                 onDeleteClick={setDeleteConfirm}
               />
             ))}

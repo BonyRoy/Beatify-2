@@ -42,6 +42,29 @@ export function addUserPlaylist({ name, trackIds }) {
 
 /**
  * @param {string} id
+ * @param {{ name: string, trackIds: string[] }} param
+ */
+export function updateUserPlaylistById(id, { name, trackIds }) {
+  if (!id) throw new Error("Playlist id is required.");
+  const trimmed = String(name || "").trim();
+  if (!trimmed) throw new Error("Playlist name is required.");
+  if (!Array.isArray(trackIds) || trackIds.length === 0) {
+    throw new Error("Select at least one song.");
+  }
+  const list = getUserPlaylists();
+  const idx = list.findIndex((p) => p.id === id);
+  if (idx === -1) throw new Error("Playlist not found.");
+  list[idx] = {
+    ...list[idx],
+    name: trimmed,
+    trackIds: trackIds.map((x) => String(x)),
+  };
+  localStorage.setItem(USER_PLAYLISTS_KEY, JSON.stringify(list));
+  window.dispatchEvent(new CustomEvent(USER_PLAYLISTS_CHANGED));
+}
+
+/**
+ * @param {string} id
  * @returns {boolean} true if a playlist was removed
  */
 export function deleteUserPlaylistById(id) {

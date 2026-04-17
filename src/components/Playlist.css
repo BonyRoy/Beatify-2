@@ -251,12 +251,20 @@ body:has(.footer--player) .playlist__grid {
   }
 }
 
-/* User playlist: delete (trash) — does not trigger card selection */
-.playlist__delete-btn {
+/* User playlist: edit + delete — does not trigger card selection */
+.playlist__user-actions {
   position: absolute;
   top: 4px;
   right: 4px;
   z-index: 3;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.playlist__edit-btn,
+.playlist__delete-btn {
   width: 32px;
   height: 32px;
   padding: 0;
@@ -272,6 +280,15 @@ body:has(.footer--player) .playlist__grid {
     background 0.15s,
     transform 0.15s;
   -webkit-tap-highlight-color: transparent;
+}
+
+.playlist__edit-btn:hover {
+  background: rgba(59, 130, 246, 0.92);
+}
+
+.playlist__edit-btn:focus-visible {
+  outline: 2px solid var(--text-hover, #a78bfa);
+  outline-offset: 2px;
 }
 
 .playlist__delete-btn:hover {
@@ -338,11 +355,13 @@ body:has(.footer--player) .playlist__grid {
     gap: 0.75rem;
   }
 
+  .playlist__edit-btn,
   .playlist__delete-btn {
     width: 28px;
     height: 28px;
   }
 
+  .playlist__edit-btn svg,
   .playlist__delete-btn svg {
     width: 14px;
     height: 14px;
