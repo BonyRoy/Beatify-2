@@ -82,14 +82,118 @@
   pointer-events: none;
 }
 
+/* Mini footer: base <video> when not fullscreen */
 .player__track-video--mini {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Mobile: hide video pixels in bar; poster shows in .player__art */
+.player__track-video--mini.player__track-video--mini-mobile-hidden {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 4px;
+  height: 4px;
+  opacity: 0;
+  border-radius: 0;
+  object-fit: cover;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Laptop / desktop: live video in thumbnail (click opens floating modal) */
+.footer--player.footer--has-desktop-video-mini
+  .player__track-video--mini.player__track-video--mini-desktop {
+  position: absolute;
   left: 2rem;
-  bottom: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
   width: 56px;
   height: 56px;
   border-radius: 8px;
   object-fit: cover;
   z-index: 2;
+  pointer-events: auto;
+  cursor: pointer;
+  opacity: 1;
+}
+
+/* Floating modal: same <video> element, centered (footer z-index raised above backdrop while modal open) */
+.player__track-video--mini.player__track-video--desktop-modal {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(92vw, 920px) !important;
+  max-width: 100%;
+  height: auto !important;
+  max-height: min(85vh, 80vw) !important;
+  min-width: 0;
+  min-height: 0;
+  object-fit: contain;
+  z-index: 1 !important;
+  border-radius: 12px;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.55);
+  cursor: default;
+  pointer-events: auto;
+  opacity: 1 !important;
+}
+
+.footer-desktop-video-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Lift entire footer above the modal backdrop so the <video> (fixed child) is not behind it — avoids backdrop-filter blurring the video. */
+.footer.footer--player.footer--desktop-video-modal-open {
+  z-index: 10005;
+}
+
+.footer-desktop-video-modal__close {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 10006;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.footer-desktop-video-modal__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.footer-desktop-video-modal__close:focus-visible {
+  outline: 2px solid var(--text-hover, #a78bfa);
+  outline-offset: 2px;
+}
+
+.player__art--desktop-video-slot {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  visibility: hidden;
+}
+
+.player__art-wrapper--desktop-video-host {
+  cursor: pointer;
 }
 
 /* Full frame visible (letterbox if aspect ≠ screen). Explicit box + padding reflows on rotate (auto w/h was flaky). */
@@ -166,13 +270,6 @@
     object-position: center center;
     background: #000;
   }
-}
-
-.player__art--video-slot {
-  visibility: hidden;
-  width: 56px;
-  height: 56px;
-  flex-shrink: 0;
 }
 
 .player__fullscreen-video-spacer {

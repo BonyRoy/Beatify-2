@@ -5,6 +5,7 @@ import React, {
   useState,
   useMemo,
 } from "react";
+import { createPortal } from "react-dom";
 import { usePlayer } from "../context/PlayerContext";
 import { useAlbumArt } from "../context/AlbumArtContext";
 import { useTrackPlayCounts } from "../context/TrackPlayCountsContext";
@@ -221,6 +222,8 @@ const Footer = () => {
   /** MP4 fullscreen portrait: rotate video layer 90° + swap dimensions (landscape-style full bleed). */
   const [fullscreenVideoRotated90, setFullscreenVideoRotated90] =
     useState(false);
+  /** Laptop/desktop: floating modal for larger video (mobile uses full-screen sheet). */
+  const [desktopVideoModalOpen, setDesktopVideoModalOpen] = useState(false);
   const pausedForCallRef = useRef(false);
   const pausedForMediaRef = useRef(false);
   const timeBeforeCallRef = useRef(0);
@@ -275,6 +278,29 @@ const Footer = () => {
       setFullscreenVideoRotated90(false);
     }
   }, [isFullScreen, isVideoTrack, audioTrackLoadKey]);
+
+  useEffect(() => {
+    setDesktopVideoModalOpen(false);
+  }, [audioTrackLoadKey]);
+
+  useEffect(() => {
+    if (isMobile || !isVideoTrack || isFullScreen) {
+      setDesktopVideoModalOpen(false);
+    }
+  }, [isMobile, isVideoTrack, isFullScreen]);
+
+  useEffect(() => {
+    if (!desktopVideoModalOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setDesktopVideoModalOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [desktopVideoModalOpen]);
 
   // Touchmove with passive: false so preventDefault works during swipe-down
   useEffect(() => {
@@ -2131,6 +2157,9 @@ const Footer = () => {
   // Get album art URL - stored URLs or cached extracted from MP3 (AlbumArtContext)
   const albumArtUrl = currentTrack ? getAlbumArt(currentTrack) : null;
 
+  const showDesktopVideoMini =
+    !isFullScreen && isVideoTrack && !isMobile;
+
   if (!currentTrack) {
     return (
       <footer className="footer footer--empty">
@@ -2143,7 +2172,7 @@ const Footer = () => {
     <>
       <footer
         ref={footerRef}
-        className={`footer footer--player ${isFullScreen ? "footer--fullscreen" : ""} ${isFullScreen && isVideoTrack ? "footer--fullscreen--video-fullbleed" : ""} ${isFullScreen && fullscreenEntered && !isClosingFullscreen ? "footer--fullscreen--open" : ""} ${isClosingFullscreen ? "footer--fullscreen--closing" : ""}`}
+        className={`footer footer--player ${isFullScreen ? "footer--fullscreen" : ""} ${isFullScreen && isVideoTrack ? "footer--fullscreen--video-fullbleed" : ""} ${isFullScreen && fullscreenEntered && !isClosingFullscreen ? "footer--fullscreen--open" : ""} ${isClosingFullscreen ? "footer--fullscreen--closing" : ""} ${showDesktopVideoMini ? "footer--has-desktop-video-mini" : ""} ${desktopVideoModalOpen && isVideoTrack && !isMobile && !isFullScreen ? "footer--desktop-video-modal-open" : ""}`}
         onClick={!isFullScreen ? handleFooterClick : handleFooterClick}
         onTouchStart={isFullScreen ? handleFullscreenTouchStart : undefined}
         onTouchEnd={isFullScreen ? handleFullscreenTouchEnd : undefined}
@@ -2374,13 +2403,35 @@ const Footer = () => {
               {/* Left: Album Art & Track Info */}
               <div className="player__left">
                 <div
-                  className={`player__art-wrapper ${isPlaying ? "player__art-wrapper--playing" : ""}`}
+                  className={`player__art-wrapper ${isPlaying ? "player__art-wrapper--playing" : ""} ${showDesktopVideoMini ? "player__art-wrapper--desktop-video-host" : ""}`}
+                  onClick={
+                    showDesktopVideoMini && !desktopVideoModalOpen
+                      ? (e) => {
+                          e.stopPropagation();
+                          setDesktopVideoModalOpen(true);
+                        }
+                      : undefined
+                  }
                 >
-                  {isVideoTrack ? (
-                    <div
-                      className="player__art player__art--video-slot"
-                      aria-hidden="true"
-                    />
+                  {showDesktopVideoMini ? (
+                    desktopVideoModalOpen ? (
+                      albumArtUrl ? (
+                        <img
+                          className="player__art"
+                          src={albumArtUrl}
+                          alt=""
+                        />
+                      ) : (
+                        <div className="player__art player__art--placeholder">
+                          <MusicIcon />
+                        </div>
+                      )
+                    ) : (
+                      <div
+                        className="player__art player__art--desktop-video-slot"
+                        aria-hidden
+                      />
+                    )
                   ) : albumArtUrl ? (
                     <img
                       className="player__art"
@@ -2596,20 +2647,60 @@ const Footer = () => {
             onEnded={handleEnded}
             onPlay={handlePlay}
             onPause={handlePause}
+            onClick={(e) => {
+              if (
+                showDesktopVideoMini &&
+                !desktopVideoModalOpen &&
+                !isFullScreen
+              ) {
+                e.stopPropagation();
+                setDesktopVideoModalOpen(true);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (
+                !showDesktopVideoMini ||
+                desktopVideoModalOpen ||
+                isFullScreen
+              )
+                return;
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setDesktopVideoModalOpen(true);
+              }
+            }}
             preload="auto"
             playsInline
             poster={albumArtUrl || undefined}
+            tabIndex={
+              showDesktopVideoMini && !desktopVideoModalOpen && !isFullScreen
+                ? 0
+                : -1
+            }
             className={[
               isFullScreen
                 ? "player__track-video player__track-video--fullscreen"
                 : "player__track-video player__track-video--mini",
+              !isFullScreen && isMobile && isVideoTrack
+                ? "player__track-video--mini-mobile-hidden"
+                : "",
+              !isFullScreen && showDesktopVideoMini && !desktopVideoModalOpen
+                ? "player__track-video--mini-desktop"
+                : "",
+              !isFullScreen && desktopVideoModalOpen
+                ? "player__track-video--desktop-modal"
+                : "",
               isFullScreen && fullscreenVideoRotated90
                 ? "player__track-video--rotated-90"
                 : "",
             ]
               .filter(Boolean)
               .join(" ")}
-            aria-label={`Video: ${currentTrack.name || "Track"}`}
+            aria-label={
+              showDesktopVideoMini && !desktopVideoModalOpen
+                ? `Video: ${currentTrack.name || "Track"}. Press Enter to open larger view.`
+                : `Video: ${currentTrack.name || "Track"}`
+            }
           />
         ) : (
           <audio
@@ -2626,6 +2717,43 @@ const Footer = () => {
           />
         )}
       </footer>
+      {typeof document !== "undefined" &&
+        desktopVideoModalOpen &&
+        !isMobile &&
+        isVideoTrack &&
+        !isFullScreen &&
+        createPortal(
+          <>
+            <div
+              className="footer-desktop-video-modal__backdrop"
+              role="presentation"
+              onClick={() => setDesktopVideoModalOpen(false)}
+              aria-hidden
+            />
+            <button
+              type="button"
+              className="footer-desktop-video-modal__close"
+              onClick={() => setDesktopVideoModalOpen(false)}
+              aria-label="Close video"
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </>,
+          document.body,
+        )}
     </>
   );
 };
