@@ -20,53 +20,6 @@ import {
 import { trackUsesVideoPlayback } from "../utils/trackMediaKind";
 import "./Footer.css";
 
-/** Source-frame crop (px) from top & bottom when painting fullscreen video to canvas. */
-const FULLSCREEN_VIDEO_EDGE_CROP_PX = 20;
-/** Background canvas is slightly larger than the viewport so the dimmed layer bleeds past screen edges. */
-const FULLSCREEN_VIDEO_BG_BLEED = 1.07;
-/**
- * Mirror `<video>` vs `<audio>` sync (separate decoders drift).
- * Hard seek when drift exceeds this (seconds).
- */
-const FULLSCREEN_MIRROR_HARD_SEEK_SEC = 0.12;
-/** Below hard seek: nudge mirror `playbackRate` to catch up without constant seeks (smoother). */
-const FULLSCREEN_MIRROR_SOFT_DRIFT_SEC = 0.03;
-/**
- * Cap devicePixelRatio for fullscreen video canvases only. Retina 2× doubles every drawImage pixel;
- * video already scales from source — 1× is usually enough for smooth UI.
- */
-const FULLSCREEN_VIDEO_CANVAS_MAX_DPR = 1;
-/**
- * Cap longest edge of canvas backing-store (device pixels). Reduces GPU compositing; CSS size unchanged.
- * Does not reduce video decode cost (same file still decodes at full resolution). 0 = no cap.
- */
-const FULLSCREEN_VIDEO_MAX_BACKING_LONG_EDGE = 1920;
-
-function getFullscreenVideoCanvasDpr() {
-  return Math.min(
-    FULLSCREEN_VIDEO_CANVAS_MAX_DPR,
-    window.devicePixelRatio || 1,
-  );
-}
-
-function capVideoCanvasBacking(bw, bh) {
-  if (
-    !FULLSCREEN_VIDEO_MAX_BACKING_LONG_EDGE ||
-    FULLSCREEN_VIDEO_MAX_BACKING_LONG_EDGE <= 0
-  ) {
-    return { bw, bh };
-  }
-  const maxEdge = Math.max(bw, bh);
-  if (maxEdge <= FULLSCREEN_VIDEO_MAX_BACKING_LONG_EDGE) {
-    return { bw, bh };
-  }
-  const scale = FULLSCREEN_VIDEO_MAX_BACKING_LONG_EDGE / maxEdge;
-  return {
-    bw: Math.max(1, Math.floor(bw * scale)),
-    bh: Math.max(1, Math.floor(bh * scale)),
-  };
-}
-
 const PlayIcon = () => (
   <svg
     width="20"
@@ -178,6 +131,24 @@ const SpinnerIcon = () => (
   </svg>
 );
 
+/** 90° rotate — portrait phone: swap logical W/H so landscape-shaped video can fill screen. */
+const VideoRotate90Icon = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M21 12a9 9 0 1 1-3-6.7" />
+    <polyline points="21 3 21 9 15 9" />
+  </svg>
+);
+
 const Footer = () => {
   const { getAlbumArt, fetchAlbumArt } = useAlbumArt();
   const { incrementPlayCount } = useTrackPlayCounts();
@@ -213,7 +184,8 @@ const Footer = () => {
     [currentTrack],
   );
 
-  const audioRef = useRef(null);
+  /** Single playback element: `<video>` for MP4 (one decoder, picture + audio) or `<audio>` otherwise. */
+  const mediaRef = useRef(null);
   const progressBarRef = useRef(null);
   const volumeBarRef = useRef(null);
   const shouldAutoResumeRef = useRef(false);
@@ -227,11 +199,6 @@ const Footer = () => {
   const albumRef = useRef(null);
   const fullscreenArtistRef = useRef(null);
   const fullscreenArtWrapperRef = useRef(null);
-  const fullscreenVideoBgCanvasRef = useRef(null);
-  const fullscreenVideoCanvasRef = useRef(null);
-  /** Muted decode-only video synced to `audio` while fullscreen MP4 — `<audio>` plays in background on iOS/Android; `<video>` alone is often suspended when backgrounded. */
-  const fullscreenMirrorVideoRef = useRef(null);
-  const fullscreenVideoFgReportedRef = useRef(false);
   const isDraggingProgressRef = useRef(false);
   const isDraggingVolumeRef = useRef(false);
   const [shouldScrollTitle, setShouldScrollTitle] = useState(false);
@@ -251,7 +218,9 @@ const Footer = () => {
   const [dynamicBgGradient, setDynamicBgGradient] = useState(null);
   const [isClosingFullscreen, setIsClosingFullscreen] = useState(false);
   const [fullscreenEntered, setFullscreenEntered] = useState(false);
-  const [fullscreenVideoHasFrame, setFullscreenVideoHasFrame] = useState(false);
+  /** MP4 fullscreen portrait: rotate video layer 90° + swap dimensions (landscape-style full bleed). */
+  const [fullscreenVideoRotated90, setFullscreenVideoRotated90] =
+    useState(false);
   const pausedForCallRef = useRef(false);
   const pausedForMediaRef = useRef(false);
   const timeBeforeCallRef = useRef(0);
@@ -269,18 +238,24 @@ const Footer = () => {
   const swipeStartYRef = useRef(null);
   const footerRef = useRef(null);
 
-  // Check if mobile on mount and resize
+  // Check if mobile on mount and resize / orientation change
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-      // Auto-exit full screen if resizing to desktop
-      if (window.innerWidth > 768) {
-        setIsFullScreen(false);
-      }
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      // Shortest edge: phone landscape stays "mobile" (width often > 768; old logic broke fullscreen)
+      setIsMobile(Math.min(w, h) <= 768);
+    };
+    const onViewportChange = () => {
+      checkMobile();
     };
     checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    window.addEventListener("resize", onViewportChange);
+    window.addEventListener("orientationchange", onViewportChange);
+    return () => {
+      window.removeEventListener("resize", onViewportChange);
+      window.removeEventListener("orientationchange", onViewportChange);
+    };
   }, []);
 
   // Add/remove body class when fullscreen
@@ -294,6 +269,12 @@ const Footer = () => {
       document.body.classList.remove("footer-fullscreen-active");
     };
   }, [isFullScreen, isMobile]);
+
+  useEffect(() => {
+    if (!isFullScreen || !isVideoTrack) {
+      setFullscreenVideoRotated90(false);
+    }
+  }, [isFullScreen, isVideoTrack, audioTrackLoadKey]);
 
   // Touchmove with passive: false so preventDefault works during swipe-down
   useEffect(() => {
@@ -316,7 +297,8 @@ const Footer = () => {
         e.target.closest(".player__fullscreen-progress") ||
         e.target.closest(".player__fullscreen-controls") ||
         e.target.closest(".player__fullscreen-extra-controls") ||
-        e.target.closest(".player__fullscreen-close")
+        e.target.closest(".player__fullscreen-close") ||
+        e.target.closest(".player__fullscreen-rotate-toggle")
       ) {
         return;
       }
@@ -403,9 +385,9 @@ const Footer = () => {
     }
   };
 
-  // Update audio source when track changes (prefer IndexedDB blob for top-100 listens)
+  // Update media source when track changes (prefer IndexedDB blob for top-100 listens)
   useEffect(() => {
-    if (currentTrack && audioRef.current) {
+    if (currentTrack && mediaRef.current) {
       const expectedTrackId = String(currentTrack.uuid || currentTrack.id);
       const networkUrl = currentTrack.fileUrl || currentTrack.url;
       if (!networkUrl) return;
@@ -436,7 +418,7 @@ const Footer = () => {
         const audioUrl = resolved.url;
         if (!audioUrl) return;
 
-        const audio = audioRef.current;
+        const audio = mediaRef.current;
         if (!audio || cancelled) return;
 
         isSourceChangingRef.current = true;
@@ -456,7 +438,7 @@ const Footer = () => {
         }
 
         const tryStartPlayback = () => {
-          const currentAudio = audioRef.current;
+          const currentAudio = mediaRef.current;
           if (!currentAudio || cancelled) return;
           if (playingTrackIdRef.current !== expectedTrackId) return;
 
@@ -511,12 +493,12 @@ const Footer = () => {
         blobUrlRevokeRef.current = null;
       }
       setIsLoading(false);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = "";
+      if (mediaRef.current) {
+        mediaRef.current.pause();
+        mediaRef.current.src = "";
       }
     }
-  }, [audioTrackLoadKey]);
+  }, [audioTrackLoadKey, isVideoTrack]);
 
   // Warm IndexedDB cache for tracks already in personal top 100 (e.g. returning visit)
   useEffect(() => {
@@ -572,7 +554,7 @@ const Footer = () => {
 
   // Handle play/pause state changes
   useEffect(() => {
-    const audio = audioRef.current;
+    const audio = mediaRef.current;
     if (!audio || !currentTrack) return;
 
     // If source is changing, wait a bit then try again
@@ -660,8 +642,8 @@ const Footer = () => {
 
   // Update volume
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
+    if (mediaRef.current) {
+      mediaRef.current.volume = volume;
     }
   }, [volume]);
 
@@ -680,8 +662,8 @@ const Footer = () => {
 
   // Handle time updates
   const handleTimeUpdate = useCallback(() => {
-    if (audioRef.current) {
-      const currentTime = audioRef.current.currentTime;
+    if (mediaRef.current) {
+      const currentTime = mediaRef.current.currentTime;
       updateTime(currentTime);
 
       // Increment play count only after 30 sec of playback (once per track)
@@ -695,7 +677,7 @@ const Footer = () => {
         recordPersonalListen(currentTrack).catch(() => {});
       }
 
-      const audioDuration = audioRef.current.duration;
+      const audioDuration = mediaRef.current.duration;
       if (!(audioDuration > 0 && currentTrack && playlist.length > 0)) return;
 
       const trackId = currentTrack.uuid || currentTrack.id;
@@ -765,8 +747,8 @@ const Footer = () => {
 
   // Handle loaded metadata
   const handleLoadedMetadata = useCallback(() => {
-    if (audioRef.current) {
-      updateDuration(audioRef.current.duration);
+    if (mediaRef.current) {
+      updateDuration(mediaRef.current.duration);
       setIsLoading(false);
 
       // iOS: If should be playing and track just loaded, force play
@@ -778,16 +760,16 @@ const Footer = () => {
         isIOS &&
         isPlaying &&
         nextTrackPendingRef.current &&
-        audioRef.current.paused
+        mediaRef.current.paused
       ) {
         setTimeout(() => {
           if (
-            audioRef.current &&
+            mediaRef.current &&
             isPlaying &&
-            audioRef.current.paused &&
+            mediaRef.current.paused &&
             !isSourceChangingRef.current
           ) {
-            audioRef.current
+            mediaRef.current
               .play()
               .then(() => {
                 nextTrackPendingRef.current = false;
@@ -818,8 +800,8 @@ const Footer = () => {
     if (
       isIOS &&
       isPlaying &&
-      audioRef.current &&
-      audioRef.current.paused &&
+      mediaRef.current &&
+      mediaRef.current.paused &&
       !isSourceChangingRef.current
     ) {
       // This is crucial for background playback - when new track is ready, play it
@@ -828,12 +810,12 @@ const Footer = () => {
         setTimeout(
           () => {
             if (
-              audioRef.current &&
+              mediaRef.current &&
               isPlaying &&
-              audioRef.current.paused &&
+              mediaRef.current.paused &&
               !isSourceChangingRef.current
             ) {
-              audioRef.current
+              mediaRef.current
                 .play()
                 .then(() => {
                   nextTrackPendingRef.current = false;
@@ -907,7 +889,7 @@ const Footer = () => {
     if (
       isPlaying &&
       currentTrack &&
-      audioRef.current &&
+      mediaRef.current &&
       !isSourceChangingRef.current
     ) {
       const isPageHidden =
@@ -919,7 +901,7 @@ const Footer = () => {
 
       // Detect phone call: page is hidden (user switched to phone app)
       if (isPageHidden && !pausedForCallRef.current) {
-        timeBeforeCallRef.current = audioRef.current.currentTime;
+        timeBeforeCallRef.current = mediaRef.current.currentTime;
         pausedForCallRef.current = true;
         shouldAutoResumeRef.current = true;
         setPlaying(false);
@@ -931,7 +913,7 @@ const Footer = () => {
         !pausedForMediaRef.current &&
         wasPlaying
       ) {
-        timeBeforeMediaRef.current = audioRef.current.currentTime;
+        timeBeforeMediaRef.current = mediaRef.current.currentTime;
         pausedForMediaRef.current = true;
         shouldAutoResumeRef.current = true;
         setPlaying(false);
@@ -998,8 +980,8 @@ const Footer = () => {
 
   // Update playback speed
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.playbackRate = playbackSpeed;
+    if (mediaRef.current) {
+      mediaRef.current.playbackRate = playbackSpeed;
     }
   }, [playbackSpeed]);
 
@@ -1025,10 +1007,10 @@ const Footer = () => {
 
     // Comprehensive background monitor
     const iosBackgroundMonitor = () => {
-      if (!currentTrack || !audioRef.current) return;
+      if (!currentTrack || !mediaRef.current) return;
 
       const currentTrackId = currentTrack.uuid || currentTrack.id;
-      const audio = audioRef.current;
+      const audio = mediaRef.current;
       const now = Date.now();
       const timeSinceTrackChange = now - lastTrackChangeTimeRef.current;
 
@@ -1077,8 +1059,8 @@ const Footer = () => {
           // Clear flags after delay
           setTimeout(() => {
             isChangingTrackRef.current = false;
-            if (audioRef.current) {
-              delete audioRef.current.dataset.ending;
+            if (mediaRef.current) {
+              delete mediaRef.current.dataset.ending;
             }
           }, 3000);
         }
@@ -1279,22 +1261,22 @@ const Footer = () => {
         // Check if we were paused for a phone call and should resume
         if (
           pausedForCallRef.current &&
-          audioRef.current &&
+          mediaRef.current &&
           wasPlayingBeforeInterruptionRef.current &&
-          audioRef.current.paused
+          mediaRef.current.paused
         ) {
           const resumeTime = Math.max(0, timeBeforeCallRef.current - 2);
-          audioRef.current.currentTime = resumeTime;
+          mediaRef.current.currentTime = resumeTime;
           seekTo(resumeTime);
 
           // Try to resume playback
           setTimeout(() => {
             if (
-              audioRef.current &&
+              mediaRef.current &&
               pausedForCallRef.current &&
-              audioRef.current.paused
+              mediaRef.current.paused
             ) {
-              audioRef.current
+              mediaRef.current
                 .play()
                 .then(() => {
                   pausedForCallRef.current = false;
@@ -1311,21 +1293,21 @@ const Footer = () => {
         // Also check for media interruption resume when page becomes visible
         else if (
           pausedForMediaRef.current &&
-          audioRef.current &&
+          mediaRef.current &&
           wasPlayingBeforeInterruptionRef.current &&
-          audioRef.current.paused
+          mediaRef.current.paused
         ) {
           const resumeTime = Math.max(0, timeBeforeMediaRef.current);
-          audioRef.current.currentTime = resumeTime;
+          mediaRef.current.currentTime = resumeTime;
           seekTo(resumeTime);
 
           setTimeout(() => {
             if (
-              audioRef.current &&
+              mediaRef.current &&
               pausedForMediaRef.current &&
-              audioRef.current.paused
+              mediaRef.current.paused
             ) {
-              audioRef.current
+              mediaRef.current
                 .play()
                 .then(() => {
                   pausedForMediaRef.current = false;
@@ -1366,7 +1348,7 @@ const Footer = () => {
 
   // Handle audio interruptions - phone calls and other media
   useEffect(() => {
-    const audio = audioRef.current;
+    const audio = mediaRef.current;
     if (!audio) return;
 
     const handleSuspend = () => {
@@ -1441,9 +1423,9 @@ const Footer = () => {
 
   // Monitor for resuming after interruptions (works for all platforms)
   useEffect(() => {
-    if (!currentTrack || !audioRef.current) return;
+    if (!currentTrack || !mediaRef.current) return;
 
-    const audio = audioRef.current;
+    const audio = mediaRef.current;
     let resumeCheckInterval = null;
 
     const checkForResume = () => {
@@ -1562,8 +1544,8 @@ const Footer = () => {
           });
 
           // iOS: Update playback state when metadata is set
-          if (isIOS && mediaSession.setPlaybackState && audioRef.current) {
-            mediaSession.playbackState = audioRef.current.paused
+          if (isIOS && mediaSession.setPlaybackState && mediaRef.current) {
+            mediaSession.playbackState = mediaRef.current.paused
               ? "paused"
               : "playing";
           }
@@ -1582,8 +1564,8 @@ const Footer = () => {
     if (
       isPlaying &&
       currentTrack &&
-      audioRef.current &&
-      !audioRef.current.paused
+      mediaRef.current &&
+      !mediaRef.current.paused
     ) {
       // Delay slightly for iOS to ensure audio is ready
       setTimeout(() => updateMetadata(), isIOS ? 200 : 0);
@@ -1600,9 +1582,9 @@ const Footer = () => {
 
         // Set play handler
         mediaSession.setActionHandler("play", () => {
-          if (audioRef.current && currentTrack) {
+          if (mediaRef.current && currentTrack) {
             // Directly play audio and update state - don't rely on isPlaying state
-            const audio = audioRef.current;
+            const audio = mediaRef.current;
             if (audio.paused) {
               audio
                 .play()
@@ -1623,9 +1605,9 @@ const Footer = () => {
 
         // Set pause handler
         mediaSession.setActionHandler("pause", () => {
-          if (audioRef.current) {
+          if (mediaRef.current) {
             // Directly pause audio and update state
-            const audio = audioRef.current;
+            const audio = mediaRef.current;
             if (!audio.paused) {
               audio.pause();
               setPlaying(false);
@@ -1645,8 +1627,8 @@ const Footer = () => {
             setTimeout(
               () => {
                 updateMetadata();
-                if (mediaSession.setPlaybackState && audioRef.current) {
-                  mediaSession.playbackState = audioRef.current.paused
+                if (mediaSession.setPlaybackState && mediaRef.current) {
+                  mediaSession.playbackState = mediaRef.current.paused
                     ? "paused"
                     : "playing";
                 }
@@ -1673,9 +1655,9 @@ const Footer = () => {
               const delay = isIOS ? attempt * 200 + 300 : 100;
 
               setTimeout(() => {
-                if (!audioRef.current || !isPlaying) return;
+                if (!mediaRef.current || !isPlaying) return;
 
-                const audio = audioRef.current;
+                const audio = mediaRef.current;
 
                 // Try to play if paused
                 if (audio.paused) {
@@ -1723,33 +1705,33 @@ const Footer = () => {
 
         // Set seek handlers
         mediaSession.setActionHandler("seekto", (details) => {
-          if (audioRef.current && details.seekTime !== undefined) {
+          if (mediaRef.current && details.seekTime !== undefined) {
             const seekTime = details.seekTime;
-            audioRef.current.currentTime = seekTime;
+            mediaRef.current.currentTime = seekTime;
             seekTo(seekTime);
           }
         });
 
         // Optional: Seek backward/forward
         mediaSession.setActionHandler("seekbackward", (details) => {
-          if (audioRef.current) {
+          if (mediaRef.current) {
             const skipTime = details.seekOffset || 10;
-            audioRef.current.currentTime = Math.max(
+            mediaRef.current.currentTime = Math.max(
               0,
-              audioRef.current.currentTime - skipTime,
+              mediaRef.current.currentTime - skipTime,
             );
-            seekTo(audioRef.current.currentTime);
+            seekTo(mediaRef.current.currentTime);
           }
         });
 
         mediaSession.setActionHandler("seekforward", (details) => {
-          if (audioRef.current && duration) {
+          if (mediaRef.current && duration) {
             const skipTime = details.seekOffset || 10;
-            audioRef.current.currentTime = Math.min(
+            mediaRef.current.currentTime = Math.min(
               duration,
-              audioRef.current.currentTime + skipTime,
+              mediaRef.current.currentTime + skipTime,
             );
-            seekTo(audioRef.current.currentTime);
+            seekTo(mediaRef.current.currentTime);
           }
         });
       } catch (error) {
@@ -1762,9 +1744,9 @@ const Footer = () => {
 
     // Update playback state - iOS requires frequent updates
     const updatePlaybackState = () => {
-      if (mediaSession.setPlaybackState && audioRef.current) {
+      if (mediaSession.setPlaybackState && mediaRef.current) {
         // Use actual audio state for iOS compatibility
-        const actualState = audioRef.current.paused ? "paused" : "playing";
+        const actualState = mediaRef.current.paused ? "paused" : "playing";
         mediaSession.playbackState = actualState;
       }
     };
@@ -1776,12 +1758,12 @@ const Footer = () => {
     const updatePositionState = () => {
       if (
         mediaSession.setPositionState &&
-        audioRef.current &&
+        mediaRef.current &&
         duration > 0 &&
         !isNaN(duration)
       ) {
         try {
-          const currentPos = audioRef.current.currentTime || currentTime;
+          const currentPos = mediaRef.current.currentTime || currentTime;
           if (!isNaN(currentPos)) {
             mediaSession.setPositionState({
               duration: duration,
@@ -1801,17 +1783,17 @@ const Footer = () => {
       isPlaying &&
       currentTrack &&
       duration > 0 &&
-      audioRef.current &&
-      !audioRef.current.paused
+      mediaRef.current &&
+      !mediaRef.current.paused
     ) {
       updatePositionState();
     }
 
     // Update playback state and position state periodically (iOS requirement)
     const stateUpdateInterval = setInterval(() => {
-      if (currentTrack && audioRef.current) {
+      if (currentTrack && mediaRef.current) {
         updatePlaybackState();
-        if (duration > 0 && !audioRef.current.paused) {
+        if (duration > 0 && !mediaRef.current.paused) {
           updatePositionState();
         }
       }
@@ -1860,12 +1842,12 @@ const Footer = () => {
   // Update progress based on clientX position
   const updateProgress = useCallback(
     (clientX) => {
-      if (!progressBarRef.current || !duration || !audioRef.current) return;
+      if (!progressBarRef.current || !duration || !mediaRef.current) return;
       const rect = progressBarRef.current.getBoundingClientRect();
       const x = clientX - rect.left;
       const percentage = Math.max(0, Math.min(1, x / rect.width));
       const newTime = percentage * duration;
-      audioRef.current.currentTime = newTime;
+      mediaRef.current.currentTime = newTime;
       seekTo(newTime);
     },
     [duration, seekTo],
@@ -2146,259 +2128,6 @@ const Footer = () => {
     };
   }, [currentTrack, isFullScreen]);
 
-  useEffect(() => {
-    fullscreenVideoFgReportedRef.current = false;
-    setFullscreenVideoHasFrame(false);
-  }, [audioTrackLoadKey]);
-
-  /** Fullscreen MP4: wire muted <video> to same URL as <audio> for canvas frames; audio is playback (background-capable). */
-  useEffect(() => {
-    if (!isFullScreen || !isVideoTrack) return;
-    const v = fullscreenMirrorVideoRef.current;
-    const a = audioRef.current;
-    if (!v || !a) return;
-
-    v.muted = true;
-    v.setAttribute("playsinline", "");
-    v.setAttribute("webkit-playsinline", "");
-
-    const syncMirrorToAudio = () => {
-      if (!fullscreenMirrorVideoRef.current || !audioRef.current) return;
-      const video = fullscreenMirrorVideoRef.current;
-      const audio = audioRef.current;
-      video.currentTime = audio.currentTime;
-      video.playbackRate = audio.playbackRate;
-      if (!audio.paused) video.play().catch(() => {});
-      else video.pause();
-    };
-
-    a.addEventListener("seeked", syncMirrorToAudio);
-
-    const tryWire = () => {
-      const src = a.currentSrc || a.src;
-      if (!src) return false;
-      if (v.src !== src) {
-        v.src = src;
-        v.load();
-      }
-      v.addEventListener("canplay", syncMirrorToAudio, { once: true });
-      if (v.readyState >= 2) syncMirrorToAudio();
-      return true;
-    };
-
-    let cancelled = false;
-    if (!tryWire()) {
-      const onAudioCanPlay = () => {
-        if (cancelled) return;
-        tryWire();
-        a.removeEventListener("canplay", onAudioCanPlay);
-      };
-      a.addEventListener("canplay", onAudioCanPlay);
-      return () => {
-        cancelled = true;
-        a.removeEventListener("canplay", onAudioCanPlay);
-        a.removeEventListener("seeked", syncMirrorToAudio);
-        v.pause();
-        v.removeAttribute("src");
-        v.load();
-      };
-    }
-
-    return () => {
-      cancelled = true;
-      a.removeEventListener("seeked", syncMirrorToAudio);
-      v.pause();
-      v.removeAttribute("src");
-      v.load();
-    };
-  }, [isFullScreen, isVideoTrack, audioTrackLoadKey]);
-
-  useEffect(() => {
-    if (!isFullScreen || !isVideoTrack) {
-      fullscreenVideoFgReportedRef.current = false;
-      setFullscreenVideoHasFrame(false);
-      return;
-    }
-
-    const bgCanvas = fullscreenVideoBgCanvasRef.current;
-    const fgCanvas = fullscreenVideoCanvasRef.current;
-    const wrap = fullscreenArtWrapperRef.current;
-    if (!bgCanvas) return;
-
-    let rafId = 0;
-    let cancelled = false;
-    const bgCtx = bgCanvas.getContext("2d");
-    let fgCtxCached = null;
-
-    const syncBgCanvasSize = () => {
-      const dpr = getFullscreenVideoCanvasDpr();
-      const vw = document.documentElement.clientWidth || window.innerWidth;
-      const vh = window.innerHeight;
-      const w = Math.ceil(vw * FULLSCREEN_VIDEO_BG_BLEED);
-      const h = Math.ceil(vh * FULLSCREEN_VIDEO_BG_BLEED);
-      let bw = Math.floor(w * dpr);
-      let bh = Math.floor(h * dpr);
-      const capped = capVideoCanvasBacking(bw, bh);
-      bw = capped.bw;
-      bh = capped.bh;
-      bgCanvas.width = bw;
-      bgCanvas.height = bh;
-      bgCanvas.style.width = `${w}px`;
-      bgCanvas.style.height = `${h}px`;
-    };
-
-    syncBgCanvasSize();
-    const onWindowResize = () => syncBgCanvasSize();
-    window.addEventListener("resize", onWindowResize);
-
-    const ro =
-      wrap && typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => {
-            /* foreground size updated on next frame */
-          })
-        : null;
-    if (ro && wrap) ro.observe(wrap);
-
-    let scheduleLoop;
-    const tick = () => {
-      if (cancelled) return;
-      const audio = audioRef.current;
-      const mirror = fullscreenMirrorVideoRef.current;
-      if (mirror && audio) {
-        if (!audio.paused && mirror.paused) {
-          mirror.play().catch(() => {});
-        }
-        if (audio.paused && !mirror.paused) {
-          mirror.pause();
-        }
-        if (!audio.paused) {
-          const at = audio.currentTime;
-          const mt = mirror.currentTime;
-          const drift = at - mt;
-          const ap = audio.playbackRate;
-          if (Math.abs(drift) > FULLSCREEN_MIRROR_HARD_SEEK_SEC) {
-            mirror.currentTime = at;
-            mirror.playbackRate = ap;
-          } else if (Math.abs(drift) > FULLSCREEN_MIRROR_SOFT_DRIFT_SEC) {
-            if (drift > 0) {
-              mirror.playbackRate = Math.min(ap * 1.08, 2);
-            } else {
-              mirror.playbackRate = Math.max(ap * 0.92, 0.25);
-            }
-          } else {
-            mirror.playbackRate = ap;
-          }
-        } else {
-          mirror.playbackRate = audio.playbackRate;
-        }
-      }
-      const video = mirror;
-
-      if (bgCtx) {
-        const logicalW = parseFloat(bgCanvas.style.width) || bgCanvas.clientWidth || 1;
-        const logicalH = parseFloat(bgCanvas.style.height) || bgCanvas.clientHeight || 1;
-        const w = logicalW;
-        const h = logicalH;
-        const scaleX = bgCanvas.width / logicalW;
-        const scaleY = bgCanvas.height / logicalH;
-        bgCtx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
-        if (video instanceof HTMLVideoElement && video.videoWidth > 0) {
-          const vw = video.videoWidth;
-          const vh = video.videoHeight;
-          const crop = FULLSCREEN_VIDEO_EDGE_CROP_PX;
-          let sx = 0;
-          let sy = 0;
-          let sw = vw;
-          let sh = vh;
-          if (vh > crop * 2) {
-            sy = crop;
-            sh = vh - crop * 2;
-          }
-          const scale = Math.max(w / sw, h / sh);
-          const tw = sw * scale;
-          const th = sh * scale;
-          const ox = (w - tw) / 2;
-          const oy = (h - th) / 2;
-          bgCtx.fillStyle = "#000";
-          bgCtx.fillRect(0, 0, w, h);
-          bgCtx.drawImage(video, sx, sy, sw, sh, ox, oy, tw, th);
-        } else {
-          bgCtx.fillStyle = "#0a0a0a";
-          bgCtx.fillRect(0, 0, w, h);
-        }
-      }
-
-      if (
-        fgCanvas &&
-        wrap &&
-        video instanceof HTMLVideoElement &&
-        video.videoWidth > 0
-      ) {
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
-        const crop = FULLSCREEN_VIDEO_EDGE_CROP_PX;
-        let sx = 0;
-        let sy = 0;
-        let sw = vw;
-        let sh = vh;
-        if (vh > crop * 2) {
-          sy = crop;
-          sh = vh - crop * 2;
-        }
-        const fw = wrap.clientWidth;
-        if (fw > 0) {
-          const fh = (sh / sw) * fw;
-          const canvasDpr = getFullscreenVideoCanvasDpr();
-          let iw = Math.floor(fw * canvasDpr);
-          let ih = Math.floor(fh * canvasDpr);
-          const fgCapped = capVideoCanvasBacking(iw, ih);
-          iw = fgCapped.bw;
-          ih = fgCapped.bh;
-          if (fgCanvas.width !== iw || fgCanvas.height !== ih) {
-            fgCanvas.width = iw;
-            fgCanvas.height = ih;
-            fgCanvas.style.width = `${fw}px`;
-            fgCanvas.style.height = `${fh}px`;
-            fgCtxCached = null;
-          }
-          if (!fgCtxCached && fgCanvas) {
-            fgCtxCached = fgCanvas.getContext("2d");
-          }
-          const fgCtx = fgCtxCached;
-          if (fgCtx) {
-            if (!fullscreenVideoFgReportedRef.current) {
-              fullscreenVideoFgReportedRef.current = true;
-              setFullscreenVideoHasFrame(true);
-            }
-            const fsx = iw / fw;
-            const fsy = ih / fh;
-            fgCtx.setTransform(fsx, 0, 0, fsy, 0, 0);
-            fgCtx.drawImage(video, sx, sy, sw, sh, 0, 0, fw, fh);
-          }
-        }
-      }
-
-      /* rAF every frame: sync runs at display rate. requestVideoFrameCallback only fired on video
-         frames (~30fps) so audio could outpace the mirror when the video decoder stalled. */
-      rafId = requestAnimationFrame(scheduleLoop);
-    };
-
-    scheduleLoop = () => {
-      tick();
-    };
-
-    scheduleLoop();
-
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(rafId);
-      window.removeEventListener("resize", onWindowResize);
-      if (ro) ro.disconnect();
-      fullscreenVideoFgReportedRef.current = false;
-      setFullscreenVideoHasFrame(false);
-    };
-  }, [isFullScreen, isVideoTrack, audioTrackLoadKey]);
-
   // Get album art URL - stored URLs or cached extracted from MP3 (AlbumArtContext)
   const albumArtUrl = currentTrack ? getAlbumArt(currentTrack) : null;
 
@@ -2427,13 +2156,6 @@ const Footer = () => {
             : undefined
         }
       >
-        {isFullScreen && isVideoTrack && (
-          <canvas
-            ref={fullscreenVideoBgCanvasRef}
-            className="player__fullscreen-video-bg-canvas"
-            aria-hidden="true"
-          />
-        )}
         {/* Chevron down - close/minimize fullscreen */}
         {isFullScreen && (
           <button
@@ -2454,26 +2176,16 @@ const Footer = () => {
               <div
                 className={`player__fullscreen-content ${isVideoTrack ? "player__fullscreen-content--video-bg" : ""}`}
               >
-                {/* MP4: dimmed full-viewport bg canvas + full-width foreground canvas */}
+                {/* MP4: picture comes from native <video> at footer root (one decoder) */}
                 {isVideoTrack ? (
                   <div
                     ref={fullscreenArtWrapperRef}
-                    className="player__fullscreen-art-wrapper player__fullscreen-art-wrapper--video-fullwidth"
+                    className="player__fullscreen-art-wrapper player__fullscreen-art-wrapper--video-fullwidth player__fullscreen-art-wrapper--native-video"
                   >
-                    <div className="player__fullscreen-video-stack">
-                      {!fullscreenVideoHasFrame && (
-                        <div
-                          className={`player__fullscreen-art player__fullscreen-art--placeholder ${isPlaying ? "player__fullscreen-art--playing" : ""}`}
-                        >
-                          <MusicIcon />
-                        </div>
-                      )}
-                      <canvas
-                        ref={fullscreenVideoCanvasRef}
-                        className={`player__fullscreen-video-canvas ${fullscreenVideoHasFrame ? "player__fullscreen-video-canvas--visible" : ""}`}
-                        aria-hidden="true"
-                      />
-                    </div>
+                    <div
+                      className="player__fullscreen-video-spacer"
+                      aria-hidden="true"
+                    />
                   </div>
                 ) : (
                   <div className="player__fullscreen-art-wrapper">
@@ -2602,8 +2314,29 @@ const Footer = () => {
                     </button>
                   </div>
 
-                  {/* Speed Control */}
+                  {/* Rotate + speed (MP4 fullscreen) */}
                   <div className="player__fullscreen-extra-controls">
+                    {isVideoTrack && (
+                      <button
+                        type="button"
+                        className={`player__fullscreen-rotate-toggle ${fullscreenVideoRotated90 ? "player__fullscreen-rotate-toggle--active" : ""}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFullscreenVideoRotated90((v) => !v);
+                        }}
+                        aria-pressed={fullscreenVideoRotated90}
+                        aria-label={
+                          fullscreenVideoRotated90
+                            ? "Reset video orientation"
+                            : "Rotate video 90 degrees for full screen"
+                        }
+                      >
+                        <VideoRotate90Icon />
+                        <span className="player__fullscreen-rotate-toggle__label">
+                          {fullscreenVideoRotated90 ? "Reset" : "Rotate"}
+                        </span>
+                      </button>
+                    )}
                     <div className="player__fullscreen-speed">
                       <button
                         className="player__speed-btn"
@@ -2643,7 +2376,12 @@ const Footer = () => {
                 <div
                   className={`player__art-wrapper ${isPlaying ? "player__art-wrapper--playing" : ""}`}
                 >
-                  {albumArtUrl ? (
+                  {isVideoTrack ? (
+                    <div
+                      className="player__art player__art--video-slot"
+                      aria-hidden="true"
+                    />
+                  ) : albumArtUrl ? (
                     <img
                       className="player__art"
                       src={albumArtUrl}
@@ -2848,27 +2586,43 @@ const Footer = () => {
             </>
           )}
         </div>
-        <audio
-          ref={audioRef}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onLoadStart={handleLoadStart}
-          onCanPlay={handleCanPlay}
-          onEnded={handleEnded}
-          onPlay={handlePlay}
-          onPause={handlePause}
-          preload="auto"
-          playsInline
-          aria-hidden={isVideoTrack ? true : undefined}
-        />
-        {isFullScreen && isVideoTrack && (
+        {isVideoTrack ? (
           <video
-            ref={fullscreenMirrorVideoRef}
-            className="player__media-audio-only"
-            muted
-            playsInline
+            ref={mediaRef}
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onLoadStart={handleLoadStart}
+            onCanPlay={handleCanPlay}
+            onEnded={handleEnded}
+            onPlay={handlePlay}
+            onPause={handlePause}
             preload="auto"
-            aria-hidden="true"
+            playsInline
+            poster={albumArtUrl || undefined}
+            className={[
+              isFullScreen
+                ? "player__track-video player__track-video--fullscreen"
+                : "player__track-video player__track-video--mini",
+              isFullScreen && fullscreenVideoRotated90
+                ? "player__track-video--rotated-90"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-label={`Video: ${currentTrack.name || "Track"}`}
+          />
+        ) : (
+          <audio
+            ref={mediaRef}
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onLoadStart={handleLoadStart}
+            onCanPlay={handleCanPlay}
+            onEnded={handleEnded}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            preload="auto"
+            playsInline
           />
         )}
       </footer>

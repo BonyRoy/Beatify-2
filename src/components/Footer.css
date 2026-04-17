@@ -67,13 +67,122 @@
   will-change: transform;
 }
 
-/* Edge-to-edge video: drop horizontal inset; stretch player to full viewport width. */
+/* Edge-to-edge video: no footer padding — video layer fills safe viewport; controls dock has own padding. */
 .footer--fullscreen.footer--fullscreen--video-fullbleed {
-  padding-left: 0;
-  padding-right: 0;
+  padding: 0;
   align-items: stretch;
   justify-content: flex-start;
-  background: transparent;
+  background: #0a0a0a;
+}
+
+/* Native MP4: one <video> for decode + picture + audio (no dual decode / canvas mirror). */
+.player__track-video {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.player__track-video--mini {
+  left: 2rem;
+  bottom: 0.5rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  z-index: 2;
+}
+
+/* Full frame visible (letterbox if aspect ≠ screen). Explicit box + padding reflows on rotate (auto w/h was flaky). */
+.footer--fullscreen.footer--fullscreen--video-fullbleed .player__track-video--fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  max-height: 100lvh;
+  margin: 0;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  box-sizing: border-box;
+  object-fit: contain;
+  object-position: center center;
+  background: #000;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/*
+ * Portrait: rotate video 90° and swap viewport W/H so landscape-shaped clips use full screen.
+ * Margin-based centering (not translate%) — transform order with rotate was shrinking/misplacing the layer on mobile.
+ */
+@media (orientation: portrait) {
+  .footer--fullscreen.footer--fullscreen--video-fullbleed
+    .player__track-video--fullscreen.player__track-video--rotated-90 {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    width: 100vh;
+    height: 100vw;
+    width: 100dvh;
+    height: 100dvw;
+    max-width: none;
+    max-height: none;
+    margin-left: -50vh;
+    margin-top: -50vw;
+    margin-left: -50dvh;
+    margin-top: -50dvw;
+    padding: 0;
+    transform: rotate(90deg);
+    transform-origin: center center;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    object-fit: cover;
+    object-position: center center;
+    background: #000;
+    /* Do not set inset: auto — it overrides left/top and breaks centering (video stuck top-left). */
+  }
+}
+
+/* Already landscape: no CSS rotation */
+@media (orientation: landscape) {
+  .footer--fullscreen.footer--fullscreen--video-fullbleed
+    .player__track-video--fullscreen.player__track-video--rotated-90 {
+    position: fixed;
+    inset: 0;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    max-height: 100dvh;
+    max-height: 100lvh;
+    margin: 0;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+      env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    box-sizing: border-box;
+    transform: none;
+    object-fit: cover;
+    object-position: center center;
+    background: #000;
+  }
+}
+
+.player__art--video-slot {
+  visibility: hidden;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.player__fullscreen-video-spacer {
+  flex: 1 1 auto;
+  min-height: min(42vh, 360px);
+  width: 100%;
+}
+
+.player__fullscreen-art-wrapper--native-video {
+  justify-content: center;
 }
 
 /* Full-viewport live video (canvas) behind UI; full color (no dim filter).
@@ -199,6 +308,38 @@
   padding-left: 0;
   padding-right: 0;
   margin-top: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.player__fullscreen-rotate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.8rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.player__fullscreen-rotate-toggle--active {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.16);
+  color: #fff;
+}
+
+.player__fullscreen-rotate-toggle__label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .footer--fullscreen.footer--fullscreen--video-fullbleed
