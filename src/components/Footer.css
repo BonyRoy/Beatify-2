@@ -82,6 +82,17 @@
   pointer-events: none;
 }
 
+/* Hidden <audio> for MP4 background playback (same URL as video; not display:none — some engines skip it). */
+.player__background-audio {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 4px;
+  height: 4px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Mini footer: base <video> when not fullscreen */
 .player__track-video--mini {
   position: absolute;

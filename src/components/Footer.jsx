@@ -240,6 +240,18 @@ const Footer = () => {
   const playCountIncrementedRef = useRef(false);
   const swipeStartYRef = useRef(null);
   const footerRef = useRef(null);
+  /** Hidden <audio> for MP4: iOS/Android pause <video> in background; same file in <audio> often keeps playing. */
+  const backgroundAudioRef = useRef(null);
+  const mp4BackgroundHandoffRef = useRef(false);
+  const skipMediaPauseSyncRef = useRef(false);
+
+  /** Active playback element: background audio while page hidden, else video/audio mediaRef. */
+  function getActivePlaybackEl() {
+    if (mp4BackgroundHandoffRef.current && backgroundAudioRef.current) {
+      return backgroundAudioRef.current;
+    }
+    return mediaRef.current;
+  }
 
   // Check if mobile on mount and resize / orientation change
   useEffect(() => {
@@ -301,6 +313,77 @@ const Footer = () => {
       window.removeEventListener("keydown", onKey);
     };
   }, [desktopVideoModalOpen]);
+
+  // MP4: hand off to <audio> when app/ tab is hidden so playback continues (video is often paused by OS).
+  useEffect(() => {
+    if (!isVideoTrack) {
+      mp4BackgroundHandoffRef.current = false;
+      const a = backgroundAudioRef.current;
+      if (a) {
+        try {
+          a.pause();
+          a.removeAttribute("src");
+          a.load();
+        } catch {
+          /* ignore */
+        }
+      }
+      return;
+    }
+
+    const onVisibility = () => {
+      const v = mediaRef.current;
+      const a = backgroundAudioRef.current;
+      if (!v || !a) return;
+
+      if (document.visibilityState === "hidden") {
+        if (!v.paused && v.src) {
+          try {
+            skipMediaPauseSyncRef.current = true;
+            a.src = v.src;
+            a.volume = v.volume;
+            a.playbackRate = v.playbackRate;
+            a.currentTime = v.currentTime;
+            mp4BackgroundHandoffRef.current = true;
+            v.pause();
+            void a.play();
+          } catch {
+            mp4BackgroundHandoffRef.current = false;
+          } finally {
+            requestAnimationFrame(() => {
+              skipMediaPauseSyncRef.current = false;
+            });
+          }
+        }
+      } else if (mp4BackgroundHandoffRef.current && a.src) {
+        try {
+          skipMediaPauseSyncRef.current = true;
+          const t = a.currentTime;
+          const wasPlaying = !a.paused;
+          a.pause();
+          a.removeAttribute("src");
+          a.load();
+          mp4BackgroundHandoffRef.current = false;
+          v.currentTime = t;
+          seekTo(t);
+          if (!v.ended && wasPlaying) {
+            void v.play();
+          }
+        } catch {
+          mp4BackgroundHandoffRef.current = false;
+        } finally {
+          requestAnimationFrame(() => {
+            skipMediaPauseSyncRef.current = false;
+          });
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [isVideoTrack, seekTo]);
 
   // Touchmove with passive: false so preventDefault works during swipe-down
   useEffect(() => {
@@ -580,20 +663,21 @@ const Footer = () => {
 
   // Handle play/pause state changes
   useEffect(() => {
-    const audio = mediaRef.current;
+    const audio = getActivePlaybackEl();
     if (!audio || !currentTrack) return;
 
     // If source is changing, wait a bit then try again
     if (isSourceChangingRef.current) {
       // Wait for source to finish loading, then retry
       const checkAndPlay = setTimeout(() => {
+        const el = getActivePlaybackEl();
         if (
           !isSourceChangingRef.current &&
-          audio &&
+          el &&
           isPlaying &&
-          audio.paused
+          el.paused
         ) {
-          audio
+          el
             .play()
             .then(() => {
               setPlaying(true);
@@ -613,8 +697,10 @@ const Footer = () => {
     if (isPlaying) {
       // Only play if audio is ready
       const attemptPlay = (retryCount = 0) => {
-        if (audio.paused && isPlaying && !isSourceChangingRef.current) {
-          const playPromise = audio.play();
+        const el = getActivePlaybackEl();
+        if (!el) return;
+        if (el.paused && isPlaying && !isSourceChangingRef.current) {
+          const playPromise = el.play();
           if (playPromise !== undefined) {
             playPromise
               .then(() => {
@@ -622,8 +708,8 @@ const Footer = () => {
                 // iOS: Verify it's actually playing
                 if (isIOS) {
                   setTimeout(() => {
-                    if (audio && audio.paused && isPlaying && retryCount < 2) {
-                      // Still paused, retry once more
+                    const again = getActivePlaybackEl();
+                    if (again && again.paused && isPlaying && retryCount < 2) {
                       attemptPlay(retryCount + 1);
                     }
                   }, 300);
@@ -634,7 +720,7 @@ const Footer = () => {
                 // On iOS, retry if it's a background play issue
                 if (isIOS && retryCount < 2 && nextTrackPendingRef.current) {
                   setTimeout(() => {
-                    if (audio && isPlaying && !isSourceChangingRef.current) {
+                    if (isPlaying && !isSourceChangingRef.current) {
                       attemptPlay(retryCount + 1);
                     }
                   }, 500);
@@ -660,8 +746,9 @@ const Footer = () => {
         };
       }
     } else {
-      if (!audio.paused) {
-        audio.pause();
+      const el = getActivePlaybackEl();
+      if (el && !el.paused) {
+        el.pause();
       }
     }
   }, [isPlaying, currentTrack, setPlaying]);
@@ -671,6 +758,9 @@ const Footer = () => {
     if (mediaRef.current) {
       mediaRef.current.volume = volume;
     }
+    if (backgroundAudioRef.current) {
+      backgroundAudioRef.current.volume = volume;
+    }
   }, [volume]);
 
   // Reset preload, transition, and play-count flags when track changes
@@ -678,6 +768,16 @@ const Footer = () => {
     preloadStartedRef.current = false;
     transitionAt2SecTriggeredRef.current = false;
     playCountIncrementedRef.current = false;
+    mp4BackgroundHandoffRef.current = false;
+    if (backgroundAudioRef.current) {
+      try {
+        backgroundAudioRef.current.pause();
+        backgroundAudioRef.current.removeAttribute("src");
+        backgroundAudioRef.current.load();
+      } catch {
+        /* ignore */
+      }
+    }
     if (preloadAudioRef.current) {
       preloadAudioRef.current.src = "";
       preloadAudioRef.current = null;
@@ -688,8 +788,9 @@ const Footer = () => {
 
   // Handle time updates
   const handleTimeUpdate = useCallback(() => {
-    if (mediaRef.current) {
-      const currentTime = mediaRef.current.currentTime;
+    const el = getActivePlaybackEl();
+    if (el) {
+      const currentTime = el.currentTime;
       updateTime(currentTime);
 
       // Increment play count only after 30 sec of playback (once per track)
@@ -703,7 +804,7 @@ const Footer = () => {
         recordPersonalListen(currentTrack).catch(() => {});
       }
 
-      const audioDuration = mediaRef.current.duration;
+      const audioDuration = el.duration;
       if (!(audioDuration > 0 && currentTrack && playlist.length > 0)) return;
 
       const trackId = currentTrack.uuid || currentTrack.id;
@@ -911,6 +1012,17 @@ const Footer = () => {
 
   // Handle pause event
   const handlePause = useCallback(() => {
+    if (skipMediaPauseSyncRef.current) return;
+
+    // MP4: OS often pauses <video> before we hand off to <audio>; don't clear isPlaying yet.
+    if (
+      isVideoTrack &&
+      (document.hidden || document.visibilityState === "hidden") &&
+      !mp4BackgroundHandoffRef.current
+    ) {
+      return;
+    }
+
     // Sync state when audio is paused externally (e.g., from media session, phone call, or other media)
     if (
       isPlaying &&
@@ -925,9 +1037,13 @@ const Footer = () => {
       // Save that we were playing before interruption
       wasPlayingBeforeInterruptionRef.current = true;
 
+      const active = getActivePlaybackEl();
+
       // Detect phone call: page is hidden (user switched to phone app)
       if (isPageHidden && !pausedForCallRef.current) {
-        timeBeforeCallRef.current = mediaRef.current.currentTime;
+        timeBeforeCallRef.current = active
+          ? active.currentTime
+          : mediaRef.current.currentTime;
         pausedForCallRef.current = true;
         shouldAutoResumeRef.current = true;
         setPlaying(false);
@@ -939,7 +1055,9 @@ const Footer = () => {
         !pausedForMediaRef.current &&
         wasPlaying
       ) {
-        timeBeforeMediaRef.current = mediaRef.current.currentTime;
+        timeBeforeMediaRef.current = active
+          ? active.currentTime
+          : mediaRef.current.currentTime;
         pausedForMediaRef.current = true;
         shouldAutoResumeRef.current = true;
         setPlaying(false);
@@ -954,7 +1072,7 @@ const Footer = () => {
       shouldAutoResumeRef.current = false;
       wasPlayingBeforeInterruptionRef.current = false;
     }
-  }, [isPlaying, currentTrack, setPlaying]);
+  }, [isPlaying, currentTrack, setPlaying, isVideoTrack]);
 
   // Handle play event
   const handlePlay = useCallback(() => {
@@ -1009,6 +1127,9 @@ const Footer = () => {
     if (mediaRef.current) {
       mediaRef.current.playbackRate = playbackSpeed;
     }
+    if (backgroundAudioRef.current) {
+      backgroundAudioRef.current.playbackRate = playbackSpeed;
+    }
   }, [playbackSpeed]);
 
   // Handle speed change
@@ -1033,10 +1154,11 @@ const Footer = () => {
 
     // Comprehensive background monitor
     const iosBackgroundMonitor = () => {
-      if (!currentTrack || !mediaRef.current) return;
+      if (!currentTrack) return;
+      const audio = getActivePlaybackEl();
+      if (!audio) return;
 
       const currentTrackId = currentTrack.uuid || currentTrack.id;
-      const audio = mediaRef.current;
       const now = Date.now();
       const timeSinceTrackChange = now - lastTrackChangeTimeRef.current;
 
@@ -1085,8 +1207,9 @@ const Footer = () => {
           // Clear flags after delay
           setTimeout(() => {
             isChangingTrackRef.current = false;
-            if (mediaRef.current) {
-              delete mediaRef.current.dataset.ending;
+            const el = getActivePlaybackEl();
+            if (el) {
+              delete el.dataset.ending;
             }
           }, 3000);
         }
@@ -1284,25 +1407,22 @@ const Footer = () => {
     const handleVisibilityChange = () => {
       resumeAttempted = false;
       if (document.visibilityState === "visible") {
+        const active = getActivePlaybackEl();
         // Check if we were paused for a phone call and should resume
         if (
           pausedForCallRef.current &&
-          mediaRef.current &&
+          active &&
           wasPlayingBeforeInterruptionRef.current &&
-          mediaRef.current.paused
+          active.paused
         ) {
           const resumeTime = Math.max(0, timeBeforeCallRef.current - 2);
-          mediaRef.current.currentTime = resumeTime;
+          active.currentTime = resumeTime;
           seekTo(resumeTime);
 
-          // Try to resume playback
           setTimeout(() => {
-            if (
-              mediaRef.current &&
-              pausedForCallRef.current &&
-              mediaRef.current.paused
-            ) {
-              mediaRef.current
+            const el = getActivePlaybackEl();
+            if (el && pausedForCallRef.current && el.paused) {
+              el
                 .play()
                 .then(() => {
                   pausedForCallRef.current = false;
@@ -1316,24 +1436,20 @@ const Footer = () => {
             }
           }, 500);
         }
-        // Also check for media interruption resume when page becomes visible
         else if (
           pausedForMediaRef.current &&
-          mediaRef.current &&
+          active &&
           wasPlayingBeforeInterruptionRef.current &&
-          mediaRef.current.paused
+          active.paused
         ) {
           const resumeTime = Math.max(0, timeBeforeMediaRef.current);
-          mediaRef.current.currentTime = resumeTime;
+          active.currentTime = resumeTime;
           seekTo(resumeTime);
 
           setTimeout(() => {
-            if (
-              mediaRef.current &&
-              pausedForMediaRef.current &&
-              mediaRef.current.paused
-            ) {
-              mediaRef.current
+            const el = getActivePlaybackEl();
+            if (el && pausedForMediaRef.current && el.paused) {
+              el
                 .play()
                 .then(() => {
                   pausedForMediaRef.current = false;
@@ -1374,18 +1490,15 @@ const Footer = () => {
 
   // Handle audio interruptions - phone calls and other media
   useEffect(() => {
-    const audio = mediaRef.current;
-    if (!audio) return;
-
     const handleSuspend = () => {
-      // Audio was suspended (e.g., by system or other media)
+      const active = getActivePlaybackEl();
+      if (!active) return;
       if (isPlaying && currentTrack && !isSourceChangingRef.current) {
         const isPageHidden =
           document.hidden || document.visibilityState === "hidden";
 
         if (isPageHidden && !pausedForCallRef.current) {
-          // Likely a phone call
-          timeBeforeCallRef.current = audio.currentTime;
+          timeBeforeCallRef.current = active.currentTime;
           pausedForCallRef.current = true;
           wasPlayingBeforeInterruptionRef.current = true;
         } else if (
@@ -1393,8 +1506,7 @@ const Footer = () => {
           !pausedForCallRef.current &&
           !pausedForMediaRef.current
         ) {
-          // Likely other media interruption
-          timeBeforeMediaRef.current = audio.currentTime;
+          timeBeforeMediaRef.current = active.currentTime;
           pausedForMediaRef.current = true;
           wasPlayingBeforeInterruptionRef.current = true;
         }
@@ -1402,10 +1514,11 @@ const Footer = () => {
       }
     };
 
-    // Monitor for interruptions when audio is paused externally
     const checkForInterruption = () => {
+      const active = getActivePlaybackEl();
       if (
-        audio.paused &&
+        active &&
+        active.paused &&
         isPlaying &&
         currentTrack &&
         !isSourceChangingRef.current
@@ -1413,9 +1526,8 @@ const Footer = () => {
         const isPageHidden =
           document.hidden || document.visibilityState === "hidden";
 
-        // If we're paused but should be playing, it's an interruption
         if (isPageHidden && !pausedForCallRef.current) {
-          timeBeforeCallRef.current = audio.currentTime;
+          timeBeforeCallRef.current = active.currentTime;
           pausedForCallRef.current = true;
           wasPlayingBeforeInterruptionRef.current = true;
           shouldAutoResumeRef.current = true;
@@ -1424,7 +1536,7 @@ const Footer = () => {
           !pausedForCallRef.current &&
           !pausedForMediaRef.current
         ) {
-          timeBeforeMediaRef.current = audio.currentTime;
+          timeBeforeMediaRef.current = active.currentTime;
           pausedForMediaRef.current = true;
           wasPlayingBeforeInterruptionRef.current = true;
           shouldAutoResumeRef.current = true;
@@ -1432,30 +1544,40 @@ const Footer = () => {
       }
     };
 
-    // Check periodically for interruptions
     const interruptionCheckInterval = setInterval(checkForInterruption, 500);
 
-    audio.addEventListener("pause", handlePause);
-    audio.addEventListener("play", handlePlay);
-    audio.addEventListener("suspend", handleSuspend);
+    const attach = (el) => {
+      if (!el) return;
+      el.addEventListener("pause", handlePause);
+      el.addEventListener("play", handlePlay);
+      el.addEventListener("suspend", handleSuspend);
+    };
+    attach(mediaRef.current);
+    if (isVideoTrack) attach(backgroundAudioRef.current);
 
     return () => {
       clearInterval(interruptionCheckInterval);
-      audio.removeEventListener("pause", handlePause);
-      audio.removeEventListener("play", handlePlay);
-      audio.removeEventListener("suspend", handleSuspend);
+      const detach = (el) => {
+        if (!el) return;
+        el.removeEventListener("pause", handlePause);
+        el.removeEventListener("play", handlePlay);
+        el.removeEventListener("suspend", handleSuspend);
+      };
+      detach(mediaRef.current);
+      detach(backgroundAudioRef.current);
     };
-  }, [isPlaying, currentTrack, handlePause, handlePlay]);
+  }, [isPlaying, currentTrack, isVideoTrack, handlePause, handlePlay]);
 
   // Monitor for resuming after interruptions (works for all platforms)
   useEffect(() => {
-    if (!currentTrack || !mediaRef.current) return;
+    if (!currentTrack) return;
 
-    const audio = mediaRef.current;
     let resumeCheckInterval = null;
 
     const checkForResume = () => {
-      // Check for phone call resume
+      const audio = getActivePlaybackEl();
+      if (!audio) return;
+
       if (
         pausedForCallRef.current &&
         wasPlayingBeforeInterruptionRef.current &&
@@ -1467,8 +1589,9 @@ const Footer = () => {
         seekTo(resumeTime);
 
         setTimeout(() => {
-          if (audio && pausedForCallRef.current && audio.paused) {
-            audio
+          const el = getActivePlaybackEl();
+          if (el && pausedForCallRef.current && el.paused) {
+            el
               .play()
               .then(() => {
                 pausedForCallRef.current = false;
@@ -1483,7 +1606,6 @@ const Footer = () => {
         }, 500);
       }
 
-      // Check for other media interruption resume
       if (
         pausedForMediaRef.current &&
         wasPlayingBeforeInterruptionRef.current &&
@@ -1495,8 +1617,9 @@ const Footer = () => {
         seekTo(resumeTime);
 
         setTimeout(() => {
-          if (audio && pausedForMediaRef.current && audio.paused) {
-            audio
+          const el = getActivePlaybackEl();
+          if (el && pausedForMediaRef.current && el.paused) {
+            el
               .play()
               .then(() => {
                 pausedForMediaRef.current = false;
@@ -1570,10 +1693,11 @@ const Footer = () => {
           });
 
           // iOS: Update playback state when metadata is set
-          if (isIOS && mediaSession.setPlaybackState && mediaRef.current) {
-            mediaSession.playbackState = mediaRef.current.paused
-              ? "paused"
-              : "playing";
+          if (isIOS && mediaSession.setPlaybackState) {
+            const el = getActivePlaybackEl();
+            if (el) {
+              mediaSession.playbackState = el.paused ? "paused" : "playing";
+            }
           }
         } catch (error) {
           console.error("Error setting media session metadata:", error);
@@ -1587,14 +1711,11 @@ const Footer = () => {
     updateMetadata();
 
     // Also update metadata when playback starts (iOS requirement)
-    if (
-      isPlaying &&
-      currentTrack &&
-      mediaRef.current &&
-      !mediaRef.current.paused
-    ) {
-      // Delay slightly for iOS to ensure audio is ready
-      setTimeout(() => updateMetadata(), isIOS ? 200 : 0);
+    {
+      const ap = getActivePlaybackEl();
+      if (isPlaying && currentTrack && ap && !ap.paused) {
+        setTimeout(() => updateMetadata(), isIOS ? 200 : 0);
+      }
     }
 
     // Set action handlers - iOS requires these to be set every time
@@ -1608,9 +1729,8 @@ const Footer = () => {
 
         // Set play handler
         mediaSession.setActionHandler("play", () => {
-          if (mediaRef.current && currentTrack) {
-            // Directly play audio and update state - don't rely on isPlaying state
-            const audio = mediaRef.current;
+          const audio = getActivePlaybackEl();
+          if (audio && currentTrack) {
             if (audio.paused) {
               audio
                 .play()
@@ -1631,9 +1751,8 @@ const Footer = () => {
 
         // Set pause handler
         mediaSession.setActionHandler("pause", () => {
-          if (mediaRef.current) {
-            // Directly pause audio and update state
-            const audio = mediaRef.current;
+          const audio = getActivePlaybackEl();
+          if (audio) {
             if (!audio.paused) {
               audio.pause();
               setPlaying(false);
@@ -1653,10 +1772,13 @@ const Footer = () => {
             setTimeout(
               () => {
                 updateMetadata();
-                if (mediaSession.setPlaybackState && mediaRef.current) {
-                  mediaSession.playbackState = mediaRef.current.paused
-                    ? "paused"
-                    : "playing";
+                if (mediaSession.setPlaybackState) {
+                  const el = getActivePlaybackEl();
+                  if (el) {
+                    mediaSession.playbackState = el.paused
+                      ? "paused"
+                      : "playing";
+                  }
                 }
               },
               isIOS ? 300 : 100,
@@ -1681,9 +1803,8 @@ const Footer = () => {
               const delay = isIOS ? attempt * 200 + 300 : 100;
 
               setTimeout(() => {
-                if (!mediaRef.current || !isPlaying) return;
-
-                const audio = mediaRef.current;
+                const audio = getActivePlaybackEl();
+                if (!audio || !isPlaying) return;
 
                 // Try to play if paused
                 if (audio.paused) {
@@ -1731,33 +1852,45 @@ const Footer = () => {
 
         // Set seek handlers
         mediaSession.setActionHandler("seekto", (details) => {
-          if (mediaRef.current && details.seekTime !== undefined) {
+          const el = getActivePlaybackEl();
+          if (el && details.seekTime !== undefined) {
             const seekTime = details.seekTime;
-            mediaRef.current.currentTime = seekTime;
+            el.currentTime = seekTime;
+            if (
+              isVideoTrack &&
+              mediaRef.current &&
+              el !== mediaRef.current
+            ) {
+              mediaRef.current.currentTime = seekTime;
+            }
             seekTo(seekTime);
           }
         });
 
         // Optional: Seek backward/forward
         mediaSession.setActionHandler("seekbackward", (details) => {
-          if (mediaRef.current) {
+          const el = getActivePlaybackEl();
+          if (el) {
             const skipTime = details.seekOffset || 10;
-            mediaRef.current.currentTime = Math.max(
-              0,
-              mediaRef.current.currentTime - skipTime,
-            );
-            seekTo(mediaRef.current.currentTime);
+            const t = Math.max(0, el.currentTime - skipTime);
+            el.currentTime = t;
+            if (isVideoTrack && mediaRef.current && el !== mediaRef.current) {
+              mediaRef.current.currentTime = t;
+            }
+            seekTo(t);
           }
         });
 
         mediaSession.setActionHandler("seekforward", (details) => {
-          if (mediaRef.current && duration) {
+          const el = getActivePlaybackEl();
+          if (el && duration) {
             const skipTime = details.seekOffset || 10;
-            mediaRef.current.currentTime = Math.min(
-              duration,
-              mediaRef.current.currentTime + skipTime,
-            );
-            seekTo(mediaRef.current.currentTime);
+            const t = Math.min(duration, el.currentTime + skipTime);
+            el.currentTime = t;
+            if (isVideoTrack && mediaRef.current && el !== mediaRef.current) {
+              mediaRef.current.currentTime = t;
+            }
+            seekTo(t);
           }
         });
       } catch (error) {
@@ -1770,9 +1903,9 @@ const Footer = () => {
 
     // Update playback state - iOS requires frequent updates
     const updatePlaybackState = () => {
-      if (mediaSession.setPlaybackState && mediaRef.current) {
-        // Use actual audio state for iOS compatibility
-        const actualState = mediaRef.current.paused ? "paused" : "playing";
+      const el = getActivePlaybackEl();
+      if (mediaSession.setPlaybackState && el) {
+        const actualState = el.paused ? "paused" : "playing";
         mediaSession.playbackState = actualState;
       }
     };
@@ -1782,14 +1915,15 @@ const Footer = () => {
 
     // Update position state for scrubbing
     const updatePositionState = () => {
+      const el = getActivePlaybackEl();
       if (
         mediaSession.setPositionState &&
-        mediaRef.current &&
+        el &&
         duration > 0 &&
         !isNaN(duration)
       ) {
         try {
-          const currentPos = mediaRef.current.currentTime || currentTime;
+          const currentPos = el.currentTime || currentTime;
           if (!isNaN(currentPos)) {
             mediaSession.setPositionState({
               duration: duration,
@@ -1805,21 +1939,25 @@ const Footer = () => {
     };
 
     // Update position state when time changes
-    if (
-      isPlaying &&
-      currentTrack &&
-      duration > 0 &&
-      mediaRef.current &&
-      !mediaRef.current.paused
-    ) {
-      updatePositionState();
+    {
+      const ap = getActivePlaybackEl();
+      if (
+        isPlaying &&
+        currentTrack &&
+        duration > 0 &&
+        ap &&
+        !ap.paused
+      ) {
+        updatePositionState();
+      }
     }
 
     // Update playback state and position state periodically (iOS requirement)
     const stateUpdateInterval = setInterval(() => {
-      if (currentTrack && mediaRef.current) {
+      const el = getActivePlaybackEl();
+      if (currentTrack && el) {
         updatePlaybackState();
-        if (duration > 0 && !mediaRef.current.paused) {
+        if (duration > 0 && !el.paused) {
           updatePositionState();
         }
       }
@@ -1843,6 +1981,7 @@ const Footer = () => {
   }, [
     currentTrack,
     isPlaying,
+    isVideoTrack,
     currentTime,
     duration,
     playbackSpeed,
@@ -1868,15 +2007,19 @@ const Footer = () => {
   // Update progress based on clientX position
   const updateProgress = useCallback(
     (clientX) => {
-      if (!progressBarRef.current || !duration || !mediaRef.current) return;
+      const el = getActivePlaybackEl();
+      if (!progressBarRef.current || !duration || !el) return;
       const rect = progressBarRef.current.getBoundingClientRect();
       const x = clientX - rect.left;
       const percentage = Math.max(0, Math.min(1, x / rect.width));
       const newTime = percentage * duration;
-      mediaRef.current.currentTime = newTime;
+      el.currentTime = newTime;
+      if (isVideoTrack && mediaRef.current && el !== mediaRef.current) {
+        mediaRef.current.currentTime = newTime;
+      }
       seekTo(newTime);
     },
-    [duration, seekTo],
+    [duration, seekTo, isVideoTrack],
   );
 
   // Handle progress bar start (mouse down or touch start)
@@ -2638,6 +2781,7 @@ const Footer = () => {
           )}
         </div>
         {isVideoTrack ? (
+          <>
           <video
             ref={mediaRef}
             onTimeUpdate={handleTimeUpdate}
@@ -2702,6 +2846,20 @@ const Footer = () => {
                 : `Video: ${currentTrack.name || "Track"}`
             }
           />
+          {/* Same MP4 URL: iOS/Android often pause <video> in background; <audio> keeps playing. */}
+          <audio
+            ref={backgroundAudioRef}
+            className="player__background-audio"
+            preload="none"
+            playsInline
+            aria-hidden
+            onTimeUpdate={handleTimeUpdate}
+            onEnded={handleEnded}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            onCanPlay={handleCanPlay}
+          />
+          </>
         ) : (
           <audio
             ref={mediaRef}
