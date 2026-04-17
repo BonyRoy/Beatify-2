@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { toast } from "react-toastify";
 import { useListeningHistory } from "./ListeningHistoryContext";
 import { useCreateAccount } from "./CreateAccountContext";
@@ -83,6 +90,37 @@ export const PlayerProvider = ({ children }) => {
   const [allowCatalogRecommendations, setAllowCatalogRecommendations] =
     useState(true);
 
+  /**
+   * Audio `timeupdate` fires often; each `setCurrentTime` re-renders every `usePlayer()` consumer
+   * (including a large Footer). That can block the main thread and make fullscreen video/canvas
+   * rAF look “stuck” while native `<audio>` keeps playing. Throttle UI time; always flush on seeks.
+   */
+  const timeThrottleRef = useRef({ lastMs: 0, lastVal: -1 });
+
+  const flushCurrentTime = useCallback((time) => {
+    const t = typeof time === "number" && Number.isFinite(time) ? time : 0;
+    timeThrottleRef.current = { lastMs: performance.now(), lastVal: t };
+    setCurrentTime(t);
+  }, []);
+
+  const updateTime = useCallback((time) => {
+    const t = typeof time === "number" && Number.isFinite(time) ? time : 0;
+    const pr = timeThrottleRef.current;
+    const now = performance.now();
+    const bigJump = pr.lastVal < 0 || Math.abs(t - pr.lastVal) >= 0.35;
+    if (!bigJump && now - pr.lastMs < 150) return;
+    pr.lastMs = now;
+    pr.lastVal = t;
+    setCurrentTime(t);
+  }, []);
+
+  const seekTo = useCallback(
+    (time) => {
+      flushCurrentTime(time);
+    },
+    [flushCurrentTime],
+  );
+
   const selectTrack = (track, tracksList = null) => {
     // Same track already playing: don't reload, don't update, don't count
     const currentId = currentTrack?.uuid || currentTrack?.id;
@@ -108,7 +146,7 @@ export const PlayerProvider = ({ children }) => {
     }
 
     setCurrentTrack(track);
-    setCurrentTime(0);
+    flushCurrentTime(0);
     setIsPlaying(true);
     // Count immediately on click (before audio loads)
     if (track) {
@@ -193,10 +231,10 @@ export const PlayerProvider = ({ children }) => {
       selectTrack(prevTrack);
     } else if (currentIndex === 0 && currentTime > 3) {
       // If less than 3 seconds, restart current track, otherwise go to previous
-      setCurrentTime(0);
+      flushCurrentTime(0);
     } else if (currentIndex === 0) {
       // Restart current track if at the beginning
-      setCurrentTime(0);
+      flushCurrentTime(0);
     }
   };
 
@@ -204,16 +242,8 @@ export const PlayerProvider = ({ children }) => {
     setIsPlaying((prev) => !prev);
   };
 
-  const seekTo = (time) => {
-    setCurrentTime(time);
-  };
-
   const setVolumeLevel = (level) => {
     setVolume(level);
-  };
-
-  const updateTime = (time) => {
-    setCurrentTime(time);
   };
 
   const updateDuration = (dur) => {
