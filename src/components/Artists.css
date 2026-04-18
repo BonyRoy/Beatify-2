@@ -152,7 +152,9 @@
   justify-content: center;
   color: white;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   z-index: 2;
   background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fb7185 100%);
   border: 2px solid rgba(255, 255, 255, 0.95);
@@ -256,7 +258,7 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .artists-section {
-    padding: 0.75rem 0 0.5rem 0;
+    padding: 0;
     top: calc(70px + var(--app-safe-top));
     margin-top: 0;
   }
@@ -305,7 +307,7 @@
 @media (max-width: 480px) {
   .artists-section {
     top: calc(70px + var(--app-safe-top));
-    padding: 0.75rem 0 0.5rem 0;
+    padding: 0;
     margin-top: 0;
   }
 

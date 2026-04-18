@@ -757,7 +757,7 @@ const Navbar = () => {
           selectedPlaylist={selectedPlaylist}
           playlistImages={playlistImages}
         />
-      ) : (
+      ) : isMobile && view === "playlist" ? null : (
         <Artists
           artists={allArtists}
           selectedArtist={selectedArtist}
