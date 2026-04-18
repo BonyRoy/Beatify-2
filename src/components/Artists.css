@@ -3,7 +3,8 @@
   padding: 1rem 0 0.5rem 0;
   background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
   position: fixed;
-  top: 73px;
+  /* Must match navbar height; navbar uses padding-top: calc(1rem + var(--app-safe-top)) + row + bottom padding */
+  top: calc(73px + var(--app-safe-top));
   left: 0;
   right: 0;
   z-index: 99;
@@ -256,7 +257,7 @@
 @media (max-width: 768px) {
   .artists-section {
     padding: 0.75rem 0 0.5rem 0;
-    top: 70px;
+    top: calc(70px + var(--app-safe-top));
     margin-top: 0;
   }
 
@@ -303,7 +304,7 @@
 
 @media (max-width: 480px) {
   .artists-section {
-    top: 70px;
+    top: calc(70px + var(--app-safe-top));
     padding: 0.75rem 0 0.5rem 0;
     margin-top: 0;
   }
