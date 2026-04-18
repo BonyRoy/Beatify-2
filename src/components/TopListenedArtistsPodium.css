@@ -1,0 +1,335 @@
+.top-artists-podium {
+  flex: 0 0 auto;
+  width: 100%;
+  background: var(--bg);
+}
+
+.top-artists-podium__header {
+  position: relative;
+  padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+  flex-shrink: 0;
+}
+
+.top-artists-podium__header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 2px;
+  background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+}
+
+.top-artists-podium__title {
+  margin: 0;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.top-artists-podium__header-icon {
+  flex-shrink: 0;
+}
+
+/* Three equal columns, top-aligned so badges / text baselines match */
+.top-artists-podium__row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  justify-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.5rem 0.65rem;
+  box-sizing: border-box;
+}
+
+.top-artists-podium__slot {
+  width: 100%;
+  min-width: 0;
+  max-width: 140px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 10px;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.top-artists-podium__slot--empty {
+  cursor: default;
+  pointer-events: none;
+}
+
+.top-artists-podium__slot:not(.top-artists-podium__slot--empty):hover {
+  background: var(--track-bg-hover);
+}
+
+.top-artists-podium__slot:not(.top-artists-podium__slot--empty):hover
+  .top-artists-podium__ring {
+  transform: scale(1.04);
+}
+
+.top-artists-podium__slot--selected {
+  background: rgba(6, 182, 212, 0.1);
+}
+
+.top-artists-podium__ring {
+  transition: transform 0.2s ease;
+}
+
+/* Same vertical slot for every rank so icons + text line up */
+.top-artists-podium__badge-wrap {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Medal rings — refined metallic rims + depth */
+.top-artists-podium__ring {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  padding: 2.5px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-artists-podium__ring--gold {
+  background: linear-gradient(
+    145deg,
+    #fde68a 0%,
+    #f6d365 25%,
+    #d4a017 55%,
+    #a16207 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.45) inset,
+    0 1px 0 rgba(255, 255, 255, 0.35) inset,
+    0 3px 10px rgba(180, 130, 0, 0.45),
+    0 0 0 0.5px rgba(0, 0, 0, 0.2);
+}
+
+.top-artists-podium__ring--silver {
+  background: linear-gradient(
+    145deg,
+    #f4f4f5 0%,
+    #d4d4d8 35%,
+    #9ca3af 70%,
+    #71717a 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset,
+    0 1px 0 rgba(255, 255, 255, 0.3) inset,
+    0 3px 8px rgba(82, 82, 91, 0.4),
+    0 0 0 0.5px rgba(0, 0, 0, 0.15);
+}
+
+.top-artists-podium__ring--bronze {
+  background: linear-gradient(
+    145deg,
+    #fcd34d 0%,
+    #e8a87c 30%,
+    #cd7f32 60%,
+    #92400e 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35) inset,
+    0 1px 0 rgba(255, 255, 255, 0.2) inset,
+    0 3px 8px rgba(120, 53, 15, 0.45),
+    0 0 0 0.5px rgba(0, 0, 0, 0.2);
+}
+
+.top-artists-podium__ring--empty {
+  opacity: 0.5;
+}
+
+/* Inner disc: dark theme — cool slate with subtle top light */
+.top-artists-podium__badge-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      ellipse 100% 70% at 50% 0%,
+      rgba(255, 255, 255, 0.12) 0%,
+      transparent 55%
+    ),
+    linear-gradient(165deg, #3d4f63 0%, #1e293b 50%, #0f172a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.top-artists-podium__badge-inner--empty {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+}
+
+/* Unicode medal emojis (🥇 🥈 🥉) — color comes from the glyph */
+.top-artists-podium__medal-emoji {
+  display: block;
+  flex-shrink: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+  text-align: center;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.top-artists-podium__medal-emoji--empty {
+  opacity: 0.42;
+}
+
+.top-artists-podium__rank {
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.top-artists-podium__name {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  width: 100%;
+  word-break: break-word;
+  min-height: calc(0.78rem * 1.25 * 2);
+  box-sizing: border-box;
+}
+
+.top-artists-podium__name--muted {
+  font-weight: 500;
+  color: var(--text-muted);
+  min-height: calc(0.78rem * 1.25 * 2);
+}
+
+.top-artists-podium__count {
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.top-artists-podium__count--muted {
+  font-size: 0.62rem;
+  max-width: 100%;
+  padding: 0 0.15rem;
+}
+
+.top-artists-podium__hint {
+  margin: 0 0.75rem 0.65rem;
+  padding: 0 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* —— Light mode: softer medals, bright inner disc —— */
+[data-theme="light"] .top-artists-podium__slot--selected {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="light"] .top-artists-podium__ring--gold {
+  background: linear-gradient(
+    145deg,
+    #fef3c7 0%,
+    #fcd34d 30%,
+    #eab308 65%,
+    #ca8a04 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset,
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 2px 4px rgba(202, 138, 4, 0.25),
+    0 4px 12px rgba(234, 179, 8, 0.2);
+}
+
+[data-theme="light"] .top-artists-podium__ring--silver {
+  background: linear-gradient(
+    145deg,
+    #ffffff 0%,
+    #e4e4e7 40%,
+    #a1a1aa 85%,
+    #71717a 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset,
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 2px 4px rgba(113, 113, 122, 0.2),
+    0 3px 10px rgba(82, 82, 91, 0.12);
+}
+
+[data-theme="light"] .top-artists-podium__ring--bronze {
+  background: linear-gradient(
+    145deg,
+    #ffedd5 0%,
+    #fdba74 35%,
+    #ea580c 70%,
+    #c2410c 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.55) inset,
+    0 1px 0 rgba(255, 255, 255, 0.35) inset,
+    0 2px 4px rgba(194, 65, 12, 0.2),
+    0 3px 10px rgba(234, 88, 12, 0.15);
+}
+
+[data-theme="light"] .top-artists-podium__badge-inner {
+  background: linear-gradient(
+    165deg,
+    #ffffff 0%,
+    #fafafa 45%,
+    #f4f4f5 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05),
+    inset 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .top-artists-podium__badge-inner--empty {
+  background: rgba(244, 244, 245, 0.9);
+  border: 1px dashed #d4d4d8;
+}
+
+[data-theme="light"] .top-artists-podium__ring--empty {
+  opacity: 0.55;
+}
+
+@media (min-width: 400px) {
+  .top-artists-podium__row {
+    gap: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}

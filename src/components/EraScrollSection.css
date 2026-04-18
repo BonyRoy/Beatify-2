@@ -1,0 +1,91 @@
+/* Depends on .home__era-badge gradients from Home.css */
+
+.era-scroll {
+  flex: 0 0 auto;
+  width: 100%;
+  background: var(--bg);
+}
+
+.era-scroll__header {
+  position: relative;
+  padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+  flex-shrink: 0;
+}
+
+.era-scroll__header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 2px;
+  background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+}
+
+.era-scroll__title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.era-scroll__header-icon {
+  flex-shrink: 0;
+}
+
+.era-scroll__strip-wrap {
+  padding: 0.65rem 0 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.era-scroll__strip {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0.15rem 0.75rem 0.35rem;
+  box-sizing: border-box;
+}
+
+.era-scroll__strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* Slightly raised “chip” depth on top of Home era gradients */
+.era-scroll__chip {
+  font-weight: 700;
+  min-width: 3.25rem;
+  padding: 0.55rem 0.85rem;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.era-scroll__chip.home__era-badge--2000s,
+.era-scroll__chip.home__era-badge--2010s,
+.era-scroll__chip.home__era-badge--2020s {
+  min-width: 3.75rem;
+}
+
+.era-scroll__chip:hover {
+  filter: brightness(1.08);
+}
+
+.era-scroll__chip.home__era-badge--selected {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.15),
+    0 0 0 2px #fff,
+    0 0 14px rgba(255, 255, 255, 0.35);
+}

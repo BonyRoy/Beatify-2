@@ -64,29 +64,13 @@
 
 .artists-section__icon {
   display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.artists-section__icon-bar {
+.artists-section__icon-svg {
   display: block;
-  width: 14px;
-  height: 3px;
-  border-radius: 1px;
-}
-
-.artists-section__icon-bar:nth-child(1) {
-  background: #06b6d4;
-}
-
-.artists-section__icon-bar:nth-child(2) {
-  background: #3b82f6;
-}
-
-.artists-section__icon-bar:nth-child(3) {
-  background: #8b5cf6;
 }
 
 .artists-container--inline {

@@ -306,7 +306,7 @@ const Navbar = () => {
   const showFavorites = searchParams.get("favorites") === "true";
   const selectedArtist = searchParams.get("artist");
   const selectedPlaylist = searchParams.get("playlist") || "";
-  const view = searchParams.get("view") || (isMobile ? "track" : "playlist");
+  const view = searchParams.get("view") || "playlist";
   const searchQuery = searchParams.get("search") || "";
   const brandModTapCountRef = useRef(0);
   const brandModResetTimerRef = useRef(null);

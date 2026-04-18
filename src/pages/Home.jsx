@@ -16,6 +16,8 @@ import {
 import Playlist from "../components/Playlist";
 import Artists from "../components/Artists";
 import MobileTopTracksSection from "../components/MobileTopTracksSection";
+import TopListenedArtistsPodium from "../components/TopListenedArtistsPodium";
+import EraScrollSection from "../components/EraScrollSection";
 import { fetchMusicList } from "../services/musicService";
 import { usePlayer } from "../context/PlayerContext";
 import { useAlbumArt } from "../context/AlbumArtContext";
@@ -436,8 +438,8 @@ const Home = () => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Default to 'track' on mobile, 'playlist' on desktop if no view param is set
-  const defaultView = isMobile ? "track" : "playlist";
+  // Default home: playlist column on all breakpoints; `view=track` shows tracks-first mobile layout
+  const defaultView = "playlist";
   const view = searchParams.get("view") || defaultView;
   const mobileView = view === "home" ? "playlist" : view;
   const showFavorites = searchParams.get("favorites") === "true";
@@ -943,17 +945,23 @@ const Home = () => {
     [searchParams, setSearchParams, selectedArtist, isMobile, view],
   );
 
-  const handleEraClick = (era) => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    if (selectedEra === era) {
-      newSearchParams.delete("era");
-    } else {
-      newSearchParams.set("era", era);
-      newSearchParams.delete("playlist");
-      newSearchParams.delete("favorites");
-    }
-    setSearchParams(newSearchParams);
-  };
+  const handleEraClick = useCallback(
+    (era) => {
+      const newSearchParams = new URLSearchParams(searchParams);
+      if (selectedEra === era) {
+        newSearchParams.delete("era");
+      } else {
+        newSearchParams.set("era", era);
+        newSearchParams.delete("playlist");
+        newSearchParams.delete("favorites");
+        if (isMobile && view === "playlist") {
+          newSearchParams.set("view", "track");
+        }
+      }
+      setSearchParams(newSearchParams);
+    },
+    [searchParams, setSearchParams, selectedEra, isMobile, view],
+  );
 
   const handleThemeClick = (theme) => {
     const newSearchParams = new URLSearchParams(searchParams);
@@ -1161,9 +1169,29 @@ const Home = () => {
                 searchQuery={searchQuery}
                 onArtistClick={handleArtistClick}
               />
+              <TopListenedArtistsPodium
+                selectedArtist={selectedArtist}
+                onArtistClick={handleArtistClick}
+              />
+              <EraScrollSection
+                eras={ERA_ORDER.filter((e) => availableEras.includes(e))}
+                selectedEra={selectedEra}
+                onEraClick={handleEraClick}
+              />
             </div>
           ) : (
-            <Playlist hasFavorites={favorites.length > 0} />
+            <>
+              <Playlist hasFavorites={favorites.length > 0} />
+              <TopListenedArtistsPodium
+                selectedArtist={selectedArtist}
+                onArtistClick={handleArtistClick}
+              />
+              <EraScrollSection
+                eras={ERA_ORDER.filter((e) => availableEras.includes(e))}
+                selectedEra={selectedEra}
+                onEraClick={handleEraClick}
+              />
+            </>
           )}
         </main>
         {isMobile && (

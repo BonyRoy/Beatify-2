@@ -481,6 +481,18 @@ body:has(.footer--player) .home__moods-grid {
   background-color: var(--bg);
 }
 
+/* Playlist fills main column; podium sections stack below */
+.home__main > .playlist {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+.home__main > .top-artists-podium,
+.home__main > .era-scroll {
+  flex-shrink: 0;
+}
+
 /* Mobile playlist tab: playlist + artists stack; playlist height = content only (no flex gap) */
 .home__main--with-inline-artists .home__main-playlist-pane {
   flex: 1;

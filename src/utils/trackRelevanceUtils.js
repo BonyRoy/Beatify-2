@@ -26,6 +26,10 @@ const getEraFromYear = (year) => {
   return null;
 };
 
+/** Era label (e.g. "90s") from a track release date string, or null */
+export const getEraFromReleaseDate = (releaseDate) =>
+  getEraFromYear(getYearFromReleaseDate(releaseDate));
+
 /**
  * Extract artist names from a track's artist string (e.g. "A, B & C" -> ["a","b","c"])
  */

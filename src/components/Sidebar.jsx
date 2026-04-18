@@ -227,8 +227,7 @@ const Sidebar = ({
     }
   }, [isOpen]);
 
-  // Default to 'track' on mobile, 'playlist' on desktop if no view param is set
-  const defaultView = isMobile ? "track" : "playlist";
+  const defaultView = "playlist";
   const currentView = searchParams.get("view") || defaultView;
   const showFavorites = searchParams.get("favorites") === "true";
   const selectedEra = searchParams.get("era") || "";

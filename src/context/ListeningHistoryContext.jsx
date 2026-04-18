@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { getEraFromReleaseDate } from "../utils/trackRelevanceUtils";
 
 const STORAGE_KEY = "artistPlayCounts";
+const STORAGE_ERA_KEY = "eraPlayCounts";
 const STORAGE_LAST_SONGS = "beatify_last10_songs";
 const MAX_LAST_SONGS = 50;
 
@@ -46,6 +48,15 @@ const loadFromStorage = () => {
   }
 };
 
+const loadEraFromStorage = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_ERA_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
 const loadLastSongsFromStorage = () => {
   try {
     const raw = localStorage.getItem(STORAGE_LAST_SONGS);
@@ -63,6 +74,14 @@ const saveToStorage = (counts) => {
   }
 };
 
+const saveEraToStorage = (counts) => {
+  try {
+    localStorage.setItem(STORAGE_ERA_KEY, JSON.stringify(counts));
+  } catch (e) {
+    console.warn("Failed to save era play counts:", e);
+  }
+};
+
 const saveLastSongsToStorage = (songs) => {
   try {
     localStorage.setItem(STORAGE_LAST_SONGS, JSON.stringify(songs));
@@ -73,11 +92,16 @@ const saveLastSongsToStorage = (songs) => {
 
 export const ListeningHistoryProvider = ({ children }) => {
   const [artistCounts, setArtistCounts] = useState(loadFromStorage);
+  const [eraCounts, setEraCounts] = useState(loadEraFromStorage);
   const [lastSongs, setLastSongs] = useState(loadLastSongsFromStorage);
 
   useEffect(() => {
     saveToStorage(artistCounts);
   }, [artistCounts]);
+
+  useEffect(() => {
+    saveEraToStorage(eraCounts);
+  }, [eraCounts]);
 
   useEffect(() => {
     saveLastSongsToStorage(lastSongs);
@@ -98,6 +122,13 @@ export const ListeningHistoryProvider = ({ children }) => {
   const recordTrackPlay = (track) => {
     if (!track?.uuid && !track?.id) return;
     const uuid = track.uuid || track.id;
+    const era = getEraFromReleaseDate(track.releaseDate);
+    if (era) {
+      setEraCounts((prev) => ({
+        ...prev,
+        [era]: (prev[era] || 0) + 1,
+      }));
+    }
     const entry = {
       uuid,
       name: track.name || "Unknown",
@@ -119,6 +150,13 @@ export const ListeningHistoryProvider = ({ children }) => {
       .map(([name, count]) => ({ name, count }));
   };
 
+  const getTopEras = (limit = 3) => {
+    return Object.entries(eraCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, limit)
+      .map(([name, count]) => ({ name, count }));
+  };
+
   const getLastSongs = () => [...lastSongs];
 
   return (
@@ -127,8 +165,10 @@ export const ListeningHistoryProvider = ({ children }) => {
         recordArtistPlay,
         recordTrackPlay,
         getTopArtists,
+        getTopEras,
         getLastSongs,
         artistCounts,
+        eraCounts,
         lastSongs,
       }}
     >

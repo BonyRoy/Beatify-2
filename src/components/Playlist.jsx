@@ -318,7 +318,7 @@ const Playlist = ({ hasFavorites = false }) => {
     (!searchQuery || fuzzyMatches(searchQuery, FAVORITES_LABEL));
 
   // On mobile: if in playlist view, search is active, but no playlists match - switch to track view so user sees track results
-  const view = searchParams.get("view") || (isMobile ? "track" : "playlist");
+  const view = searchParams.get("view") || "playlist";
   useEffect(() => {
     if (
       isMobile &&

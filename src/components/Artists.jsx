@@ -5,6 +5,40 @@ import "./Artists.css";
 
 const SCROLL_SPEED = 15;
 
+const ArtistsProfileIcon = () => (
+  <svg
+    className="artists-section__icon-svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+  >
+    <defs>
+      <linearGradient
+        id="beatify-icon-gradient-artists"
+        x1="0%"
+        y1="0%"
+        x2="100%"
+        y2="100%"
+      >
+        <stop offset="0%" stopColor="#06b6d4" />
+        <stop offset="50%" stopColor="#3b82f6" />
+        <stop offset="100%" stopColor="#8b5cf6" />
+      </linearGradient>
+    </defs>
+    <g
+      fill="none"
+      stroke="url(#beatify-icon-gradient-artists)"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </g>
+  </svg>
+);
+
 const PlayIcon = () => (
   <svg
     width="14"
@@ -361,9 +395,7 @@ const Artists = ({
         <div className="artists-section__header artists-section__header--inline">
           <h4 className="artists-section__title">
             <span className="artists-section__icon" aria-hidden="true">
-              <span className="artists-section__icon-bar" />
-              <span className="artists-section__icon-bar" />
-              <span className="artists-section__icon-bar" />
+              <ArtistsProfileIcon />
             </span>
             Artists
           </h4>
