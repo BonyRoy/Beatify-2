@@ -26,12 +26,14 @@ const ArtistCard = ({
   shouldGrayOut,
   onArtistClick,
   selectedCardRef,
+  tileLayout = false,
 }) => {
   const nameRef = useRef(null);
   const [shouldScrollName, setShouldScrollName] = useState(false);
   const [nameDuration, setNameDuration] = useState(20);
 
   useEffect(() => {
+    if (tileLayout) return;
     const checkOverflow = () => {
       requestAnimationFrame(() => {
         setTimeout(() => {
@@ -58,33 +60,43 @@ const ArtistCard = ({
     const resizeHandler = () => checkOverflow();
     window.addEventListener("resize", resizeHandler);
     return () => window.removeEventListener("resize", resizeHandler);
-  }, [artist.name]);
+  }, [artist.name, tileLayout]);
 
   return (
     <div
       ref={isSelected ? selectedCardRef : null}
-      className={`artist-card ${shouldGrayOut ? "artist-card--grayed" : ""}`}
+      className={`artist-card ${tileLayout ? "artist-card--tile" : ""} ${shouldGrayOut ? "artist-card--grayed" : ""}`}
       onClick={() => onArtistClick && onArtistClick(artist.name)}
     >
       <div
-        className={`artist-image-wrapper ${isSelected ? "artist-image-wrapper--selected" : ""}`}
+        className={`artist-image-wrapper ${tileLayout ? "artist-image-wrapper--tile" : ""} ${isSelected ? "artist-image-wrapper--selected" : ""}`}
       >
         <img
           src={getImagePath(artist.image)}
           alt={artist.name}
-          className={`artist-image ${shouldGrayOut ? "artist-image--grayed" : ""}`}
+          className={`artist-image ${tileLayout ? "artist-image--tile" : ""} ${shouldGrayOut ? "artist-image--grayed" : ""}`}
           onError={(e) => {
-            e.target.style.display = "none";
-            e.target.parentElement.innerHTML =
-              '<div class="artist-placeholder">' +
-              artist.name.charAt(0) +
-              "</div>";
+            const img = e.target;
+            if (img.dataset.fallback === "1") return;
+            img.dataset.fallback = "1";
+            img.style.display = "none";
+            const ph = document.createElement("div");
+            ph.className = tileLayout
+              ? "artist-placeholder artist-placeholder--tile"
+              : "artist-placeholder";
+            ph.textContent = artist.name.charAt(0);
+            img.insertAdjacentElement("afterend", ph);
           }}
         />
+        {tileLayout && (
+          <div className="artist-name-overlay" aria-hidden="true">
+            <span className="artist-name artist-name--overlay">{artist.name}</span>
+          </div>
+        )}
         {isSelected && (
           <button
             type="button"
-            className="artist-play-btn"
+            className={`artist-play-btn ${tileLayout ? "artist-play-btn--tile" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
               window.dispatchEvent(
@@ -99,26 +111,28 @@ const ArtistCard = ({
           </button>
         )}
       </div>
-      <div className="artist-name-wrapper">
-        <div
-          className={`artist-name-inner ${isSelected && shouldScrollName ? "artist-name--scroll" : ""}`}
-          style={
-            isSelected && shouldScrollName
-              ? { "--scroll-duration": `${nameDuration}s` }
-              : {}
-          }
-        >
-          <p
-            ref={nameRef}
-            className={`artist-name ${!(isSelected && shouldScrollName) ? "artist-name--truncate" : ""}`}
+      {!tileLayout && (
+        <div className="artist-name-wrapper">
+          <div
+            className={`artist-name-inner ${isSelected && shouldScrollName ? "artist-name--scroll" : ""}`}
+            style={
+              isSelected && shouldScrollName
+                ? { "--scroll-duration": `${nameDuration}s` }
+                : {}
+            }
           >
-            {artist.name}
-          </p>
-          {isSelected && shouldScrollName && (
-            <p className="artist-name artist-name--duplicate">{artist.name}</p>
-          )}
+            <p
+              ref={nameRef}
+              className={`artist-name ${!(isSelected && shouldScrollName) ? "artist-name--truncate" : ""}`}
+            >
+              {artist.name}
+            </p>
+            {isSelected && shouldScrollName && (
+              <p className="artist-name artist-name--duplicate">{artist.name}</p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -170,7 +184,13 @@ export const getImagePath = (imageName) => {
   return `/Artists/${filename}`;
 };
 
-const Artists = ({ artists, selectedArtist, searchQuery, onArtistClick }) => {
+const Artists = ({
+  artists,
+  selectedArtist,
+  searchQuery,
+  onArtistClick,
+  inline = false,
+}) => {
   const containerRef = useRef(null);
   const selectedCardRef = useRef(null);
   const [musicList, setMusicList] = useState([]);
@@ -334,8 +354,25 @@ const Artists = ({ artists, selectedArtist, searchQuery, onArtistClick }) => {
   }
 
   return (
-    <div className="artists-section">
-      <div className="artists-container" ref={containerRef}>
+    <div
+      className={`artists-section${inline ? " artists-section--inline" : ""}`}
+    >
+      {inline && (
+        <div className="artists-section__header artists-section__header--inline">
+          <h4 className="artists-section__title">
+            <span className="artists-section__icon" aria-hidden="true">
+              <span className="artists-section__icon-bar" />
+              <span className="artists-section__icon-bar" />
+              <span className="artists-section__icon-bar" />
+            </span>
+            Artists
+          </h4>
+        </div>
+      )}
+      <div
+        className={`artists-container${inline ? " artists-container--inline" : ""}`}
+        ref={containerRef}
+      >
         {reorderedArtists.map((artist) => {
           const isSelected = selectedArtist === artist.name;
           const shouldGrayOut = selectedArtist && !isSelected;
@@ -347,6 +384,7 @@ const Artists = ({ artists, selectedArtist, searchQuery, onArtistClick }) => {
               shouldGrayOut={shouldGrayOut}
               onArtistClick={onArtistClick}
               selectedCardRef={selectedCardRef}
+              tileLayout={inline}
             />
           );
         })}

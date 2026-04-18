@@ -234,12 +234,13 @@ body:has(.footer--player) .home__moods-grid {
   background: transparent;
 }
 
+/* Same default as user-created playlist when no album art (see .playlist__placeholder) */
 .track-row__art--placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
-  color: white;
+  background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+  color: rgba(255, 255, 255, 0.95);
   border-radius: 0;
   width: 64px;
   height: 64px;
@@ -248,6 +249,7 @@ body:has(.footer--player) .home__moods-grid {
 .track-row__art--placeholder svg {
   width: 28px;
   height: 28px;
+  stroke: rgba(255, 255, 255, 0.92);
 }
 
 .track-row__info {
@@ -477,6 +479,55 @@ body:has(.footer--player) .home__moods-grid {
   min-height: 0;
   overflow: hidden;
   background-color: var(--bg);
+}
+
+/* Mobile playlist tab: playlist + artists stack; playlist height = content only (no flex gap) */
+.home__main--with-inline-artists .home__main-playlist-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.home__main--with-inline-artists .home__main-playlist-pane > .playlist {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+}
+
+/* Undo playlist column flex-grow so the grid row doesn’t eat vertical space */
+.home__main--with-inline-artists .home__main-playlist-pane .playlist__grid {
+  flex: 0 0 auto;
+  min-height: 0;
+  /* Default playlist grid uses large bottom padding when player is open — that reads as a gap above Artists */
+  margin-bottom: 0;
+}
+
+body:has(.footer--player)
+  .home__main--with-inline-artists
+  .home__main-playlist-pane
+  .playlist__grid {
+  padding-bottom: 0.75rem;
+}
+
+/* Keep clearance above overlay footer by padding the scroll column, not the playlist row */
+body:has(.footer--player)
+  .home__main--with-inline-artists
+  .home__main-playlist-pane {
+  padding-bottom: 88px;
+}
+
+@media (max-width: 480px) {
+  body:has(.footer--player)
+    .home__main--with-inline-artists
+    .home__main-playlist-pane {
+    padding-bottom: 72px;
+  }
 }
 
 .home__main h4 {

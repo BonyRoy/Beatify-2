@@ -12,6 +12,9 @@ import "./Playlist.css";
 
 const RESERVED_PLAYLIST_NAMES = ["My Favorites", "Top 10 of the Week"];
 
+/** Hidden from the horizontal playlist strip on phone; Top 10 is shown in MobileTopTracksSection instead */
+const TOP_10_PLAYLIST_LABEL = "Top 10 of the Week";
+
 const PlaylistIconGradient = () => (
   <svg
     width="24"
@@ -134,11 +137,7 @@ const DeletePlaylistConfirmModal = ({ target, onClose, onConfirm }) => {
   if (!target) return null;
   return (
     <>
-      <div
-        className="modal-overlay"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="modal-overlay" onClick={onClose} aria-hidden="true" />
       <div
         className="modal playlist-delete-modal"
         role="alertdialog"
@@ -269,7 +268,8 @@ const PlaylistImageItem = ({
 const FAVORITES_LABEL = "My Favorites";
 
 const Playlist = ({ hasFavorites = false }) => {
-  const { playlistImages, refreshPlaylists, getPlaylistByLabel } = usePlaylist();
+  const { playlistImages, refreshPlaylists, getPlaylistByLabel } =
+    usePlaylist();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const searchQuery = searchParams.get("search") || "";
@@ -301,11 +301,16 @@ const Playlist = ({ hasFavorites = false }) => {
 
   // Filter playlists based on search query (fuzzy match, ~75% similarity)
   const filteredPlaylists = useMemo(() => {
-    if (!searchQuery) return playlistImages;
-    return playlistImages.filter((playlist) =>
-      fuzzyMatches(searchQuery, playlist.label),
-    );
-  }, [searchQuery, playlistImages]);
+    let list = !searchQuery
+      ? playlistImages
+      : playlistImages.filter((playlist) =>
+          fuzzyMatches(searchQuery, playlist.label),
+        );
+    if (isMobile) {
+      list = list.filter((p) => p.label !== TOP_10_PLAYLIST_LABEL);
+    }
+    return list;
+  }, [searchQuery, playlistImages, isMobile]);
 
   // Include My Favorites card only when user has favorites, and when search matches or no search
   const showFavoritesCard =
@@ -464,16 +469,16 @@ const Playlist = ({ hasFavorites = false }) => {
             {!searchQuery && (
               <>
                 <p className="playlist__empty-hint">
-                  Create your own with &quot;Create playlist&quot;, or an admin can add
-                  playlists in Admin → Playlist.
+                  Create your own with &quot;Create playlist&quot;, or an admin
+                  can add playlists in Admin → Playlist.
                 </p>
-                <button
+                {/* <button
                   type="button"
                   className="playlist__retry-btn"
                   onClick={() => refreshPlaylists()}
                 >
                   Retry loading
-                </button>
+                </button> */}
               </>
             )}
           </div>

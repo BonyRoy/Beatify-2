@@ -9,7 +9,7 @@
   /* Set by useAppContentOffset from measured fixed navbar + artists/playlist/moods */
   padding-top: var(
     --app-content-offset,
-    calc(73px + var(--app-safe-top))
+    var(--navbar-stack-height, calc(73px + var(--app-safe-top)))
   );
   padding-bottom: 56px; /* matches .footer--empty height (1rem padding + line) */
   width: 100%;

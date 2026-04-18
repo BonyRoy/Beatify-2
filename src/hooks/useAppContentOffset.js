@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from "react";
 
 /** Fixed strips below the navbar that reserve vertical space for main content */
 const SECOND_ROW_SELECTOR =
-  ".artists-section, .playlist-header-mobile, .moods-header-mobile";
+  ".artists-section:not(.artists-section--inline), .playlist-header-mobile, .moods-header-mobile";
 
 /**
  * Sets --app-content-offset on <html> to the bottom edge of the fixed header stack

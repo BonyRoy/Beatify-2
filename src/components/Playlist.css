@@ -251,6 +251,36 @@ body:has(.footer--player) .playlist__grid {
   }
 }
 
+/* Phone / small tablet: single horizontal row (like Artists), swipe to scroll */
+@media (max-width: 768px) {
+  .playlist__grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 1.35rem;
+    padding: 0.75rem 0rem 0rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    grid-template-columns: unset;
+  }
+
+  .playlist__item {
+    flex: 0 0 auto;
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
+  }
+
+  .playlist__empty {
+    flex: 0 0 100%;
+    min-width: 100%;
+    width: 100%;
+    grid-column: unset;
+  }
+}
+
 /* User playlist: edit + delete — does not trigger card selection */
 .playlist__user-actions {
   position: absolute;
@@ -351,8 +381,15 @@ body:has(.footer--player) .playlist__grid {
 
 @media (max-width: 480px) {
   .playlist__grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 0.75rem;
+    gap: 1.1rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .playlist__item {
+    width: 128px;
+    min-width: 128px;
+    max-width: 128px;
   }
 
   .playlist__edit-btn,

@@ -596,7 +596,7 @@
   .playlist-header-mobile {
     display: block;
     position: fixed;
-    top: calc(70px + var(--app-safe-top));
+    top: var(--navbar-stack-height, calc(70px + var(--app-safe-top)));
     left: 0;
     right: 0;
     z-index: 99;
@@ -640,7 +640,7 @@
   /* Moods header - gradient blue header with "Moods" in white */
   .moods-header-mobile {
     position: fixed;
-    top: calc(70px + var(--app-safe-top));
+    top: var(--navbar-stack-height, calc(70px + var(--app-safe-top)));
     left: 0;
     right: 0;
     z-index: 99;

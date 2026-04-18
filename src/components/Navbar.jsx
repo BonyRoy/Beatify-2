@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { UserPlus, User, MessageSquare, Sparkles } from "lucide-react";
@@ -25,6 +31,7 @@ import {
   unlockGuestMod,
   lockGuestMod,
 } from "../utils/guestPlayLimit";
+import { allArtists } from "../data/topArtists";
 import "./Navbar.css";
 
 const SunIcon = () => (
@@ -213,48 +220,6 @@ const ClearIcon = () => (
   </svg>
 );
 
-// Artists data
-const allArtists = [
-  { id: 1, name: "Arijit Singh", image: "arjit" },
-  { id: 2, name: "Mohit Chauhan", image: "mohit" },
-  { id: 3, name: "Rahat Fateh Ali Khan", image: "rahet" },
-  { id: 4, name: "Shankar Mahadevan", image: "shankar" },
-  { id: 5, name: "Richa Sharma", image: "richa" },
-  { id: 6, name: "Javed Ali", image: "javedali" },
-  { id: 7, name: "Honey Singh", image: "honey" },
-  { id: 8, name: "Badshah", image: "badshah" },
-  { id: 9, name: "Jubin Nautiyal", image: "JubinNautiyal" },
-  { id: 10, name: "Himesh Reshammiya", image: "HimeshReshammiya" },
-  { id: 11, name: "Shaan", image: "Shaan" },
-  { id: 12, name: "Sonu Nigam", image: "SonuNigam" },
-  { id: 13, name: "Sajid Wajid", image: "SajidWajid" },
-  { id: 14, name: "Shreya Ghoshal", image: "ShreyaGhoshal" },
-  { id: 15, name: "Babul Supriyo", image: "BabulSupriyo" },
-  { id: 16, name: "Guru Randhawa", image: "GuruRandhawa" },
-  { id: 17, name: "Sukhwinder Singh", image: "SukhwinderSingh" },
-  { id: 18, name: "Papon", image: "Papon" },
-  { id: 19, name: "Abhijeet", image: "AbhijeetBhattacharya" },
-  { id: 20, name: "Vishal-Shekhar", image: "VishalShekhar" },
-  { id: 21, name: "Atif Aslam", image: "AtifAslam" },
-  { id: 22, name: "KK", image: "KK" },
-  { id: 23, name: "Diljit Dosanjh", image: "DiljitDosanjh" },
-  { id: 24, name: "Shafqat Amanat Ali", image: "ShafqatAmanatAli" },
-  { id: 25, name: "Sunidhi Chauhan", image: "SunidhiChauhan" },
-  { id: 26, name: "A. R. Rahman", image: "ARRahman" },
-  { id: 27, name: "Ajay-Atul", image: "AjayAtul" },
-  { id: 28, name: "Ayushmann Khurrana", image: "AyushmannKhurrana" },
-  { id: 29, name: "Armaan Malik", image: "ArmaanMalik" },
-  { id: 30, name: "Harrdy Sandhu", image: "HarrdySandhu" },
-  { id: 31, name: "Vishal Mishra", image: "VishalMishra" },
-  { id: 32, name: "Harshit Saxena", image: "HarshitSaxena" },
-  { id: 33, name: "Alka Yagnik", image: "AlkaYagnik" },
-  { id: 34, name: "Udit Narayan", image: "UditNarayan" },
-  { id: 35, name: "Kumar Sanu", image: "KumarSanu" },
-  { id: 36, name: "Kailash Kher", image: "KailashKher" },
-  { id: 37, name: "Kishore Kumar", image: "KishoreKumar" },
-  { id: 38, name: "Lata Mangeshkar", image: "lata" },
-];
-
 const MobilePlaylistHeaderStrip = ({ selectedPlaylist, playlistImages }) => {
   const plMeta = useMemo(
     () => playlistImages.find((p) => p.label === selectedPlaylist),
@@ -351,6 +316,29 @@ const Navbar = () => {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  /* Measured navbar height — avoids a visible gap between nav and fixed artists / headers */
+  useLayoutEffect(() => {
+    const nav = document.querySelector(".navbar");
+    if (!nav) return undefined;
+
+    const apply = () => {
+      const h = Math.round(nav.getBoundingClientRect().height);
+      document.documentElement.style.setProperty(
+        "--navbar-stack-height",
+        `${h}px`,
+      );
+    };
+
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(nav);
+    window.addEventListener("resize", apply);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", apply);
+    };
   }, []);
 
   useEffect(() => {

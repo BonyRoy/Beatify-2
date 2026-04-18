@@ -3,14 +3,94 @@
   padding: 1rem 0 0.5rem 0;
   background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
   position: fixed;
-  /* Must match navbar height; navbar uses padding-top: calc(1rem + var(--app-safe-top)) + row + bottom padding */
-  top: calc(73px + var(--app-safe-top));
+  /* Set by Navbar (measured) — fallback avoids gap before JS runs */
+  top: var(--navbar-stack-height, calc(73px + var(--app-safe-top)));
   left: 0;
   right: 0;
   z-index: 99;
   overflow-x: hidden;
   overflow-y: hidden;
   margin: 0;
+}
+
+/* In-flow in playlist column on mobile (not counted in --app-content-offset) */
+.artists-section.artists-section--inline {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  padding: 0;
+  border-bottom: none;
+}
+
+.artists-section.artists-section--inline::before,
+.artists-section.artists-section--inline::after {
+  content: none;
+  display: none;
+}
+
+/* Matches playlist header row + solid divider (no gradients) */
+.artists-section__header--inline {
+  position: relative;
+  padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+  flex-shrink: 0;
+}
+
+.artists-section__header--inline::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 2px;
+  background: #06b6d4;
+  opacity: 0.9;
+}
+
+.artists-section__title {
+  margin: 0;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.artists-section__icon {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.artists-section__icon-bar {
+  display: block;
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.artists-section__icon-bar:nth-child(1) {
+  background: #06b6d4;
+}
+
+.artists-section__icon-bar:nth-child(2) {
+  background: #3b82f6;
+}
+
+.artists-section__icon-bar:nth-child(3) {
+  background: #8b5cf6;
+}
+
+.artists-container--inline {
+  padding: 0.75rem 1rem 0.5rem;
 }
 
 .artists-section::before,
@@ -259,7 +339,6 @@
 @media (max-width: 768px) {
   .artists-section {
     padding: 0;
-    top: calc(70px + var(--app-safe-top));
     margin-top: 0;
   }
 
@@ -271,6 +350,10 @@
   .artists-container {
     gap: 1.25rem;
     padding: 0 1rem;
+  }
+
+  .artists-container.artists-container--inline {
+    padding: 0.75rem 1rem 0.5rem;
   }
 
   .artist-card {
@@ -306,7 +389,6 @@
 
 @media (max-width: 480px) {
   .artists-section {
-    top: calc(70px + var(--app-safe-top));
     padding: 0;
     margin-top: 0;
   }
@@ -319,6 +401,10 @@
   .artists-container {
     gap: 1rem;
     padding: 2px 1rem;
+  }
+
+  .artists-container.artists-container--inline {
+    padding: 0.65rem 0.75rem 0.45rem;
   }
 
   .artist-card {
@@ -352,5 +438,134 @@
     font-size: 0.7rem;
     line-height: 1.2;
     padding: 0 2px;
+  }
+}
+
+/* Mobile playlist column: square tiles (match playlist), label inside image */
+.artists-section--inline .artist-card.artist-card--tile {
+  min-width: 140px;
+  width: 140px;
+  max-width: 140px;
+  gap: 0;
+  align-items: stretch;
+}
+
+.artists-section--inline .artists-container {
+  gap: 1.35rem;
+}
+
+.artists-section--inline .artist-image-wrapper--tile {
+  width: 140px;
+  height: 140px;
+  border-radius: 0;
+  overflow: hidden;
+  border: 2px solid var(--nav-border, #333);
+  flex-shrink: 0;
+}
+
+.artists-section--inline .artist-image-wrapper--tile.artist-image-wrapper--selected {
+  border-color: var(--text-hover, #a78bfa);
+  border-width: 3px;
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.3);
+}
+
+.artists-section--inline .artist-image--tile {
+  border-radius: 0;
+}
+
+.artists-section--inline .artist-name-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.4rem 0.45rem 0.35rem;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.5) 70%,
+    transparent 100%
+  );
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.artists-section--inline .artist-name--overlay {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  margin: 0;
+}
+
+.artists-section--inline .artist-play-btn--tile {
+  top: 6px;
+  right: 6px;
+  bottom: auto;
+  width: 28px;
+  height: 28px;
+  z-index: 2;
+}
+
+.artists-section--inline .artist-image-wrapper--tile:hover {
+  transform: none;
+}
+
+.artists-section--inline .artist-card--tile:hover {
+  transform: translateY(-2px);
+}
+
+.artists-section--inline .artist-placeholder--tile {
+  border-radius: 0;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.25rem;
+}
+
+@media (max-width: 480px) {
+  .artists-section--inline .artist-card.artist-card--tile {
+    min-width: 128px;
+    width: 128px;
+    max-width: 128px;
+  }
+
+  .artists-section--inline .artist-image-wrapper--tile {
+    width: 128px;
+    height: 128px;
+  }
+
+  .artists-section--inline .artists-container {
+    gap: 1.1rem;
+  }
+
+  .artists-section--inline .artist-name--overlay {
+    font-size: 0.72rem;
+  }
+
+  .artists-section--inline .artist-name-overlay {
+    padding: 0.35rem 0.4rem 0.3rem;
+  }
+
+  .artists-section--inline .artist-play-btn--tile {
+    width: 26px;
+    height: 26px;
+  }
+
+  .artists-section--inline .artist-play-btn--tile svg {
+    width: 11px;
+    height: 11px;
   }
 }

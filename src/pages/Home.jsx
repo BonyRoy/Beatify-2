@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import DownloadModal from "../components/DownloadModal";
 import { useRequestSong } from "../context/RequestSongContext";
@@ -8,6 +14,8 @@ import {
   FAVORITES_LOADED,
 } from "../components/ListeningStatsSync";
 import Playlist from "../components/Playlist";
+import Artists from "../components/Artists";
+import MobileTopTracksSection from "../components/MobileTopTracksSection";
 import { fetchMusicList } from "../services/musicService";
 import { usePlayer } from "../context/PlayerContext";
 import { useAlbumArt } from "../context/AlbumArtContext";
@@ -20,6 +28,7 @@ import { sortTracksByRelevance } from "../utils/trackRelevanceUtils";
 import { THEME_OPTIONS } from "../utils/themeOptions";
 import { MOODS_IMAGES } from "../utils/moodsImages";
 import { getTrackFormatTag } from "../utils/trackMediaKind";
+import { allArtists } from "../data/topArtists";
 import "./Home.css";
 
 const DownloadIcon = ({ filled }) => (
@@ -387,9 +396,7 @@ const MusicTrack = ({
           type="button"
           className={`track-row__icon-btn track-row__icon-btn--fav ${isFavorite ? "track-row__icon-btn--active" : ""}`}
           onClick={() => onFavoriteToggle(trackIdentifier)}
-          aria-label={
-            isFavorite ? "Remove from favorites" : "Add to favorites"
-          }
+          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
         >
           <FavoriteIcon filled={isFavorite} />
         </button>
@@ -795,6 +802,28 @@ const Home = () => {
     artistCounts,
   ]);
 
+  /** Weekly Top 10 for phone playlist column (grid below playlist strip) */
+  const top10TracksForMobile = useMemo(() => {
+    const top10Uuids = Object.entries(playCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([uuid]) => uuid);
+    if (top10Uuids.length === 0) return [];
+    const rank = Object.fromEntries(top10Uuids.map((uuid, i) => [uuid, i]));
+    return [...musicList]
+      .filter((t) => top10Uuids.includes(t.uuid || t.id))
+      .sort(
+        (a, b) => (rank[a.uuid || a.id] ?? 999) - (rank[b.uuid || b.id] ?? 999),
+      );
+  }, [musicList, playCounts]);
+
+  const handleMobileTopTrackClick = useCallback(
+    (track) => {
+      selectTrack(track, top10TracksForMobile);
+    },
+    [selectTrack, top10TracksForMobile],
+  );
+
   const handleTrackClick = (track) => {
     selectTrack(track, sortedMusicList);
   };
@@ -890,6 +919,30 @@ const Home = () => {
     setSearchParams(newSearchParams);
   };
 
+  const handleArtistClick = useCallback(
+    (artistName) => {
+      const newSearchParams = new URLSearchParams(searchParams);
+      if (selectedArtist === artistName) {
+        newSearchParams.delete("artist");
+      } else {
+        newSearchParams.set("artist", artistName);
+        newSearchParams.delete("favorites");
+        newSearchParams.delete("playlist");
+        if (isMobile && view === "playlist") {
+          newSearchParams.set("view", "track");
+        }
+        const savedArtists = JSON.parse(
+          localStorage.getItem("selectedArtists") || "[]",
+        );
+        const filtered = savedArtists.filter((name) => name !== artistName);
+        const updated = [artistName, ...filtered].slice(0, 4);
+        localStorage.setItem("selectedArtists", JSON.stringify(updated));
+      }
+      setSearchParams(newSearchParams);
+    },
+    [searchParams, setSearchParams, selectedArtist, isMobile, view],
+  );
+
   const handleEraClick = (era) => {
     const newSearchParams = new URLSearchParams(searchParams);
     if (selectedEra === era) {
@@ -935,6 +988,10 @@ const Home = () => {
         size: "",
         releaseDate: "",
       };
+
+  const playingTrackId = currentTrack
+    ? currentTrack.uuid || currentTrack.id
+    : null;
 
   return (
     <div className={`home home--mobile-view-${mobileView}`}>
@@ -1007,9 +1064,10 @@ const Home = () => {
             ) : error ? (
               <div className="home__error">
                 <p>{error}</p>
-                <button onClick={loadMusicList} className="home__retry-btn">
+                <p>Please try again later.</p>
+                {/* <button onClick={loadMusicList} className="home__retry-btn">
                   Retry
-                </button>
+                </button> */}
               </div>
             ) : filteredMusicList.length === 0 ? (
               <div className="home__empty">
@@ -1080,8 +1138,33 @@ const Home = () => {
             )}
           </div>
         </aside>
-        <main className="home__main">
-          <Playlist hasFavorites={favorites.length > 0} />
+        <main
+          className={`home__main${
+            isMobile && view === "playlist"
+              ? " home__main--with-inline-artists"
+              : ""
+          }`}
+        >
+          {isMobile && view === "playlist" ? (
+            <div className="home__main-playlist-pane">
+              <Playlist hasFavorites={favorites.length > 0} />
+              <MobileTopTracksSection
+                tracks={top10TracksForMobile}
+                currentTrackId={playingTrackId}
+                isPlaying={isPlaying}
+                onTrackClick={handleMobileTopTrackClick}
+              />
+              <Artists
+                inline
+                artists={allArtists}
+                selectedArtist={selectedArtist}
+                searchQuery={searchQuery}
+                onArtistClick={handleArtistClick}
+              />
+            </div>
+          ) : (
+            <Playlist hasFavorites={favorites.length > 0} />
+          )}
         </main>
         {isMobile && (
           <section className="home__moods" aria-hidden={mobileView !== "moods"}>

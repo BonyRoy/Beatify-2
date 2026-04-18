@@ -57,7 +57,8 @@ export function PlaylistProvider({ children }) {
       order: 0,
       isUserPlaylist: true,
     }));
-    return [...server, ...userRows];
+    /* User playlists first (newest among them first), then server playlists by order */
+    return [...userRows, ...server];
   }, [playlists, userPlaylistsTick]);
 
   const playlistTrackIds = useMemo(() => {
