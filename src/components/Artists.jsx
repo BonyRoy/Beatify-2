@@ -328,18 +328,6 @@ const Artists = ({ artists, selectedArtist, searchQuery, onArtistClick }) => {
     };
   }, [selectedArtist]);
 
-  // Don't render if no artists match and update body class
-  useEffect(() => {
-    if (reorderedArtists.length === 0) {
-      document.body.classList.add("artists-hidden");
-    } else {
-      document.body.classList.remove("artists-hidden");
-    }
-    return () => {
-      document.body.classList.remove("artists-hidden");
-    };
-  }, [reorderedArtists.length]);
-
   // Don't render if no artists match
   if (reorderedArtists.length === 0) {
     return null;

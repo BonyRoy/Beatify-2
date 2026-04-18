@@ -1,5 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { useAppContentOffset } from './hooks/useAppContentOffset'
 import { ToastContainer } from 'react-toastify'
 import { ThemeProvider } from './context/ThemeContext'
 import { PlaylistProvider } from './context/PlaylistContext'
@@ -26,6 +27,7 @@ import './App.css'
 const AppContent = () => {
   const location = useLocation()
   const isAdminPage = location.pathname === '/admin'
+  useAppContentOffset(!isAdminPage)
 
   return (
     <>

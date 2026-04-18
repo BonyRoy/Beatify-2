@@ -292,14 +292,14 @@ const Sidebar = ({
         aria-hidden="true"
       />
       <aside className={`sidebar ${isOpen ? "sidebar--open" : ""}`}>
-        <button
+        {/* <button
           type="button"
           className="sidebar__close"
           onClick={onClose}
           aria-label="Close sidebar"
         >
           <CloseIcon />
-        </button>
+        </button> */}
 
         <div className="sidebar__content">
           {onOpenProfileModal ? (
