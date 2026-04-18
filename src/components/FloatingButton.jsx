@@ -33,7 +33,17 @@ const loadStoredPosition = () => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const { x, y } = JSON.parse(stored);
-      if (typeof x === "number" && typeof y === "number") return { x, y };
+      if (typeof x === "number" && typeof y === "number") {
+        if (typeof window !== "undefined" && window.innerWidth <= 768) {
+          const btnSize = 56;
+          const margin = 20;
+          const reserveRight = 96;
+          if (x > window.innerWidth - btnSize - margin - reserveRight) {
+            return { x: margin, y };
+          }
+        }
+        return { x, y };
+      }
     }
   } catch (_) {}
   return null;
@@ -122,6 +132,12 @@ const FloatingButton = ({
   const getDefaultPosition = useCallback(() => {
     const btnSize = 56;
     const margin = 20;
+    if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      return {
+        x: margin,
+        y: window.innerHeight - btnSize - margin,
+      };
+    }
     return {
       x: window.innerWidth - btnSize - margin,
       y: window.innerHeight - btnSize - margin,
@@ -131,9 +147,16 @@ const FloatingButton = ({
   const clampPosition = useCallback((x, y) => {
     const btnSize = 56;
     const margin = 8;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const narrow = w <= 768;
+    const reserveRight = 96;
+    const maxX = narrow
+      ? Math.max(margin, w - btnSize - margin - reserveRight)
+      : w - btnSize - margin;
     return {
-      x: Math.max(margin, Math.min(window.innerWidth - btnSize - margin, x)),
-      y: Math.max(margin, Math.min(window.innerHeight - btnSize - margin, y)),
+      x: Math.max(margin, Math.min(maxX, x)),
+      y: Math.max(margin, Math.min(h - btnSize - margin, y)),
     };
   }, []);
 
