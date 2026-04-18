@@ -34,14 +34,6 @@ const loadStoredPosition = () => {
     if (stored) {
       const { x, y } = JSON.parse(stored);
       if (typeof x === "number" && typeof y === "number") {
-        if (typeof window !== "undefined" && window.innerWidth <= 768) {
-          const btnSize = 56;
-          const margin = 20;
-          const reserveRight = 96;
-          if (x > window.innerWidth - btnSize - margin - reserveRight) {
-            return { x: margin, y };
-          }
-        }
         return { x, y };
       }
     }
@@ -149,11 +141,7 @@ const FloatingButton = ({
     const margin = 8;
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const narrow = w <= 768;
-    const reserveRight = 96;
-    const maxX = narrow
-      ? Math.max(margin, w - btnSize - margin - reserveRight)
-      : w - btnSize - margin;
+    const maxX = w - btnSize - margin;
     return {
       x: Math.max(margin, Math.min(maxX, x)),
       y: Math.max(margin, Math.min(h - btnSize - margin, y)),
