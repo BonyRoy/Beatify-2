@@ -481,15 +481,16 @@ body:has(.footer--player) .home__moods-grid {
   background-color: var(--bg);
 }
 
-/* Playlist fills main column; podium sections stack below */
+/* Desktop / non-mobile playlist column: playlist only fills main */
 .home__main > .playlist {
   flex: 1;
   min-height: 0;
   height: auto;
 }
 
-.home__main > .top-artists-podium,
-.home__main > .era-scroll {
+/* Mobile playlist pane: podium + era sit under playlist strip */
+.home__main-playlist-pane > .top-artists-podium,
+.home__main-playlist-pane > .era-scroll {
   flex-shrink: 0;
 }
 

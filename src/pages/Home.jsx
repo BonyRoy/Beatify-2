@@ -1180,18 +1180,7 @@ const Home = () => {
               />
             </div>
           ) : (
-            <>
-              <Playlist hasFavorites={favorites.length > 0} />
-              <TopListenedArtistsPodium
-                selectedArtist={selectedArtist}
-                onArtistClick={handleArtistClick}
-              />
-              <EraScrollSection
-                eras={ERA_ORDER.filter((e) => availableEras.includes(e))}
-                selectedEra={selectedEra}
-                onEraClick={handleEraClick}
-              />
-            </>
+            <Playlist hasFavorites={favorites.length > 0} />
           )}
         </main>
         {isMobile && (
