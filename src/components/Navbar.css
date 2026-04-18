@@ -7,7 +7,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 2rem;
+  /* iPhone notch / status bar / Control Center strip — viewport-fit=cover needs safe-area padding */
+  padding: calc(1rem + env(safe-area-inset-top, 0px))
+    calc(2rem + env(safe-area-inset-right, 0px)) 1rem
+    calc(2rem + env(safe-area-inset-left, 0px));
   background-color: var(--nav-bg, #1a1a1a);
   z-index: 100;
 }
@@ -386,7 +389,9 @@
 
 @media (max-width: 768px) {
   .navbar {
-    padding: 1rem 1.125rem;
+    padding: calc(1rem + env(safe-area-inset-top, 0px))
+      calc(1.125rem + env(safe-area-inset-right, 0px)) 1rem
+      calc(1.125rem + env(safe-area-inset-left, 0px));
     gap: 0.5rem;
   }
 
@@ -430,7 +435,9 @@
 
 @media (max-width: 480px) {
   .navbar {
-    padding: 0.75rem 1rem;
+    padding: calc(0.75rem + env(safe-area-inset-top, 0px))
+      calc(1rem + env(safe-area-inset-right, 0px)) 0.75rem
+      calc(1rem + env(safe-area-inset-left, 0px));
     gap: 0.4rem;
   }
 

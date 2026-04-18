@@ -6,7 +6,7 @@
 
 .app__content {
   height: 100vh;
-  padding-top: 230px;
+  padding-top: calc(230px + env(safe-area-inset-top, 0px));
   padding-bottom: 56px; /* matches .footer--empty height (1rem padding + line) */
   width: 100%;
   overflow-y: hidden;
@@ -43,19 +43,19 @@ body:has(.footer--player) .app__content {
 
 /* Reduce padding when artists section is hidden */
 body.artists-hidden .app__content {
-  padding-top: 73px;
+  padding-top: calc(73px + env(safe-area-inset-top, 0px));
   /* Only navbar height */
 }
 
 /* Laptop and full screen - add gap after artists section */
 @media (min-width: 1024px) {
   .app__content {
-    padding-top: 246px;
+    padding-top: calc(246px + env(safe-area-inset-top, 0px));
     /* 230px + 16px gap */
   }
 
   body.artists-hidden .app__content {
-    padding-top: 73px;
+    padding-top: calc(73px + env(safe-area-inset-top, 0px));
     /* Only navbar height */
   }
 
@@ -68,22 +68,22 @@ body.artists-hidden .app__content {
 @media (max-width: 768px) {
   .app__content {
     /* Navbar ~70px + Artists section ~132px (80px image + padding + text) = ~202px */
-    padding-top: 200px;
+    padding-top: calc(200px + env(safe-area-inset-top, 0px));
   }
 
   /* When playlist header replaces artists (playlist playing on mobile) */
   body.playlist-header-visible .app__content {
-    padding-top: 205px;
+    padding-top: calc(205px + env(safe-area-inset-top, 0px));
     /* Navbar ~73px + playlist image header ~132px */
   }
 
   body.artists-hidden .app__content {
-    padding-top: 70px;
+    padding-top: calc(70px + env(safe-area-inset-top, 0px));
     /* Only navbar height on mobile */
   }
 
   body.moods-header-visible .app__content {
-    padding-top: 135px;
+    padding-top: calc(135px + env(safe-area-inset-top, 0px));
     /* Navbar ~73px + Moods header ~52px + buffer */
   }
 
@@ -95,21 +95,21 @@ body.artists-hidden .app__content {
 @media (max-width: 480px) {
   .app__content {
     /* Navbar ~70px + Artists section ~116px (70px image + padding + text) = ~186px */
-    padding-top: 185px;
+    padding-top: calc(185px + env(safe-area-inset-top, 0px));
   }
 
   body.playlist-header-visible .app__content {
-    padding-top: 205px;
+    padding-top: calc(205px + env(safe-area-inset-top, 0px));
     /* Navbar ~73px + playlist header ~132px */
   }
 
   body.artists-hidden .app__content {
-    padding-top: 70px;
+    padding-top: calc(70px + env(safe-area-inset-top, 0px));
     /* Only navbar height on mobile */
   }
 
   body.moods-header-visible .app__content {
-    padding-top: 120px;
+    padding-top: calc(120px + env(safe-area-inset-top, 0px));
     /* Navbar ~73px + Moods header ~52px + buffer */
   }
 
