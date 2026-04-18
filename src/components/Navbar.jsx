@@ -237,9 +237,7 @@ const MobilePlaylistHeaderStrip = ({ selectedPlaylist, playlistImages }) => {
   return (
     <div
       className={`playlist-header-mobile ${coverUrl ? "" : "playlist-header-mobile--no-art"}`}
-      style={
-        coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined
-      }
+      style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined}
     >
       {coverUrl ? (
         <img
@@ -532,7 +530,7 @@ const Navbar = () => {
           <input
             type="text"
             className="navbar__search-input"
-            placeholder="What do you want here?"
+            placeholder="Search Here..."
             value={searchQuery}
             onChange={handleSearchChange}
             aria-label="Search tracks and artists"
