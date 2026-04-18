@@ -1,5 +1,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 
+/* Overridable from safeAreaFix.js when iOS reports env(safe-area-inset-top) as 0 */
+:root {
+  --app-safe-top: env(safe-area-inset-top, 0px);
+}
+
 * {
   margin: 0;
   padding: 0;
