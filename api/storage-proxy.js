@@ -1,6 +1,7 @@
 /**
  * Vercel serverless function to proxy Firebase Storage requests.
  * Bypasses CORS by fetching on the server (no cross-origin from client).
+ * Forwards Range so partial fetches (e.g. album art) don't download entire files.
  */
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -15,10 +16,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    const upstreamHeaders = {
+      "User-Agent": "Beatify/1.0",
+    };
+    const range = req.headers.range;
+    if (range) {
+      upstreamHeaders.Range = range;
+    }
+
     const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Beatify/1.0",
-      },
+      headers: upstreamHeaders,
     });
 
     if (!response.ok) {
@@ -26,9 +33,23 @@ export default async function handler(req, res) {
       return;
     }
 
-    const contentType = response.headers.get("content-type") || "application/octet-stream";
+    const contentType =
+      response.headers.get("content-type") || "application/octet-stream";
     res.setHeader("Content-Type", contentType);
     res.setHeader("Cache-Control", "public, max-age=3600");
+
+    const status = response.status;
+    res.status(status);
+
+    if (status === 206) {
+      const contentRange = response.headers.get("content-range");
+      if (contentRange) res.setHeader("Content-Range", contentRange);
+      const contentLength = response.headers.get("content-length");
+      if (contentLength) res.setHeader("Content-Length", contentLength);
+    }
+
+    const acceptRanges = response.headers.get("accept-ranges");
+    if (acceptRanges) res.setHeader("Accept-Ranges", acceptRanges);
 
     const buffer = await response.arrayBuffer();
     res.send(Buffer.from(buffer));

@@ -16,18 +16,68 @@ export const useAlbumArt = () => {
 };
 
 const getFetchUrl = (url) => {
-  if (typeof window === "undefined" || !url?.startsWith("https://firebasestorage.googleapis.com/"))
+  if (
+    typeof window === "undefined" ||
+    !url?.startsWith("https://firebasestorage.googleapis.com/")
+  )
     return url;
   if (window.location.hostname === "localhost")
     return "/storage-proxy" + url.slice("https://firebasestorage.googleapis.com".length);
   return "/api/storage-proxy?url=" + encodeURIComponent(url);
 };
 
+/** First ~768 KiB covers almost all ID3v2 + embedded pictures without full file download */
+const COVER_RANGE_BYTES = 786432;
+
+function looksLikeVideoPath(url) {
+  const pathOnly = (url || "").split("?")[0] || "";
+  return /\.(mp4|webm|m4v|mov)(\?|$)/i.test(pathOnly);
+}
+
+/**
+ * Fetch only the start of the file (Range) when the server supports it.
+ * Falls back to full GET when Range is unsupported or fails.
+ */
+async function fetchBlobChunkForCover(fetchUrl) {
+  try {
+    const res = await fetch(fetchUrl, {
+      headers: { Range: `bytes=0-${COVER_RANGE_BYTES - 1}` },
+      mode: "cors",
+      credentials: "omit",
+    });
+    if (res.status === 206) {
+      return await res.blob();
+    }
+    if (res.status === 200) {
+      const blob = await res.blob();
+      if (blob.size <= COVER_RANGE_BYTES) return blob;
+      return blob.slice(0, COVER_RANGE_BYTES);
+    }
+  } catch {
+    /* fall through */
+  }
+  return null;
+}
+
+async function fetchFullBlob(fetchUrl) {
+  const response = await fetch(fetchUrl, { mode: "cors", credentials: "omit" });
+  if (!response.ok) return null;
+  return response.blob();
+}
+
 const extractFromUrl = async (url) => {
   const fetchUrl = getFetchUrl(url);
-  const response = await fetch(fetchUrl);
-  if (!response.ok) return null;
-  const blob = await response.blob();
+
+  if (!looksLikeVideoPath(url)) {
+    const chunk = await fetchBlobChunkForCover(fetchUrl);
+    if (chunk && chunk.size > 0) {
+      const fromPartial = await extractCoverDataUrlFromBlob(chunk, url);
+      if (fromPartial) return fromPartial;
+    }
+  }
+
+  const blob = await fetchFullBlob(fetchUrl);
+  if (!blob) return null;
   return extractCoverDataUrlFromBlob(blob, url);
 };
 

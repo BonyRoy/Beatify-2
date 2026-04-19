@@ -22,6 +22,7 @@ import {
   orderBy,
   query,
 } from "firebase/firestore";
+import { invalidateMusicListCache } from "../services/musicService";
 import {
   Lock,
   Music,
@@ -1077,6 +1078,7 @@ const Admin = () => {
         document.getElementById("musicFile").value = "";
       }
 
+      invalidateMusicListCache();
       await fetchExistingTracks();
     } catch (error) {
       console.error("Error uploading/updating music:", error);
@@ -1128,6 +1130,7 @@ const Admin = () => {
       const track = existingTracks.find((t) => t.id === trackId);
 
       await deleteDoc(doc(db, "music", trackId));
+      invalidateMusicListCache();
 
       if (track.fileName) {
         const fileRef = ref(storage, `music/${track.fileName}`);
@@ -1222,6 +1225,7 @@ const Admin = () => {
         successCount++;
       }
       alert(`Successfully updated ${successCount} track(s)!`);
+      invalidateMusicListCache();
       await fetchExistingTracks();
     } catch (error) {
       console.error("Error bulk updating:", error);
@@ -1351,6 +1355,7 @@ const Admin = () => {
         alert(
           `Updated ${matched} track(s).${skipped ? ` Skipped ${skipped} row(s) (no matching UUID).` : ""}`,
         );
+        invalidateMusicListCache();
         await fetchExistingTracks();
       } catch (err) {
         console.error("Excel upload error:", err);

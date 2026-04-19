@@ -882,7 +882,7 @@ const Home = () => {
     )
       return;
     preloadedRef.current = true;
-    const toPreload = sortedMusicList.slice(0, 15);
+    const toPreload = sortedMusicList.slice(0, 6);
     toPreload.forEach((track) => {
       if (
         !track?.coverUrl &&

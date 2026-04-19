@@ -16,7 +16,6 @@ import {
 import {
   resolvePlayUrl,
   recordPersonalListen,
-  cacheBlobFromNetworkIfTop,
 } from "../services/trackAudioCacheService";
 import { trackUsesVideoPlayback } from "../utils/trackMediaKind";
 import "./Footer.css";
@@ -542,10 +541,6 @@ const Footer = () => {
         audio.load();
         updateTime(0);
 
-        if (!resolved.isBlob) {
-          cacheBlobFromNetworkIfTop(currentTrack).catch(() => {});
-        }
-
         const tryStartPlayback = () => {
           const currentAudio = mediaRef.current;
           if (!currentAudio || cancelled) return;
@@ -608,16 +603,6 @@ const Footer = () => {
       }
     }
   }, [audioTrackLoadKey, isVideoTrack]);
-
-  // Warm IndexedDB cache for tracks already in personal top 100 (e.g. returning visit)
-  useEffect(() => {
-    if (!currentTrack) return;
-    const t = currentTrack;
-    const h = setTimeout(() => {
-      cacheBlobFromNetworkIfTop(t).catch(() => {});
-    }, 2000);
-    return () => clearTimeout(h);
-  }, [currentTrack]);
 
   // Fetch embedded album art for current track (uses shared AlbumArtContext cache)
   useEffect(() => {
@@ -818,10 +803,11 @@ const Footer = () => {
             ? playlist[0]
             : null;
 
-      // Preload next track when 5 seconds remaining (does not stop current)
+      // Preload next track before the 2s handoff (must be > 2 so this runs first)
+      const preloadLeadSec = 2.5;
       if (
-        audioDuration > 5 &&
-        currentTime >= audioDuration - 5 &&
+        audioDuration > preloadLeadSec &&
+        currentTime >= audioDuration - preloadLeadSec &&
         !preloadStartedRef.current &&
         nextTrack
       ) {
@@ -2813,7 +2799,7 @@ const Footer = () => {
                 setDesktopVideoModalOpen(true);
               }
             }}
-            preload="auto"
+            preload="metadata"
             playsInline
             poster={albumArtUrl || undefined}
             tabIndex={
@@ -2870,7 +2856,7 @@ const Footer = () => {
             onEnded={handleEnded}
             onPlay={handlePlay}
             onPause={handlePause}
-            preload="auto"
+            preload="metadata"
             playsInline
           />
         )}
