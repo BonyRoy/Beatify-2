@@ -2248,15 +2248,15 @@ button .admin-icon-inline {
 [data-theme="dark"] .admin-listening-chart-dropdown,
 [data-theme="dark"] .admin-listening-chart-dropdown-toggle,
 [data-theme="dark"] .admin-listening-chart-dropdown-menu {
-  background-color: #1a1a1a;
+  background-color: var(--nav-bg, #0c0c0c);
 }
 
 [data-theme="dark"] .admin-listening-chart-dropdown-toggle:hover {
-  background-color: #252525;
+  background-color: var(--surface-hover, #161618);
 }
 
 [data-theme="dark"] .admin-listening-chart-dropdown-item:hover {
-  background-color: #252525;
+  background-color: var(--surface-hover, #161618);
 }
 
 [data-theme="dark"] .admin-listening-chart-dropdown-item--active {

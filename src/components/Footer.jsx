@@ -637,7 +637,7 @@ const Footer = () => {
       }
       const gradientColors = toDarkGradientColors(colors);
       if (!cancelled && gradientColors?.length) {
-        const gradient = `linear-gradient(135deg, ${gradientColors[0]} 0%, ${gradientColors[1] || gradientColors[0]} 50%, #0a0a0a 100%)`;
+        const gradient = `linear-gradient(135deg, ${gradientColors[0]} 0%, ${gradientColors[1] || gradientColors[0]} 50%, #030303 100%)`;
         setDynamicBgGradient(gradient);
       }
     });

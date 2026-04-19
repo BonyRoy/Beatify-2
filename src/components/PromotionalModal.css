@@ -24,7 +24,7 @@
   max-width: 500px;
   border-radius: 20px;
   overflow: hidden;
-  background-color: var(--bg-primary, #1a1a1a);
+  background-color: var(--nav-bg, #0c0c0c);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.3s ease-out;
 }
@@ -121,7 +121,7 @@
 
 .promo-modal__button:hover {
   transform: translateY(-2px);
-  background-color: #1a1a1a;
+  background-color: var(--surface-hover, #161618);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 

@@ -11,17 +11,19 @@
   box-sizing: border-box;
 }
 
-/* Dark theme (default) */
+/* Dark theme (default) — near-black surfaces, slightly lifted chrome */
 :root,
 [data-theme="dark"] {
-  --bg: #0a0a0a;
-  --text-primary: #fff;
-  --text-muted: #a1a1aa;
-  --nav-bg: #1a1a1a;
-  --nav-border: #27272a;
+  --bg: #030303;
+  --text-primary: #fafafa;
+  --text-muted: #94949e;
+  --nav-bg: #0c0c0c;
+  --nav-border: #1a1a1f;
+  /* Solid hover / modal chrome (slightly above --nav-bg) */
+  --surface-hover: #161618;
   --text-hover: #a78bfa;
-  --track-bg: rgba(255, 255, 255, 0.03);
-  --track-bg-hover: rgba(255, 255, 255, 0.06);
+  --track-bg: rgba(255, 255, 255, 0.028);
+  --track-bg-hover: rgba(255, 255, 255, 0.055);
 }
 
 [data-theme="light"] {
@@ -30,6 +32,7 @@
   --text-muted: #71717a;
   --nav-bg: #fff;
   --nav-border: #e4e4e7;
+  --surface-hover: #f4f4f5;
   --text-hover: #7c3aed;
   --track-bg: rgba(0, 0, 0, 0.04);
   --track-bg-hover: rgba(0, 0, 0, 0.08);

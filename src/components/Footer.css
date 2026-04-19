@@ -52,7 +52,7 @@
   height: 100dvh !important;
   width: 100% !important;
   max-width: 100%;
-  background: #0a0a0a; /* Dark fallback until album-art gradient loads; overridden by inline style */
+  background: var(--bg, #030303); /* Dark fallback until album-art gradient loads; overridden by inline style */
   transition:
     background 0.5s ease,
     transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
@@ -72,7 +72,7 @@
   padding: 0;
   align-items: stretch;
   justify-content: flex-start;
-  background: #0a0a0a;
+  background: var(--bg, #030303);
 }
 
 /* Native MP4: one <video> for decode + picture + audio (no dual decode / canvas mirror). */

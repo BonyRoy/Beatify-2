@@ -278,9 +278,9 @@ body:has(.footer--player) .floating-button {
   padding: 0.9rem 1.25rem;
   background: linear-gradient(
     135deg,
-    #1a1a1a 0%,
-    #2d2d2d 50%,
-    #0d0d0d 100%
+    #0c0c0c 0%,
+    #222226 50%,
+    #030303 100%
   );
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
@@ -300,9 +300,9 @@ body:has(.footer--player) .floating-button {
 .floating-button-overlay__submit-story-btn:hover {
   background: linear-gradient(
     135deg,
-    #252525 0%,
-    #3a3a3a 50%,
-    #1a1a1a 100%
+    #1a1a1e 0%,
+    #2e2e34 50%,
+    #0c0c0c 100%
   );
   border-color: rgba(255, 255, 255, 0.25);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
