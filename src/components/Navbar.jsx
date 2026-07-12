@@ -32,6 +32,7 @@ import {
   lockGuestMod,
 } from "../utils/guestPlayLimit";
 import { allArtists } from "../data/topArtists";
+import { notifyHeaderStackChanged } from "../hooks/useAppContentOffset";
 import "./Navbar.css";
 
 const SunIcon = () => (
@@ -364,6 +365,25 @@ const Navbar = () => {
 
   const showPlaylistHeader = isMobile && selectedPlaylist && view === "track";
   const showMoodsView = isMobile && view === "moods";
+  const showMobilePlaylistHome =
+    isMobile && (view === "playlist" || view === "home");
+
+  useLayoutEffect(() => {
+    if (showMobilePlaylistHome) {
+      document.body.classList.add("mobile-playlist-no-fixed-strip");
+    } else {
+      document.body.classList.remove("mobile-playlist-no-fixed-strip");
+    }
+    notifyHeaderStackChanged();
+    return () =>
+      document.body.classList.remove("mobile-playlist-no-fixed-strip");
+  }, [
+    showMobilePlaylistHome,
+    showPlaylistHeader,
+    showMoodsView,
+    isMobile,
+    view,
+  ]);
 
   useEffect(() => {
     if (showPlaylistHeader) {
@@ -743,7 +763,7 @@ const Navbar = () => {
           selectedPlaylist={selectedPlaylist}
           playlistImages={playlistImages}
         />
-      ) : isMobile && view === "playlist" ? null : (
+      ) : showMobilePlaylistHome ? null : (
         <Artists
           artists={allArtists}
           selectedArtist={selectedArtist}

@@ -4,6 +4,20 @@ import { useLayoutEffect, useRef } from "react";
 const SECOND_ROW_SELECTOR =
   ".artists-section:not(.artists-section--inline), .playlist-header-mobile, .moods-header-mobile";
 
+export const HEADER_STACK_CHANGED = "beatify:header-stack-changed";
+
+/** Call when the fixed header stack gains/loses a row (mobile view tab, playlist header, etc.) */
+export function notifyHeaderStackChanged() {
+  window.dispatchEvent(new CustomEvent(HEADER_STACK_CHANGED));
+}
+
+const isVisibleFixedStrip = (el) => {
+  const rect = el.getBoundingClientRect();
+  if (rect.height <= 0 || rect.bottom <= 0) return false;
+  const style = window.getComputedStyle(el);
+  return style.display !== "none" && style.visibility !== "hidden";
+};
+
 /**
  * Sets --app-content-offset on <html> to the bottom edge of the fixed header stack
  * (navbar + optional artists / playlist / moods strip) so .app__content does not
@@ -24,6 +38,7 @@ export function useAppContentOffset(enabled) {
       if (!nav) return;
       let bottom = nav.getBoundingClientRect().bottom;
       document.querySelectorAll(SECOND_ROW_SELECTOR).forEach((el) => {
+        if (!isVisibleFixedStrip(el)) return;
         bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
       });
       document.documentElement.style.setProperty(
@@ -61,6 +76,7 @@ export function useAppContentOffset(enabled) {
 
     window.addEventListener("resize", measure);
     window.addEventListener("orientationchange", measure);
+    window.addEventListener(HEADER_STACK_CHANGED, measure);
 
     return () => {
       clearTimeout(moTimerRef.current);
@@ -71,6 +87,7 @@ export function useAppContentOffset(enabled) {
       }
       window.removeEventListener("resize", measure);
       window.removeEventListener("orientationchange", measure);
+      window.removeEventListener(HEADER_STACK_CHANGED, measure);
       document.documentElement.style.removeProperty("--app-content-offset");
     };
   }, [enabled]);

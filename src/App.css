@@ -25,6 +25,16 @@ body:has(.footer--player) .app__content {
   padding-bottom: 0;
 }
 
+/* Phone playlist tab: artists live in the scroll column — do not reserve fixed-strip height */
+@media (max-width: 768px) {
+  body.mobile-playlist-no-fixed-strip main.app__content {
+    padding-top: var(
+      --navbar-stack-height,
+      calc(73px + var(--app-safe-top))
+    );
+  }
+}
+
 .app__content > * {
   flex: 1 1 0;
   min-height: 0;

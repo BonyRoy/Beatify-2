@@ -7,8 +7,8 @@
 export default function applyIosSafeAreaTopFallback() {
   if (!/iPhone/.test(navigator.userAgent)) return;
 
-  const narrowPortraitPhone = window.matchMedia("(max-width: 480px)").matches;
-  if (!narrowPortraitPhone) return;
+  const phoneLayout = window.matchMedia("(max-width: 768px)").matches;
+  if (!phoneLayout) return;
 
   const probe = document.createElement("div");
   probe.style.cssText =
