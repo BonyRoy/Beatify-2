@@ -9,7 +9,7 @@
   /* Set by useAppContentOffset from measured fixed navbar + artists/playlist/moods */
   padding-top: var(
     --app-content-offset,
-    var(--navbar-stack-height, calc(73px + var(--app-safe-top)))
+    var(--navbar-stack-height, 73px)
   );
   padding-bottom: 56px; /* matches .footer--empty height (1rem padding + line) */
   width: 100%;
@@ -25,13 +25,14 @@ body:has(.footer--player) .app__content {
   padding-bottom: 0;
 }
 
-/* Phone playlist tab: artists live in the scroll column — do not reserve fixed-strip height */
+/* Phone playlist tab: only navbar height — artists are in the scroll column */
 @media (max-width: 768px) {
+  main.app__content {
+    padding-top: var(--app-content-offset, var(--navbar-stack-height, 60px));
+  }
+
   body.mobile-playlist-no-fixed-strip main.app__content {
-    padding-top: var(
-      --navbar-stack-height,
-      calc(73px + var(--app-safe-top))
-    );
+    padding-top: var(--navbar-stack-height, var(--app-content-offset, 60px));
   }
 }
 

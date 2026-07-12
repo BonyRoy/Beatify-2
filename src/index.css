@@ -1,8 +1,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 
-/* Overridable from safeAreaFix.js when iOS reports env(safe-area-inset-top) as 0 */
+/* Overridable from safeAreaFix.js — use max(padding, inset), never padding + inset */
 :root {
-  --app-safe-top: env(safe-area-inset-top, 0px);
+  --navbar-safe-top: env(safe-area-inset-top, 0px);
+  /* Legacy alias used in layout fallbacks before JS measures the navbar */
+  --app-safe-top: var(--navbar-safe-top);
 }
 
 * {
@@ -83,4 +85,11 @@ body {
   overflow-x: hidden;
   overflow-y: hidden;
   height: 100vh;
+  height: 100dvh;
+}
+
+@media (max-width: 768px) {
+  html {
+    background-color: var(--nav-bg);
+  }
 }

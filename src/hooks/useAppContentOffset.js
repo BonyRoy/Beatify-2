@@ -37,10 +37,15 @@ export function useAppContentOffset(enabled) {
       const nav = document.querySelector(".navbar");
       if (!nav) return;
       let bottom = nav.getBoundingClientRect().bottom;
-      document.querySelectorAll(SECOND_ROW_SELECTOR).forEach((el) => {
-        if (!isVisibleFixedStrip(el)) return;
-        bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
-      });
+      const skipSecondRow = document.body.classList.contains(
+        "mobile-playlist-no-fixed-strip",
+      );
+      if (!skipSecondRow) {
+        document.querySelectorAll(SECOND_ROW_SELECTOR).forEach((el) => {
+          if (!isVisibleFixedStrip(el)) return;
+          bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
+        });
+      }
       document.documentElement.style.setProperty(
         "--app-content-offset",
         `${Math.ceil(bottom)}px`,

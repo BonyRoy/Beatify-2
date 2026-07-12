@@ -7,10 +7,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  /* --app-safe-top: env() in index.css; iOS may override via safeAreaFix.js when env() is wrong */
-  padding: calc(1rem + var(--app-safe-top))
-    calc(2rem + env(safe-area-inset-right, 0px)) 1rem
-    calc(2rem + env(safe-area-inset-left, 0px));
+  /* max() avoids stacking padding + safe-area (was leaving a large empty band on phone) */
+  padding-top: max(1rem, var(--navbar-safe-top, env(safe-area-inset-top, 0px)));
+  padding-right: calc(2rem + env(safe-area-inset-right, 0px));
+  padding-bottom: 1rem;
+  padding-left: calc(2rem + env(safe-area-inset-left, 0px));
   background-color: var(--nav-bg, #1a1a1a);
   z-index: 100;
 }
@@ -389,9 +390,11 @@
 
 @media (max-width: 768px) {
   .navbar {
-    padding: calc(1rem + var(--app-safe-top))
-      calc(1.125rem + env(safe-area-inset-right, 0px)) 1rem
-      calc(1.125rem + env(safe-area-inset-left, 0px));
+    /* Tight top padding — no safe-area inset (was a large empty white band) */
+    padding-top: 0.75rem;
+    padding-right: calc(1.125rem + env(safe-area-inset-right, 0px));
+    padding-bottom: 0.75rem;
+    padding-left: calc(1.125rem + env(safe-area-inset-left, 0px));
     gap: 0.5rem;
   }
 
@@ -435,9 +438,10 @@
 
 @media (max-width: 480px) {
   .navbar {
-    padding: calc(0.75rem + var(--app-safe-top))
-      calc(1rem + env(safe-area-inset-right, 0px)) 0.75rem
-      calc(1rem + env(safe-area-inset-left, 0px));
+    padding-top: 0.65rem;
+    padding-right: calc(1rem + env(safe-area-inset-right, 0px));
+    padding-bottom: 0.65rem;
+    padding-left: calc(1rem + env(safe-area-inset-left, 0px));
     gap: 0.4rem;
   }
 
@@ -596,7 +600,7 @@
   .playlist-header-mobile {
     display: block;
     position: fixed;
-    top: var(--navbar-stack-height, calc(70px + var(--app-safe-top)));
+    top: var(--navbar-stack-height, 70px);
     left: 0;
     right: 0;
     z-index: 99;
@@ -640,7 +644,7 @@
   /* Moods header - gradient blue header with "Moods" in white */
   .moods-header-mobile {
     position: fixed;
-    top: var(--navbar-stack-height, calc(70px + var(--app-safe-top)));
+    top: var(--navbar-stack-height, 70px);
     left: 0;
     right: 0;
     z-index: 99;

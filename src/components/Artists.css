@@ -4,7 +4,7 @@
   background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
   position: fixed;
   /* Set by Navbar (measured) — fallback avoids gap before JS runs */
-  top: var(--navbar-stack-height, calc(73px + var(--app-safe-top)));
+  top: var(--navbar-stack-height, 73px);
   left: 0;
   right: 0;
   z-index: 99;
