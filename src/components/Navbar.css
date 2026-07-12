@@ -390,12 +390,19 @@
 
 @media (max-width: 768px) {
   .navbar {
-    /* Tight top padding — no safe-area inset (was a large empty white band) */
+    /* Browser tab: tight top — no fake safe-area band */
     padding-top: 0.75rem;
     padding-right: calc(1.125rem + env(safe-area-inset-right, 0px));
     padding-bottom: 0.75rem;
     padding-left: calc(1.125rem + env(safe-area-inset-left, 0px));
     gap: 0.5rem;
+  }
+
+  body.app-standalone .navbar {
+    padding-top: max(
+      0.75rem,
+      var(--navbar-safe-top, env(safe-area-inset-top, 0px))
+    );
   }
 
   /* Let search use all space between logo and menu (desktop max-width: 500px no longer applies usefully). */
@@ -436,6 +443,15 @@
   }
 }
 
+@media (max-width: 768px) and (display-mode: standalone) {
+  .navbar {
+    padding-top: max(
+      0.75rem,
+      var(--navbar-safe-top, env(safe-area-inset-top, 0px))
+    );
+  }
+}
+
 @media (max-width: 480px) {
   .navbar {
     padding-top: 0.65rem;
@@ -443,6 +459,13 @@
     padding-bottom: 0.65rem;
     padding-left: calc(1rem + env(safe-area-inset-left, 0px));
     gap: 0.4rem;
+  }
+
+  body.app-standalone .navbar {
+    padding-top: max(
+      0.65rem,
+      var(--navbar-safe-top, env(safe-area-inset-top, 0px))
+    );
   }
 
   .navbar__brand {
@@ -465,6 +488,15 @@
 
   .navbar__search-input::placeholder {
     font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) and (display-mode: standalone) {
+  .navbar {
+    padding-top: max(
+      0.65rem,
+      var(--navbar-safe-top, env(safe-area-inset-top, 0px))
+    );
   }
 }
 
