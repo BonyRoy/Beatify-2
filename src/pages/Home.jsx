@@ -477,8 +477,8 @@ const Home = () => {
   const sidebarContentRef = useRef(null);
   const preloadedRef = useRef(false);
 
-  // After 25 seconds without interaction, bring the playing song to the top
-  // of the tracks list. This keeps playback easy to find without interrupting browsing.
+  // After 25 seconds without interaction, scroll the playing song to the top
+  // of the viewport without changing the order of the tracks list.
   useEffect(() => {
     if (!isPlaying || !currentTrack || !sidebarContentRef.current) return;
 
@@ -870,17 +870,17 @@ const Home = () => {
     setSelectedTrack(null);
   };
 
-  // Tracks to display (first N for lazy load). Put currently playing track at top when in list.
+  // Tracks stay in their natural order. Ensure the playing track is rendered so
+  // the idle-scroll behavior can find it without moving it to the top.
   const visibleTracks = useMemo(() => {
-    const slice = sortedMusicList.slice(0, visibleCount);
-    if (!currentTrack) return slice;
+    if (!currentTrack) return sortedMusicList.slice(0, visibleCount);
     const currentId = currentTrack.uuid || currentTrack.id;
-    const idx = sortedMusicList.findIndex(
+    const currentIndex = sortedMusicList.findIndex(
       (t) => (t.uuid || t.id) === currentId,
     );
-    if (idx < 0) return slice;
-    const rest = sortedMusicList.filter((t) => (t.uuid || t.id) !== currentId);
-    return [currentTrack, ...rest.slice(0, visibleCount - 1)];
+    const renderedCount =
+      currentIndex >= 0 ? Math.max(visibleCount, currentIndex + 1) : visibleCount;
+    return sortedMusicList.slice(0, renderedCount);
   }, [sortedMusicList, visibleCount, currentTrack]);
   const hasMore = visibleCount < sortedMusicList.length;
 
