@@ -142,6 +142,10 @@ const PromotionalModal = () => {
       newSearchParams.set('playlist', activeCampaign.playlistName)
       newSearchParams.delete('artist')
       newSearchParams.delete('favorites')
+      // Mobile home defaults to playlist pane; switch to tracks like Playlist clicks
+      if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+        newSearchParams.set('view', 'track')
+      }
       navigate(`/?${newSearchParams.toString()}`)
       handleClose()
     }
