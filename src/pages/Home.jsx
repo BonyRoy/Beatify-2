@@ -477,8 +477,8 @@ const Home = () => {
   const sidebarContentRef = useRef(null);
   const preloadedRef = useRef(false);
 
-  // After 25 seconds without interaction, scroll the playing song to the top
-  // of the viewport without changing the order of the tracks list.
+  // While this screen is active, return to the playing song only after the
+  // tracks list has been idle for 25 seconds. This moves the viewport only.
   useEffect(() => {
     if (!isPlaying || !currentTrack || !sidebarContentRef.current) return;
 
@@ -512,22 +512,29 @@ const Home = () => {
       inactivityTimer = setTimeout(scrollToPlayingTrack, 25000);
     };
 
-    const handleScroll = () => {
+    const handleUserScroll = () => {
       if (!isAutoScrolling) resetTimer();
     };
 
-    resetTimer();
-    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("pointerdown", resetTimer, { passive: true });
-    window.addEventListener("keydown", resetTimer);
-    window.addEventListener("touchstart", resetTimer);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        resetTimer();
+      } else if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+      }
+    };
+
+    if (document.visibilityState === "visible") resetTimer();
+    scrollContainer.addEventListener("scroll", handleUserScroll, {
+      passive: true,
+    });
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       if (inactivityTimer) clearTimeout(inactivityTimer);
-      scrollContainer.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("pointerdown", resetTimer);
-      window.removeEventListener("keydown", resetTimer);
-      window.removeEventListener("touchstart", resetTimer);
+      scrollContainer.removeEventListener("scroll", handleUserScroll);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [isPlaying, currentTrack]);
 
@@ -807,8 +814,6 @@ const Home = () => {
     isLoggedIn,
     filteredMusicList,
     musicList,
-    lastSongs,
-    artistCounts,
   ]);
 
   /** Weekly Top 10 for phone playlist column (grid below playlist strip) */
@@ -865,19 +870,21 @@ const Home = () => {
     setSelectedTrack(null);
   };
 
-  // Tracks to display (first N for lazy load). Put currently playing track at top when in list.
-  const visibleTracks = useMemo(() => {
-    const slice = sortedMusicList.slice(0, visibleCount);
-    if (!currentTrack) return slice;
+  // Keep the catalogue order intact. If the playing song is beyond the lazy
+  // window, render through it so the idle viewport scroll can reach it.
+  const renderedTrackCount = useMemo(() => {
+    if (!currentTrack) return visibleCount;
     const currentId = currentTrack.uuid || currentTrack.id;
     const idx = sortedMusicList.findIndex(
       (t) => (t.uuid || t.id) === currentId,
     );
-    if (idx < 0) return slice;
-    const rest = sortedMusicList.filter((t) => (t.uuid || t.id) !== currentId);
-    return [currentTrack, ...rest.slice(0, visibleCount - 1)];
+    return idx < 0 ? visibleCount : Math.max(visibleCount, idx + 1);
   }, [sortedMusicList, visibleCount, currentTrack]);
-  const hasMore = visibleCount < sortedMusicList.length;
+  const visibleTracks = useMemo(
+    () => sortedMusicList.slice(0, renderedTrackCount),
+    [sortedMusicList, renderedTrackCount],
+  );
+  const hasMore = renderedTrackCount < sortedMusicList.length;
 
   // On mobile: preload track images during 4 sec loading screen so they're ready when it fades
   useEffect(() => {
