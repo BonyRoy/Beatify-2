@@ -985,6 +985,7 @@ const Home = () => {
     ? {
         name: selectedTrack.name,
         artist: selectedTrack.artist,
+        movieName: selectedTrack.album || "",
         size: selectedTrack.fileSize
           ? `${(selectedTrack.fileSize / (1024 * 1024)).toFixed(1)} MB`
           : "Unknown size",
@@ -993,6 +994,7 @@ const Home = () => {
     : {
         name: "",
         artist: "",
+        movieName: "",
         size: "",
         releaseDate: "",
       };
@@ -1295,6 +1297,7 @@ const Home = () => {
         onClose={handleCloseModal}
         songName={selectedTrackData.name}
         artistName={selectedTrackData.artist}
+        movieName={selectedTrackData.movieName}
         fileSize={selectedTrackData.size}
         releaseDate={selectedTrackData.releaseDate}
         onDownload={handleDownload}

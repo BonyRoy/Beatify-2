@@ -13,6 +13,7 @@ const DownloadModal = ({
   onClose,
   songName,
   artistName,
+  movieName,
   fileSize,
   releaseDate,
   onDownload,
@@ -42,6 +43,10 @@ const DownloadModal = ({
             <div className="modal__info-row">
               <span className="modal__label">Artist Name:</span>
               <span className="modal__value">{artistName}</span>
+            </div>
+            <div className="modal__info-row">
+              <span className="modal__label">Movie/Album:</span>
+              <span className="modal__value">{movieName || "—"}</span>
             </div>
             <div className="modal__info-row">
               <span className="modal__label">Size:</span>
