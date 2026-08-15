@@ -216,6 +216,23 @@ body:has(.footer--player) .home__moods-grid {
   background-color: rgba(167, 139, 250, 0.08);
 }
 
+/* The selected row can remain visible while paused. Give the actively playing
+   song a stronger, unmistakable cue without changing its place in the list. */
+.track-row--playing {
+  position: relative;
+  border-bottom-color: rgba(6, 182, 212, 0.7);
+  background: linear-gradient(
+    90deg,
+    rgba(6, 182, 212, 0.18),
+    rgba(59, 130, 246, 0.12) 52%,
+    rgba(139, 92, 246, 0.1)
+  );
+}
+
+.track-row--playing .track-row__title {
+  color: #a5f3fc;
+}
+
 .track-row__art-wrapper {
   flex-shrink: 0;
   align-self: center;

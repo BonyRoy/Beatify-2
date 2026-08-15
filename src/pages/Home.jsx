@@ -317,7 +317,7 @@ const MusicTrack = ({
   return (
     <div
       ref={trackRowRef}
-      className={`track-row ${isSelected ? "track-row--selected" : ""}`}
+      className={`track-row ${isSelected ? "track-row--selected" : ""} ${isPlaying ? "track-row--playing" : ""}`}
       onClick={handleRowClick}
       data-track-id={trackIdentifier}
     >
