@@ -142,6 +142,10 @@ const PromotionalModal = () => {
       newSearchParams.set('playlist', activeCampaign.playlistName)
       newSearchParams.delete('artist')
       newSearchParams.delete('favorites')
+      // On mobile, open the tracks pane with that playlist selected
+      if (window.innerWidth <= 768) {
+        newSearchParams.set('view', 'track')
+      }
       navigate(`/?${newSearchParams.toString()}`)
       handleClose()
     }
