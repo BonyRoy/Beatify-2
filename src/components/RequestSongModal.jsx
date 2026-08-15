@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import "./RequestSongModal.css";
-import { createAndSendOtp, verifyOtp, submitSongRequest } from "../services/songRequestService";
+import {
+  createAndSendOtp,
+  verifyOtp,
+  submitSongRequest,
+} from "../services/songRequestService";
 import { useCreateAccount } from "../context/CreateAccountContext";
 
 const CloseIcon = () => (
@@ -22,14 +26,28 @@ const CloseIcon = () => (
 );
 
 const PlusIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
     <line x1="12" y1="5" x2="12" y2="19" />
     <line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
 
 const TrashIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
     <polyline points="3 6 5 6 21 6" />
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     <line x1="10" y1="11" x2="10" y2="17" />
@@ -52,14 +70,19 @@ const validatePhoneNumber = (value) => {
 const validateEmail = (value) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!value.trim()) return "Please enter your email.";
-  if (!emailRegex.test(value.trim())) return "Please enter a valid email address.";
+  if (!emailRegex.test(value.trim()))
+    return "Please enter a valid email address.";
   return null;
 };
 
 const OTP_LENGTH = 6;
 
 const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
-  const { isLoggedIn, userName: authUserName, userEmail: authUserEmail } = useCreateAccount();
+  const {
+    isLoggedIn,
+    userName: authUserName,
+    userEmail: authUserEmail,
+  } = useCreateAccount();
 
   const [songRows, setSongRows] = useState([{ songName: "", album: "" }]);
   const [formData, setFormData] = useState({
@@ -154,7 +177,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
         setOtp(Array(OTP_LENGTH).fill(""));
         setError("");
       } catch (err) {
-        setError(err.message || "Failed to send OTP. Please try again.");
+        setError(err.message || "Failed to send OTP. Please try again later.");
       } finally {
         setSubmitting(false);
       }
@@ -181,7 +204,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
       toast.success(
         rows.length === 1
           ? "Song request submitted successfully!"
-          : `${rows.length} song requests submitted successfully!`
+          : `${rows.length} song requests submitted successfully!`,
       );
       if (onSubmit) await onSubmit();
       resetForm();
@@ -278,11 +301,7 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
 
   return (
     <>
-      <div
-        className="modal-overlay"
-        onClick={handleClose}
-        aria-hidden="true"
-      />
+      <div className="modal-overlay" onClick={handleClose} aria-hidden="true" />
       <div className="modal request-song-modal">
         <button
           type="button"
@@ -322,7 +341,11 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
                             type="text"
                             value={row.songName}
                             onChange={(e) =>
-                              handleSongRowChange(index, "songName", e.target.value)
+                              handleSongRowChange(
+                                index,
+                                "songName",
+                                e.target.value,
+                              )
                             }
                             placeholder="Enter song name"
                             disabled={submitting}
@@ -333,7 +356,11 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
                             type="text"
                             value={row.album}
                             onChange={(e) =>
-                              handleSongRowChange(index, "album", e.target.value)
+                              handleSongRowChange(
+                                index,
+                                "album",
+                                e.target.value,
+                              )
                             }
                             placeholder="Enter album"
                             disabled={submitting}
@@ -427,7 +454,10 @@ const RequestSongModal = ({ isOpen, onClose, onSubmit }) => {
               </div>
             </form>
           ) : (
-            <form onSubmit={handleVerifyAndSubmit} className="request-song-form">
+            <form
+              onSubmit={handleVerifyAndSubmit}
+              className="request-song-form"
+            >
               <div className="request-song-form-group">
                 <label htmlFor="otp">Enter OTP *</label>
                 <div className="otp-input-wrapper">

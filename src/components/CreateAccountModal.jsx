@@ -131,7 +131,7 @@ const CreateAccountModal = ({ isOpen, onClose, onAccountCreated }) => {
       setOtp(Array(OTP_LENGTH).fill(""));
       setError("");
     } catch (err) {
-      setError(err.message || "Failed to send OTP. Please try again.");
+      setError(err.message || "Failed to send OTP. Please try again later.");
     } finally {
       setSubmitting(false);
     }

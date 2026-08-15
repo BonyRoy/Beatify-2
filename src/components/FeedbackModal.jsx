@@ -29,13 +29,17 @@ const CloseIcon = () => (
 const validateEmail = (value) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!value.trim()) return "Please enter your email.";
-  if (!emailRegex.test(value.trim())) return "Please enter a valid email address.";
+  if (!emailRegex.test(value.trim()))
+    return "Please enter a valid email address.";
   return null;
 };
 
 const FeedbackModal = ({ isOpen, onClose }) => {
-  const { isLoggedIn, userName: authUserName, userEmail: authUserEmail } =
-    useCreateAccount();
+  const {
+    isLoggedIn,
+    userName: authUserName,
+    userEmail: authUserEmail,
+  } = useCreateAccount();
 
   const [formData, setFormData] = useState({
     userName: "",
@@ -93,7 +97,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
         setOtp(Array(OTP_LENGTH).fill(""));
         setError("");
       } catch (err) {
-        setError(err.message || "Failed to send OTP. Please try again.");
+        setError(err.message || "Failed to send OTP. Please try again later.");
       } finally {
         setSubmitting(false);
       }
@@ -127,7 +131,9 @@ const FeedbackModal = ({ isOpen, onClose }) => {
         if (index + i < OTP_LENGTH) newOtp[index + i] = d;
       });
       setOtp(newOtp);
-      otpInputRefs.current[Math.min(index + digits.length, OTP_LENGTH - 1)]?.focus();
+      otpInputRefs.current[
+        Math.min(index + digits.length, OTP_LENGTH - 1)
+      ]?.focus();
       return;
     }
     const digit = value.replace(/\D/g, "").slice(-1);
@@ -168,8 +174,8 @@ const FeedbackModal = ({ isOpen, onClose }) => {
 
   const resetForm = () => {
     setFormData({
-      userName: (isLoggedIn && authUserName) ? authUserName : "",
-      email: (isLoggedIn && authUserEmail) ? authUserEmail : "",
+      userName: isLoggedIn && authUserName ? authUserName : "",
+      email: isLoggedIn && authUserEmail ? authUserEmail : "",
       contactNumber: "",
       message: "",
     });
