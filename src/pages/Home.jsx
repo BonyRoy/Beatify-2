@@ -477,50 +477,57 @@ const Home = () => {
   const sidebarContentRef = useRef(null);
   const preloadedRef = useRef(false);
 
-  // Auto-scroll back to playing track after 10s of inactivity
+  // After 25 seconds without interaction, scroll the playing song to the top
+  // of the viewport without changing the order of the tracks list.
   useEffect(() => {
     if (!isPlaying || !currentTrack || !sidebarContentRef.current) return;
 
     const scrollContainer = sidebarContentRef.current;
     const trackId = currentTrack.uuid || currentTrack.id;
     let inactivityTimer = null;
+    let isAutoScrolling = false;
 
     const scrollToPlayingTrack = () => {
-      const trackEl = scrollContainer.querySelector(
-        `[data-track-id="${trackId}"]`,
-      );
+      const trackEl = Array.from(
+        scrollContainer.querySelectorAll("[data-track-id]"),
+      ).find((element) => element.dataset.trackId === String(trackId));
       if (!trackEl) return;
-      const rect = trackEl.getBoundingClientRect();
+      const trackRect = trackEl.getBoundingClientRect();
       const containerRect = scrollContainer.getBoundingClientRect();
-      const isVisible =
-        rect.top >= containerRect.top && rect.bottom <= containerRect.bottom;
-      if (!isVisible) {
-        trackEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
+      const targetTop = Math.max(
+        0,
+        scrollContainer.scrollTop + trackRect.top - containerRect.top - 8,
+      );
+
+      if (Math.abs(scrollContainer.scrollTop - targetTop) < 4) return;
+      isAutoScrolling = true;
+      scrollContainer.scrollTo({ top: targetTop, behavior: "smooth" });
+      window.setTimeout(() => {
+        isAutoScrolling = false;
+      }, 700);
     };
 
     const resetTimer = () => {
       if (inactivityTimer) clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(() => {
-        scrollToPlayingTrack();
-      }, 10000);
+      inactivityTimer = setTimeout(scrollToPlayingTrack, 25000);
     };
 
-    const handleScroll = () => resetTimer();
-    const handleUserActivity = () => resetTimer();
+    const handleScroll = () => {
+      if (!isAutoScrolling) resetTimer();
+    };
 
     resetTimer();
     scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("click", handleUserActivity);
-    window.addEventListener("keydown", handleUserActivity);
-    window.addEventListener("touchstart", handleUserActivity);
+    window.addEventListener("pointerdown", resetTimer, { passive: true });
+    window.addEventListener("keydown", resetTimer);
+    window.addEventListener("touchstart", resetTimer);
 
     return () => {
       if (inactivityTimer) clearTimeout(inactivityTimer);
       scrollContainer.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("click", handleUserActivity);
-      window.removeEventListener("keydown", handleUserActivity);
-      window.removeEventListener("touchstart", handleUserActivity);
+      window.removeEventListener("pointerdown", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+      window.removeEventListener("touchstart", resetTimer);
     };
   }, [isPlaying, currentTrack]);
 
@@ -985,6 +992,7 @@ const Home = () => {
     ? {
         name: selectedTrack.name,
         artist: selectedTrack.artist,
+        movieName: selectedTrack.album || "",
         size: selectedTrack.fileSize
           ? `${(selectedTrack.fileSize / (1024 * 1024)).toFixed(1)} MB`
           : "Unknown size",
@@ -993,6 +1001,7 @@ const Home = () => {
     : {
         name: "",
         artist: "",
+        movieName: "",
         size: "",
         releaseDate: "",
       };
@@ -1295,6 +1304,7 @@ const Home = () => {
         onClose={handleCloseModal}
         songName={selectedTrackData.name}
         artistName={selectedTrackData.artist}
+        movieName={selectedTrackData.movieName}
         fileSize={selectedTrackData.size}
         releaseDate={selectedTrackData.releaseDate}
         onDownload={handleDownload}
