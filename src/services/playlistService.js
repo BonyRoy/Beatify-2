@@ -18,10 +18,10 @@ const PLAYLISTS_COLLECTION = "playlists";
  * Matching files also live under /public/feels/ for the Feels page backgrounds.
  */
 export const FEELS_PLAYLISTS = [
+  { name: "Truck", image: "truck.jpg" },
   { name: "Ganpati", image: "ganpati.jpg" },
   { name: "Salon", image: "salon.jpg" },
   { name: "Navratri", image: "navratri.jpg" },
-  { name: "Truck", image: "truck.jpg" },
 ];
 
 let ensureFeelsInflight = null;
