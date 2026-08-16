@@ -110,6 +110,29 @@
   transition: all 0.2s;
 }
 
+.navbar__feels-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--nav-border, #333);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.navbar__feels-btn:hover,
+.navbar__feels-btn:focus-visible {
+  color: #eab308;
+  border-color: #eab308;
+  background-color: rgba(234, 179, 8, 0.14);
+}
+
 .navbar__top-artists-btn:hover {
   color: var(--text-primary);
   border-color: var(--text-muted);

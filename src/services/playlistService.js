@@ -13,6 +13,80 @@ import { db } from "../firebase/config";
 const PLAYLISTS_COLLECTION = "playlists";
 
 /**
+ * Feels themes as normal playlists.
+ * `image` is a filename under /public/playlistbg/ (same convention as other playlists).
+ * Matching files also live under /public/feels/ for the Feels page backgrounds.
+ */
+export const FEELS_PLAYLISTS = [
+  { name: "Truck", image: "truck.jpg" },
+  { name: "Ganpati", image: "ganpati.jpg" },
+  { name: "Salon", image: "salon.jpg" },
+  { name: "Navratri", image: "navratri.jpg" },
+
+];
+
+let ensureFeelsInflight = null;
+
+/**
+ * Ensure Feels theme playlists exist once each, with correct playlistbg images.
+ * Does not overwrite existing trackIds. Removes duplicate name entries.
+ */
+export async function ensureFeelsPlaylists() {
+  if (ensureFeelsInflight) return ensureFeelsInflight;
+
+  ensureFeelsInflight = (async () => {
+    try {
+      const existing = await fetchPlaylists();
+      const byName = new Map();
+
+      for (const playlist of existing) {
+        const key = String(playlist.name || "").trim().toLowerCase();
+        if (!key) continue;
+        if (!byName.has(key)) byName.set(key, []);
+        byName.get(key).push(playlist);
+      }
+
+      for (const feels of FEELS_PLAYLISTS) {
+        const key = feels.name.toLowerCase();
+        const matches = byName.get(key) || [];
+
+        if (matches.length === 0) {
+          await createPlaylist({
+            name: feels.name,
+            image: feels.image,
+            trackIds: [],
+          });
+          continue;
+        }
+
+        // Keep the entry with the most tracks; delete extras (double creates)
+        matches.sort(
+          (a, b) => (b.trackIds?.length || 0) - (a.trackIds?.length || 0)
+        );
+        const [keeper, ...dupes] = matches;
+
+        if (keeper.image !== feels.image) {
+          await updatePlaylist(keeper.id, { image: feels.image });
+        }
+
+        for (const dupe of dupes) {
+          await deletePlaylist(dupe.id);
+        }
+      }
+
+      return { success: true };
+    } catch (e) {
+      console.error("Failed to ensure Feels playlists:", e);
+      return { success: false, error: e.message };
+    } finally {
+      ensureFeelsInflight = null;
+    }
+  })();
+
+  return ensureFeelsInflight;
+}
+
+/**
  * Fetch all playlists from Firestore
  * @returns {Promise<Array<{id: string, name: string, image: string, trackIds: string[], order: number}>>}
  */

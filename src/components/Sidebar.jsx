@@ -6,6 +6,7 @@ import {
   MessageSquarePlus,
   MessageSquare,
   Sparkles,
+  Flower2,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import EmptyFavoritesModal from "./EmptyFavoritesModal";
@@ -436,6 +437,21 @@ const Sidebar = ({
               </span>
             </button>
           )}
+
+          <button
+            type="button"
+            className="sidebar__item sidebar__item--button sidebar__item--feels"
+            onClick={() => {
+              navigate("/feels");
+              onClose();
+            }}
+            aria-label="Open Feels"
+          >
+            <span className="sidebar__label">Feels</span>
+            <span className="sidebar__icon">
+              <Flower2 size={20} strokeWidth={1.8} aria-hidden />
+            </span>
+          </button>
 
           {isMobile && (
             <button

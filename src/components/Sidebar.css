@@ -192,6 +192,13 @@
   color: #ec4899;
 }
 
+.sidebar__item--feels:hover,
+.sidebar__item--feels:focus-visible {
+  color: #eab308;
+  border-color: #eab308;
+  background-color: rgba(234, 179, 8, 0.14);
+}
+
 .sidebar__item--disabled {
   opacity: 0.6;
 }

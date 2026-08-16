@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { UserPlus, User, MessageSquare, Sparkles } from "lucide-react";
+import { UserPlus, User, MessageSquare, Sparkles, Flower2 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useListeningHistory } from "../context/ListeningHistoryContext";
 import { useCreateAccount } from "../context/CreateAccountContext";
@@ -569,6 +569,14 @@ const Navbar = () => {
 
         {/* Desktop: top artists, favorites, feedback, theme toggle, avatar (rightmost) */}
         <div className="navbar__desktop">
+          <Link
+            to="/feels"
+            className="navbar__feels-btn"
+            aria-label="Open Feels"
+            title="Feels"
+          >
+            <Flower2 size={22} strokeWidth={1.9} aria-hidden />
+          </Link>
           <button
             type="button"
             className="navbar__top-artists-btn"

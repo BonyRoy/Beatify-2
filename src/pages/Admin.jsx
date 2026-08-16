@@ -85,6 +85,7 @@ import {
   createPlaylist,
   updatePlaylist,
   deletePlaylist,
+  ensureFeelsPlaylists,
 } from "../services/playlistService";
 import {
   fetchFeaturedStory,
@@ -435,7 +436,8 @@ const Admin = () => {
   useEffect(() => {
     if (activeTab === "playlist" && isAuthenticated) {
       setLoadingPlaylists(true);
-      fetchPlaylists()
+      ensureFeelsPlaylists()
+        .then(() => fetchPlaylists())
         .then(setPlaylists)
         .finally(() => setLoadingPlaylists(false));
     }

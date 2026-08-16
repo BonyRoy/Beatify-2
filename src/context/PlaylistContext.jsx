@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useMemo,
 } from "react";
-import { fetchPlaylists } from "../services/playlistService";
+import { fetchPlaylists, ensureFeelsPlaylists } from "../services/playlistService";
 import {
   getUserPlaylists,
   USER_PLAYLISTS_KEY,
@@ -20,7 +20,8 @@ export function PlaylistProvider({ children }) {
 
   useEffect(() => {
     const load = () =>
-      fetchPlaylists()
+      ensureFeelsPlaylists()
+        .then(() => fetchPlaylists())
         .then(setPlaylists)
         .catch((e) => {
           console.warn("[PlaylistContext] Failed to load playlists:", e);
@@ -88,7 +89,10 @@ export function PlaylistProvider({ children }) {
     playlistTrackIds,
     playlistImages,
     getPlaylistByLabel,
-    refreshPlaylists: () => fetchPlaylists().then(setPlaylists),
+    refreshPlaylists: () =>
+      ensureFeelsPlaylists()
+        .then(() => fetchPlaylists())
+        .then(setPlaylists),
   };
 
   return (
