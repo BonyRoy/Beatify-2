@@ -5,6 +5,51 @@ import "./Artists.css";
 
 const SCROLL_SPEED = 15;
 
+const normalizeArtistKey = (name) =>
+  (name || "")
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/**
+ * Keep curated artists (with images) and append any track.artist names
+ * that are not already covered by that list.
+ */
+export const mergeArtistsWithCatalog = (knownArtists, tracks) => {
+  const known = Array.isArray(knownArtists) ? knownArtists : [];
+  const knownKeys = known
+    .map((a) => normalizeArtistKey(a.name))
+    .filter(Boolean);
+
+  const isCovered = (name) => {
+    const key = normalizeArtistKey(name);
+    if (!key) return true;
+    return knownKeys.some(
+      (k) => key === k || key.includes(k) || k.includes(key),
+    );
+  };
+
+  const catalogNames = [
+    ...new Set(
+      (tracks || [])
+        .map((t) => (t.artist || "").trim())
+        .filter(Boolean),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+
+  let nextId =
+    known.reduce((max, a) => Math.max(max, Number(a.id) || 0), 0) + 1;
+
+  const extras = [];
+  for (const name of catalogNames) {
+    if (isCovered(name)) continue;
+    extras.push({ id: nextId++, name, image: null });
+  }
+
+  return known.concat(extras);
+};
+
 const ArtistsProfileIcon = () => (
   <svg
     className="artists-section__icon-svg"
@@ -54,6 +99,19 @@ const PlayIcon = () => (
   </svg>
 );
 
+const ArtistPlaceholder = ({ name, tileLayout }) => (
+  <div
+    className={
+      tileLayout
+        ? "artist-placeholder artist-placeholder--tile"
+        : "artist-placeholder"
+    }
+    aria-hidden="true"
+  >
+    {(name || "?").charAt(0).toUpperCase()}
+  </div>
+);
+
 const ArtistCard = ({
   artist,
   isSelected,
@@ -65,6 +123,11 @@ const ArtistCard = ({
   const nameRef = useRef(null);
   const [shouldScrollName, setShouldScrollName] = useState(false);
   const [nameDuration, setNameDuration] = useState(20);
+  const [imageFailed, setImageFailed] = useState(!artist.image);
+
+  useEffect(() => {
+    setImageFailed(!artist.image);
+  }, [artist.image, artist.name]);
 
   useEffect(() => {
     if (tileLayout) return;
@@ -105,23 +168,16 @@ const ArtistCard = ({
       <div
         className={`artist-image-wrapper ${tileLayout ? "artist-image-wrapper--tile" : ""} ${isSelected ? "artist-image-wrapper--selected" : ""}`}
       >
-        <img
-          src={getImagePath(artist.image)}
-          alt={artist.name}
-          className={`artist-image ${tileLayout ? "artist-image--tile" : ""} ${shouldGrayOut ? "artist-image--grayed" : ""}`}
-          onError={(e) => {
-            const img = e.target;
-            if (img.dataset.fallback === "1") return;
-            img.dataset.fallback = "1";
-            img.style.display = "none";
-            const ph = document.createElement("div");
-            ph.className = tileLayout
-              ? "artist-placeholder artist-placeholder--tile"
-              : "artist-placeholder";
-            ph.textContent = artist.name.charAt(0);
-            img.insertAdjacentElement("afterend", ph);
-          }}
-        />
+        {!imageFailed ? (
+          <img
+            src={getImagePath(artist.image)}
+            alt={artist.name}
+            className={`artist-image ${tileLayout ? "artist-image--tile" : ""} ${shouldGrayOut ? "artist-image--grayed" : ""}`}
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <ArtistPlaceholder name={artist.name} tileLayout={tileLayout} />
+        )}
         {tileLayout && (
           <div className="artist-name-overlay" aria-hidden="true">
             <span className="artist-name artist-name--overlay">{artist.name}</span>
@@ -173,6 +229,8 @@ const ArtistCard = ({
 
 // Map image names from JSON to actual filenames in public/Artists folder (exported for reuse)
 export const getImagePath = (imageName) => {
+  if (!imageName) return null;
+
   const imageMap = {
     arjit: "arjitsingh.jpeg",
     mohit: "mohit.webp",
@@ -229,20 +287,26 @@ const Artists = ({
   const selectedCardRef = useRef(null);
   const [musicList, setMusicList] = useState([]);
 
-  // Fetch music list when there's a search query to filter artists by matching tracks
+  // Always load catalog so we can show artists that exist as names but have no image
   useEffect(() => {
-    if (searchQuery) {
-      fetchMusicList()
-        .then((tracks) => setMusicList(tracks))
-        .catch((err) => {
-          console.error("Error fetching music list for artist filtering:", err);
-          setMusicList([]);
-        });
-    } else if (musicList.length > 0) {
-      // Only clear if we have data to avoid unnecessary renders
-      setMusicList([]);
-    }
-  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+    let cancelled = false;
+    fetchMusicList()
+      .then((tracks) => {
+        if (!cancelled) setMusicList(tracks);
+      })
+      .catch((err) => {
+        console.error("Error fetching music list for artists:", err);
+        if (!cancelled) setMusicList([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const catalogArtists = React.useMemo(
+    () => mergeArtistsWithCatalog(artists, musicList),
+    [artists, musicList],
+  );
 
   // Filter tracks based on search query (fuzzy match, ~75% similarity)
   const filteredTracks = React.useMemo(() => {
@@ -260,16 +324,15 @@ const Artists = ({
 
   // Filter and reorder artists
   const reorderedArtists = React.useMemo(() => {
-    if (artists.length === 0) return artists;
+    if (catalogArtists.length === 0) return catalogArtists;
 
     // First, filter by search query if present
-    let filteredArtists = artists;
+    let filteredArtists = catalogArtists;
     if (searchQuery) {
-      filteredArtists = artists.filter((artist) => {
+      filteredArtists = catalogArtists.filter((artist) => {
         const artistName = artist.name || "";
         const nameMatches = fuzzyMatches(searchQuery, artistName);
         if (filteredTracks.length > 0) {
-          const artistName = artist.name || "";
           const hasMatchingTracks = filteredTracks.some((track) =>
             fuzzyMatches(artistName, track.artist || ""),
           );
@@ -279,7 +342,7 @@ const Artists = ({
       });
     } else if (filteredTracks.length > 0) {
       // Even without search query, filter out artists with no tracks if we have filtered tracks
-      filteredArtists = artists.filter((artist) => {
+      filteredArtists = catalogArtists.filter((artist) => {
         const artistName = (artist.name || "").toLowerCase();
         return filteredTracks.some((track) => {
           const trackArtist = (track.artist || "").toLowerCase();
@@ -314,7 +377,7 @@ const Artists = ({
     }
 
     return filteredArtists;
-  }, [artists, searchQuery, filteredTracks]);
+  }, [catalogArtists, searchQuery, filteredTracks]);
 
   // Scroll to start on initial load if we have reordered artists
   useEffect(() => {
