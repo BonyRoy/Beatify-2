@@ -1,0 +1,642 @@
+[
+  {
+    "name": "Aaron Smith",
+    "key": "AaronSmith",
+    "file": "AaronSmith.jpg"
+  },
+  {
+    "name": "Abeer Arora",
+    "key": "AbeerArora",
+    "file": "AbeerArora.jpg"
+  },
+  {
+    "name": "Abhishake Raina",
+    "key": "AbhishakeRaina",
+    "file": "AbhishakeRaina.jpg"
+  },
+  {
+    "name": "Adam Levine",
+    "key": "AdamLevine",
+    "file": "AdamLevine.jpg"
+  },
+  {
+    "name": "Aditya Narayan",
+    "key": "AdityaNarayan",
+    "file": "AdityaNarayan.jpg"
+  },
+  {
+    "name": "Aditya Rikhari",
+    "key": "AdityaRikhari",
+    "file": "AdityaRikhari.jpg"
+  },
+  {
+    "name": "Akhil Sachdeva",
+    "key": "AkhilSachdeva",
+    "file": "AkhilSachdeva.jpg"
+  },
+  {
+    "name": "Akshath",
+    "key": "Akshath",
+    "file": "Akshath.jpg"
+  },
+  {
+    "name": "Amaal Mallik",
+    "key": "AmaalMallik",
+    "file": "AmaalMallik.jpg"
+  },
+  {
+    "name": "Amir Jamal",
+    "key": "AmirJamal",
+    "file": "AmirJamal.jpg"
+  },
+  {
+    "name": "Amit Trivedi",
+    "key": "AmitTrivedi",
+    "file": "AmitTrivedi.jpg"
+  },
+  {
+    "name": "Amitabh Bachchan",
+    "key": "AmitabhBachchan",
+    "file": "AmitabhBachchan.jpg"
+  },
+  {
+    "name": "Ankit Tiwari",
+    "key": "AnkitTiwari",
+    "file": "AnkitTiwari.jpg"
+  },
+  {
+    "name": "Anupama Chakraborty Shrivastava",
+    "key": "AnupamaChakrabortyShrivastava",
+    "file": "AnupamaChakrabortyShrivastava.jpg"
+  },
+  {
+    "name": "AP Dhillon",
+    "key": "APDhillon",
+    "file": "APDhillon.jpg"
+  },
+  {
+    "name": "Aparna Ullal",
+    "key": "AparnaUllal",
+    "file": "AparnaUllal.jpg"
+  },
+  {
+    "name": "Aparshakti Khurana",
+    "key": "AparshaktiKhurana",
+    "file": "AparshaktiKhurana.jpg"
+  },
+  {
+    "name": "Arash",
+    "key": "Arash",
+    "file": "Arash.jpg"
+  },
+  {
+    "name": "Asha Bhosle",
+    "key": "AshaBhosle",
+    "file": "AshaBhosle.jpg"
+  },
+  {
+    "name": "Asrar",
+    "key": "Asrar",
+    "file": "Asrar.jpg"
+  },
+  {
+    "name": "Auliʻi Cravalho",
+    "key": "AuliiCravalho",
+    "file": "AuliiCravalho.jpg"
+  },
+  {
+    "name": "B Praak",
+    "key": "BPraak",
+    "file": "BPraak.jpg"
+  },
+  {
+    "name": "Banjaare",
+    "key": "Banjaare",
+    "file": "Banjaare.jpg"
+  },
+  {
+    "name": "Bella Poarch",
+    "key": "BellaPoarch",
+    "file": "BellaPoarch.jpg"
+  },
+  {
+    "name": "Benny Dayal",
+    "key": "BennyDayal",
+    "file": "BennyDayal.jpg"
+  },
+  {
+    "name": "Bloodywood",
+    "key": "Bloodywood",
+    "file": "Bloodywood.jpg"
+  },
+  {
+    "name": "Brad Paisley",
+    "key": "BradPaisley",
+    "file": "BradPaisley.jpg"
+  },
+  {
+    "name": "Brian Tyler",
+    "key": "BrianTyler",
+    "file": "BrianTyler.jpg"
+  },
+  {
+    "name": "Calum Scott",
+    "key": "CalumScott",
+    "file": "CalumScott.jpg"
+  },
+  {
+    "name": "Charlie Puth",
+    "key": "CharliePuth",
+    "file": "CharliePuth.jpg"
+  },
+  {
+    "name": "Chester Bennington",
+    "key": "ChesterBennington",
+    "file": "ChesterBennington.jpg"
+  },
+  {
+    "name": "Crash Adams",
+    "key": "CrashAdams",
+    "file": "CrashAdams.jpg"
+  },
+  {
+    "name": "Crazy Frog",
+    "key": "CrazyFrog",
+    "file": "CrazyFrog.jpg"
+  },
+  {
+    "name": "Daler Mehndi",
+    "key": "DalerMehndi",
+    "file": "DalerMehndi.jpg"
+  },
+  {
+    "name": "DC Madana",
+    "key": "DCMadana",
+    "file": "DCMadana.jpg"
+  },
+  {
+    "name": "Deepak Rathore",
+    "key": "DeepakRathore",
+    "file": "DeepakRathore.jpg"
+  },
+  {
+    "name": "Dhanda Nyoliwala",
+    "key": "DhandaNyoliwala",
+    "file": "DhandaNyoliwala.jpg"
+  },
+  {
+    "name": "Doorbeen",
+    "key": "Doorbeen",
+    "file": "Doorbeen.jpg"
+  },
+  {
+    "name": "Dwayne Johnson",
+    "key": "DwayneJohnson",
+    "file": "DwayneJohnson.jpg"
+  },
+  {
+    "name": "Ed Sheeran",
+    "key": "EdSheeran",
+    "file": "EdSheeran.jpg"
+  },
+  {
+    "name": "Enrique Iglesias",
+    "key": "EnriqueIglesias",
+    "file": "EnriqueIglesias.jpg"
+  },
+  {
+    "name": "Eurythmics",
+    "key": "Eurythmics",
+    "file": "Eurythmics.jpg"
+  },
+  {
+    "name": "FIFTY FIFTY",
+    "key": "FIFTYFIFTY",
+    "file": "FIFTYFIFTY.jpg"
+  },
+  {
+    "name": "Hansraj Raghuwanshi",
+    "key": "HansrajRaghuwanshi",
+    "file": "HansrajRaghuwanshi.jpg"
+  },
+  {
+    "name": "Harnoor",
+    "key": "Harnoor",
+    "file": "Harnoor.jpg"
+  },
+  {
+    "name": "Harshdeep Kaur",
+    "key": "HarshdeepKaur",
+    "file": "HarshdeepKaur.jpg"
+  },
+  {
+    "name": "Hassan Jahangir",
+    "key": "HassanJahangir",
+    "file": "HassanJahangir.jpg"
+  },
+  {
+    "name": "Hemant Kumar",
+    "key": "HemantKumar",
+    "file": "HemantKumar.jpg"
+  },
+  {
+    "name": "Idina Menzel",
+    "key": "IdinaMenzel",
+    "file": "IdinaMenzel.jpg"
+  },
+  {
+    "name": "Imran Khan",
+    "key": "ImranKhan",
+    "file": "ImranKhan.jpg"
+  },
+  {
+    "name": "Indravathi Chauhan",
+    "key": "IndravathiChauhan",
+    "file": "IndravathiChauhan.jpg"
+  },
+  {
+    "name": "James Taylor",
+    "key": "JamesTaylor",
+    "file": "JamesTaylor.jpg"
+  },
+  {
+    "name": "Jasmine Sandlas",
+    "key": "JasmineSandlas",
+    "file": "JasmineSandlas.jpg"
+  },
+  {
+    "name": "Jason Derulo",
+    "key": "JasonDerulo",
+    "file": "JasonDerulo.jpg"
+  },
+  {
+    "name": "Jason Paige",
+    "key": "JasonPaige",
+    "file": "JasonPaige.jpg"
+  },
+  {
+    "name": "Javed-Bashir",
+    "key": "JavedBashir",
+    "file": "JavedBashir.jpg"
+  },
+  {
+    "name": "Jonita Gandhi",
+    "key": "JonitaGandhi",
+    "file": "JonitaGandhi.jpg"
+  },
+  {
+    "name": "Justin Bieber",
+    "key": "JustinBieber",
+    "file": "JustinBieber.jpg"
+  },
+  {
+    "name": "Karan Aujla",
+    "key": "KaranAujla",
+    "file": "KaranAujla.jpg"
+  },
+  {
+    "name": "Krishna Beura",
+    "key": "KrishnaBeura",
+    "file": "KrishnaBeura.jpg"
+  },
+  {
+    "name": "Kunal Ganjawala",
+    "key": "KunalGanjawala",
+    "file": "KunalGanjawala.jpg"
+  },
+  {
+    "name": "Lehmber Hussainpuri",
+    "key": "LehmberHussainpuri",
+    "file": "LehmberHussainpuri.jpg"
+  },
+  {
+    "name": "Linkin Park",
+    "key": "LinkinPark",
+    "file": "LinkinPark.jpg"
+  },
+  {
+    "name": "Lionel Richie",
+    "key": "LionelRichie",
+    "file": "LionelRichie.jpg"
+  },
+  {
+    "name": "Livingston",
+    "key": "Livingston",
+    "file": "Livingston.jpg"
+  },
+  {
+    "name": "Lucky Ali",
+    "key": "LuckyAli",
+    "file": "LuckyAli.jpg"
+  },
+  {
+    "name": "Luis Fonsi",
+    "key": "LuisFonsi",
+    "file": "LuisFonsi.jpg"
+  },
+  {
+    "name": "Madhubanti Bagchi",
+    "key": "MadhubantiBagchi",
+    "file": "MadhubantiBagchi.jpg"
+  },
+  {
+    "name": "Madonna",
+    "key": "Madonna",
+    "file": "Madonna.jpg"
+  },
+  {
+    "name": "Maninder Buttar",
+    "key": "ManinderButtar",
+    "file": "ManinderButtar.jpg"
+  },
+  {
+    "name": "Maroon 5",
+    "key": "Maroon5",
+    "file": "Maroon5.jpg"
+  },
+  {
+    "name": "Mehul Mahesh",
+    "key": "MehulMahesh",
+    "file": "MehulMahesh.jpg"
+  },
+  {
+    "name": "Mika Singh",
+    "key": "MikaSingh",
+    "file": "MikaSingh.jpg"
+  },
+  {
+    "name": "Mike Shinoda",
+    "key": "MikeShinoda",
+    "file": "MikeShinoda.jpg"
+  },
+  {
+    "name": "Miraz",
+    "key": "Miraz",
+    "file": "Miraz.jpg"
+  },
+  {
+    "name": "Modern Talking",
+    "key": "ModernTalking",
+    "file": "ModernTalking.jpg"
+  },
+  {
+    "name": "Mohammed Irfan",
+    "key": "MohammedIrfan",
+    "file": "MohammedIrfan.jpg"
+  },
+  {
+    "name": "Mohammed Rafi",
+    "key": "MohammedRafi",
+    "file": "MohammedRafi.jpg"
+  },
+  {
+    "name": "Monali Thakur",
+    "key": "MonaliThakur",
+    "file": "MonaliThakur.jpg"
+  },
+  {
+    "name": "Mustafa Zahid",
+    "key": "MustafaZahid",
+    "file": "MustafaZahid.jpg"
+  },
+  {
+    "name": "Navjot Ahuja",
+    "key": "NavjotAhuja",
+    "file": "NavjotAhuja.jpg"
+  },
+  {
+    "name": "Neeraj Shridhar",
+    "key": "NeerajShridhar",
+    "file": "NeerajShridhar.jpg"
+  },
+  {
+    "name": "Nikhil D’Souza",
+    "key": "NikhilDSouza",
+    "file": "NikhilDSouza.jpg"
+  },
+  {
+    "name": "Omer Inayat",
+    "key": "OmerInayat",
+    "file": "OmerInayat.jpg"
+  },
+  {
+    "name": "One Direction",
+    "key": "OneDirection",
+    "file": "OneDirection.jpg"
+  },
+  {
+    "name": "Parampara Tandon",
+    "key": "ParamparaTandon",
+    "file": "ParamparaTandon.jpg"
+  },
+  {
+    "name": "Paresh Pahuja",
+    "key": "PareshPahuja",
+    "file": "PareshPahuja.jpg"
+  },
+  {
+    "name": "Prateek Kuhad",
+    "key": "PrateekKuhad",
+    "file": "PrateekKuhad.jpg"
+  },
+  {
+    "name": "Prem Dhillon",
+    "key": "PremDhillon",
+    "file": "PremDhillon.jpg"
+  },
+  {
+    "name": "R.D. Burman",
+    "key": "RDBurman",
+    "file": "RDBurman.jpg"
+  },
+  {
+    "name": "Rabbi Shergill",
+    "key": "RabbiShergill",
+    "file": "RabbiShergill.jpg"
+  },
+  {
+    "name": "Rajeev Raja",
+    "key": "RajeevRaja",
+    "file": "RajeevRaja.jpg"
+  },
+  {
+    "name": "Rascal Flatts",
+    "key": "RascalFlatts",
+    "file": "RascalFlatts.jpg"
+  },
+  {
+    "name": "Rashid Ali",
+    "key": "RashidAli",
+    "file": "RashidAli.jpg"
+  },
+  {
+    "name": "Rituraj Mohanty",
+    "key": "RiturajMohanty",
+    "file": "RiturajMohanty.jpg"
+  },
+  {
+    "name": "Roop Kumar Rathod",
+    "key": "RoopKumarRathod",
+    "file": "RoopKumarRathod.jpg"
+  },
+  {
+    "name": "Sachet Tandon",
+    "key": "SachetTandon",
+    "file": "SachetTandon.jpg"
+  },
+  {
+    "name": "Sachin Jigar",
+    "key": "SachinJigar",
+    "file": "SachinJigar.jpg"
+  },
+  {
+    "name": "Salim Merchant",
+    "key": "SalimMerchant",
+    "file": "SalimMerchant.jpg"
+  },
+  {
+    "name": "Salman Ali",
+    "key": "SalmanAli",
+    "file": "SalmanAli.jpg"
+  },
+  {
+    "name": "SANAM",
+    "key": "SANAM",
+    "file": "SANAM.jpg"
+  },
+  {
+    "name": "SANAM (Band)",
+    "key": "SANAMBand",
+    "file": "SANAMBand.jpg"
+  },
+  {
+    "name": "Shahid Mallya",
+    "key": "ShahidMallya",
+    "file": "ShahidMallya.jpg"
+  },
+  {
+    "name": "Shahzad Ali",
+    "key": "ShahzadAli",
+    "file": "ShahzadAli.jpg"
+  },
+  {
+    "name": "Shakira",
+    "key": "Shakira",
+    "file": "Shakira.jpg"
+  },
+  {
+    "name": "Sharry Maan",
+    "key": "SharryMaan",
+    "file": "SharryMaan.jpg"
+  },
+  {
+    "name": "Shashwat Sachdev",
+    "key": "ShashwatSachdev",
+    "file": "ShashwatSachdev.jpg"
+  },
+  {
+    "name": "Sheryl Crow",
+    "key": "SherylCrow",
+    "file": "SherylCrow.jpg"
+  },
+  {
+    "name": "Sia",
+    "key": "Sia",
+    "file": "Sia.jpg"
+  },
+  {
+    "name": "Sidhu Moose Wala",
+    "key": "SidhuMooseWala",
+    "file": "SidhuMooseWala.jpg"
+  },
+  {
+    "name": "Simran Choudhary",
+    "key": "SimranChoudhary",
+    "file": "SimranChoudhary.jpg"
+  },
+  {
+    "name": "Sona Mohapatra",
+    "key": "SonaMohapatra",
+    "file": "SonaMohapatra.jpg"
+  },
+  {
+    "name": "Sonal Kaushal",
+    "key": "SonalKaushal",
+    "file": "SonalKaushal.jpg"
+  },
+  {
+    "name": "Sridevi",
+    "key": "Sridevi",
+    "file": "Sridevi.jpg"
+  },
+  {
+    "name": "Sukhbir",
+    "key": "Sukhbir",
+    "file": "Sukhbir.jpg"
+  },
+  {
+    "name": "Suman Sridhar",
+    "key": "SumanSridhar",
+    "file": "SumanSridhar.jpg"
+  },
+  {
+    "name": "Talwiinder",
+    "key": "Talwiinder",
+    "file": "Talwiinder.jpg"
+  },
+  {
+    "name": "Taylor Swift",
+    "key": "TaylorSwift",
+    "file": "TaylorSwift.jpg"
+  },
+  {
+    "name": "Taz (Stereo Nation)",
+    "key": "TazStereoNation",
+    "file": "TazStereoNation.jpg"
+  },
+  {
+    "name": "The Neighbourhood",
+    "key": "TheNeighbourhood",
+    "file": "TheNeighbourhood.jpg"
+  },
+  {
+    "name": "Tulsi Kumar",
+    "key": "TulsiKumar",
+    "file": "TulsiKumar.jpg"
+  },
+  {
+    "name": "Tushar Joshi",
+    "key": "TusharJoshi",
+    "file": "TusharJoshi.jpg"
+  },
+  {
+    "name": "Varinder Brar",
+    "key": "VarinderBrar",
+    "file": "VarinderBrar.jpg"
+  },
+  {
+    "name": "Ved Sharma",
+    "key": "VedSharma",
+    "file": "VedSharma.jpg"
+  },
+  {
+    "name": "Weezer",
+    "key": "Weezer",
+    "file": "Weezer.jpg"
+  },
+  {
+    "name": "Wiz Khalifa",
+    "key": "WizKhalifa",
+    "file": "WizKhalifa.jpg"
+  },
+  {
+    "name": "Yohani",
+    "key": "Yohani",
+    "file": "Yohani.jpg"
+  },
+  {
+    "name": "Zubeen Garg",
+    "key": "ZubeenGarg",
+    "file": "ZubeenGarg.jpg"
+  }
+]
