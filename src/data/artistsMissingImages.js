@@ -141,5 +141,4 @@ export const ARTISTS_MISSING_IMAGES = [
   "Wiz Khalifa",
   "Yohani",
   "Zubeen Garg",
-  "Zubin Nautiyal",
 ];

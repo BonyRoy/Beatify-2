@@ -14,6 +14,35 @@ const normalizeArtistKey = (name) =>
     .trim();
 
 /**
+ * Catalog typos / alternate spellings that should use an existing
+ * curated artist (with image) instead of a separate missing-image card.
+ */
+export const ARTIST_NAME_ALIASES = {
+  [normalizeArtistKey("Zubin Nautiyal")]: "Jubin Nautiyal",
+};
+
+/** Canonical curated name for a catalog spelling, if aliased. */
+export const resolveArtistAlias = (name) => {
+  const alias = ARTIST_NAME_ALIASES[normalizeArtistKey(name)];
+  return alias || name;
+};
+
+/**
+ * True when a track's artist field should count under the selected artist
+ * (includes known typos like Zubin → Jubin).
+ */
+export const trackMatchesSelectedArtist = (trackArtist, selectedArtist) => {
+  if (!selectedArtist || !trackArtist) return false;
+  const track = String(trackArtist);
+  const selected = String(selectedArtist);
+  const trackCanon = resolveArtistAlias(track);
+  const selectedCanon = resolveArtistAlias(selected);
+  const a = trackCanon.toLowerCase();
+  const b = selectedCanon.toLowerCase();
+  return a.includes(b) || b.includes(a);
+};
+
+/**
  * Skip collab credit strings and non-artist placeholders so the strip
  * only shows real single names (missing-image cards use a letter fallback).
  */
@@ -47,6 +76,7 @@ export const mergeArtistsWithCatalog = (knownArtists, tracks) => {
   const isCovered = (name) => {
     const key = normalizeArtistKey(name);
     if (!key) return true;
+    if (ARTIST_NAME_ALIASES[key]) return true;
     return knownKeys.some(
       (k) =>
         key === k ||

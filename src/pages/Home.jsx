@@ -14,7 +14,7 @@ import {
   FAVORITES_LOADED,
 } from "../components/ListeningStatsSync";
 import Playlist from "../components/Playlist";
-import Artists from "../components/Artists";
+import Artists, { trackMatchesSelectedArtist } from "../components/Artists";
 import MobileTopTracksSection from "../components/MobileTopTracksSection";
 import TopListenedArtistsPodium from "../components/TopListenedArtistsPodium";
 import EraScrollSection from "../components/EraScrollSection";
@@ -741,14 +741,9 @@ const Home = () => {
 
     // Apply artist filter if present (works within playlist or standalone, but not with favorites)
     if (!showFavorites && selectedArtist) {
-      filtered = filtered.filter((track) => {
-        // Check if the track's artist matches the selected artist
-        const trackArtist = track.artist || "";
-        return (
-          trackArtist.toLowerCase().includes(selectedArtist.toLowerCase()) ||
-          selectedArtist.toLowerCase().includes(trackArtist.toLowerCase())
-        );
-      });
+      filtered = filtered.filter((track) =>
+        trackMatchesSelectedArtist(track.artist || "", selectedArtist),
+      );
     }
 
     // Apply era filter if present
