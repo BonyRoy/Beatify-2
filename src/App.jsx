@@ -43,10 +43,9 @@ const AppContent = () => {
       <main
         className={`app__content ${isAdminPage ? "app__content--admin" : ""}`}
       >
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/admin" element={<Admin />} />
-        </Routes>
+        {/* Render by pathname — nested <Routes> under /admin only see the
+            leftover path and incorrectly matched Home. */}
+        {isAdminPage ? <Admin /> : <Home />}
       </main>
       {!isAdminPage && <Footer />}
       {!isAdminPage && (

@@ -5,16 +5,38 @@ import "./Artists.css";
 
 const SCROLL_SPEED = 15;
 
+/** Collapse punctuation/spaces so "A.R. Rahman" ≈ "A. R. Rahman". */
 const normalizeArtistKey = (name) =>
   (name || "")
     .toLowerCase()
     .replace(/[^\w\s]/g, "")
-    .replace(/\s+/g, " ")
+    .replace(/\s+/g, "")
     .trim();
 
 /**
- * Keep curated artists (with images) and append any track.artist names
- * that are not already covered by that list.
+ * Skip collab credit strings and non-artist placeholders so the strip
+ * only shows real single names (missing-image cards use a letter fallback).
+ */
+export const isDisplayableArtistName = (name) => {
+  const n = (name || "").trim();
+  if (!n || n.length < 2) return false;
+  if (/^\(.*\)$/.test(n)) return false;
+  if (/\bunknown\b/i.test(n)) return false;
+  if (/^remix\b/i.test(n)) return false;
+  if (/\bchorus\b/i.test(n)) return false;
+  if (/^various\b/i.test(n)) return false;
+  if (/english boy band/i.test(n)) return false;
+  if (/^[\d\W_]+$/.test(n)) return false;
+  // Collaborations / long credit lists
+  if (/[&,]|\/|\band\b|\bfeat\.?\b|\bft\.?\b|\bwith\b/i.test(n)) return false;
+  if (n.length > 48) return false;
+  if (n.split(/\s+/).filter(Boolean).length > 5) return false;
+  return true;
+};
+
+/**
+ * Keep curated artists (with images) and append single track.artist names
+ * that are not already covered and look like real artist names.
  */
 export const mergeArtistsWithCatalog = (knownArtists, tracks) => {
   const known = Array.isArray(knownArtists) ? knownArtists : [];
@@ -26,7 +48,10 @@ export const mergeArtistsWithCatalog = (knownArtists, tracks) => {
     const key = normalizeArtistKey(name);
     if (!key) return true;
     return knownKeys.some(
-      (k) => key === k || key.includes(k) || k.includes(key),
+      (k) =>
+        key === k ||
+        (k.length >= 3 && key.includes(k)) ||
+        (key.length >= 3 && k.includes(key)),
     );
   };
 
@@ -34,7 +59,7 @@ export const mergeArtistsWithCatalog = (knownArtists, tracks) => {
     ...new Set(
       (tracks || [])
         .map((t) => (t.artist || "").trim())
-        .filter(Boolean),
+        .filter((name) => isDisplayableArtistName(name)),
     ),
   ].sort((a, b) => a.localeCompare(b));
 
@@ -49,6 +74,12 @@ export const mergeArtistsWithCatalog = (knownArtists, tracks) => {
 
   return known.concat(extras);
 };
+
+/** Unique single catalog artists that have no curated image entry. */
+export const listArtistsMissingImages = (knownArtists, tracks) =>
+  mergeArtistsWithCatalog(knownArtists, tracks)
+    .filter((a) => !a.image)
+    .map((a) => a.name);
 
 const ArtistsProfileIcon = () => (
   <svg
