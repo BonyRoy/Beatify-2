@@ -3,7 +3,7 @@
  * Matches when similarity >= 75% (e.g. "ra one" matches "ra.one", "ravan" matches "ra.one").
  */
 
-const SIMILARITY_THRESHOLD = 0.75;
+const SIMILARITY_THRESHOLD = 0.40;
 
 /**
  * Normalize string for search: lowercase, remove punctuation, collapse spaces.
