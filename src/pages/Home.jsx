@@ -440,7 +440,9 @@ const Home = () => {
 
   // Default home: playlist column on all breakpoints; `view=track` shows tracks-first mobile layout
   const defaultView = "playlist";
-  const view = searchParams.get("view") || defaultView;
+  const rawView = searchParams.get("view") || defaultView;
+  // Moods entry is disabled for now — fall back to tracks
+  const view = rawView === "moods" ? "track" : rawView;
   const mobileView = view === "home" ? "playlist" : view;
   const showFavorites = searchParams.get("favorites") === "true";
   const selectedArtist = searchParams.get("artist");

@@ -6,7 +6,15 @@ import React, {
   useCallback,
 } from "react";
 import { Link } from "react-router-dom";
-import { Megaphone, Play, Pause, RotateCcw, Home, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Megaphone,
+  Play,
+  Pause,
+  RotateCcw,
+  Home,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 import FeelsPlayer from "../components/FeelsPlayer";
 import {
@@ -944,10 +952,7 @@ const Feels = () => {
 
                 <div className="feels__slide-copy">
                   <p className="feels__slide-title">{slide.label}</p>
-                  <div
-                    className="feels__slide-preview"
-                    aria-hidden="true"
-                  >
+                  <div className="feels__slide-preview" aria-hidden="true">
                     <img
                       className="feels__slide-preview-img"
                       src={slide.image}

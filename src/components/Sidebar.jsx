@@ -453,6 +453,7 @@ const Sidebar = ({
             </span>
           </button>
 
+          {/* Moods entry hidden for now
           {isMobile && (
             <button
               type="button"
@@ -470,6 +471,7 @@ const Sidebar = ({
               </span>
             </button>
           )}
+          */}
           <button
             type="button"
             className={`sidebar__item sidebar__item--button ${currentView === "playlist" ? "sidebar__item--active" : ""}`}

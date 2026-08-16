@@ -27,6 +27,7 @@ import ListeningStatsSync from "./components/ListeningStatsSync";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
 import Feels from "./pages/Feels";
+import NotFound from "./pages/NotFound";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 
@@ -91,7 +92,9 @@ const App = () => {
       <Routes>
         <Route path="/feels" element={<Feels />} />
         <Route path="/weel" element={<Feels />} />
-        <Route path="*" element={<MainApp />} />
+        <Route path="/" element={<MainApp />} />
+        <Route path="/admin" element={<MainApp />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );

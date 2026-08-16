@@ -53,7 +53,11 @@ body.feels-page-lock {
   align-items: center;
   justify-content: flex-start;
   gap: 0.75rem;
-  padding: 1rem 1.25rem;
+  /* Match Beatify navbar: safe-area on iPhone PWA, tight pad in browser tab */
+  padding-top: max(1rem, var(--navbar-safe-top, env(safe-area-inset-top, 0px)));
+  padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));
+  padding-bottom: 1rem;
+  padding-left: calc(1.25rem + env(safe-area-inset-left, 0px));
   background: rgba(238, 243, 246, 0.88);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--feels-line);
@@ -915,7 +919,18 @@ body.feels-page-lock {
 
 @media (max-width: 640px) {
   .feels__nav {
-    padding: 0.85rem 0.9rem;
+    /* Browser tab: tight top — match Beatify navbar iPhone handling */
+    padding-top: 0.75rem;
+    padding-right: calc(0.9rem + env(safe-area-inset-right, 0px));
+    padding-bottom: 0.85rem;
+    padding-left: calc(0.9rem + env(safe-area-inset-left, 0px));
+  }
+
+  body.app-standalone .feels__nav {
+    padding-top: max(
+      0.75rem,
+      var(--navbar-safe-top, env(safe-area-inset-top, 0px))
+    );
   }
 
   .feels__badge {
@@ -994,6 +1009,15 @@ body.feels-page-lock {
 
   .feels-sheet__list {
     padding-bottom: 8rem;
+  }
+}
+
+@media (max-width: 640px) and (display-mode: standalone) {
+  .feels__nav {
+    padding-top: max(
+      0.75rem,
+      var(--navbar-safe-top, env(safe-area-inset-top, 0px))
+    );
   }
 }
 
